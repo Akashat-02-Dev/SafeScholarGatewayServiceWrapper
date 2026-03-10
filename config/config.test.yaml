@@ -1,0 +1,96 @@
+env: test
+server:
+  host: 127.0.0.1
+  port: 0
+  readHeaderTimeout: 5s
+  readTimeout: 15s
+  writeTimeout: 30s
+  idleTimeout: 60s
+  maxRequestBodyBytes: 1048576
+  tlsCertFile: ""
+  tlsKeyFile: ""
+  trustedProxyCidrs: []
+  allowedHostnames: []
+  externalBaseUrl: http://127.0.0.1
+postgres:
+  connString: postgres://safescholar:safescholar@localhost:5432/safescholar_test?sslmode=disable
+  appName: SafeScholarGatewayServiceWrapper_Test
+  maxConns: 5
+  minConns: 1
+  healthCheckPeriod: 30s
+redis:
+  addr: localhost:6379
+  username: ""
+  password: ""
+  db: 1
+  useTls: false
+  dialTimeout: 3s
+  readTimeout: 2s
+  writeTimeout: 2s
+jwt:
+  issuer: SafeScholarGateway_Test
+  audience: SafeScholarClients_Test
+  privateKeyPemFile: config/test_jwt/private.pem
+  publicKeyPemFile: config/test_jwt/public.pem
+  accessTokenTtl: 15m
+  refreshTokenTtl: 24h
+  serviceTokenTtl: 10m
+  clockSkew: 1m
+oauth:
+  stateCookieName: ss_oauth_state
+  stateTtl: 10m
+  google:
+    enabled: false
+    clientId: ""
+    clientSecret: ""
+    redirectUrl: ""
+    scopes: []
+    tenant: ""
+  microsoft:
+    enabled: false
+    clientId: ""
+    clientSecret: ""
+    redirectUrl: ""
+    scopes: []
+    tenant: ""
+  apple:
+    enabled: false
+    clientId: ""
+    clientSecret: ""
+    redirectUrl: ""
+    scopes: []
+    tenant: ""
+mtls:
+  enabled: false
+  clientCertFile: ""
+  clientKeyFile: ""
+  caCertFile: ""
+  minVersion: 772
+  serverName: ""
+cors:
+  allowedOrigins: ["*"]
+  allowedMethods: ["GET","POST","PUT","PATCH","DELETE","OPTIONS"]
+  allowedHeaders: ["Authorization","Content-Type","X-Request-Id"]
+  allowCredentials: false
+  maxAgeSeconds: 10
+rateLimit:
+  enabled: false
+  capacity: 1000
+  refillRate: 1000
+  refillPeriod: 1m
+  prefix: ratelimit:
+serviceRegistry:
+  static: {}
+security:
+  requireTlsInDev: false
+  allowedClockSkew: 1m
+  strictTransportMaxAge: 0
+  contentSecurityPolicy: "default-src 'self'; base-uri 'none'; frame-ancestors 'none'; object-src 'none'"
+audit:
+  enabled: false
+bootstrap:
+  sysAdminEmailEnv: SYS_ADMIN_EMAIL
+  sysAdminPasswordEnv: SYS_ADMIN_PASSWORD
+  sysAdminFirstNameEnv: SYS_ADMIN_FIRST_NAME
+  sysAdminLastNameEnv: SYS_ADMIN_LAST_NAME
+

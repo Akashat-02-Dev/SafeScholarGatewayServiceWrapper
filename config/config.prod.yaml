@@ -1,0 +1,96 @@
+env: prod
+server:
+  host: 0.0.0.0
+  port: 8443
+  readHeaderTimeout: 5s
+  readTimeout: 15s
+  writeTimeout: 30s
+  idleTimeout: 60s
+  maxRequestBodyBytes: 1048576
+  tlsCertFile: /etc/safescholar/tls/server.crt
+  tlsKeyFile: /etc/safescholar/tls/server.key
+  trustedProxyCidrs: []
+  allowedHostnames: []
+  externalBaseUrl: https://gateway.safescholar.example
+postgres:
+  connString: postgres://safescholar:REDACTED@postgres.svc.cluster.local:5432/safescholar?sslmode=verify-full
+  appName: SafeScholarGatewayServiceWrapper
+  maxConns: 50
+  minConns: 10
+  healthCheckPeriod: 30s
+redis:
+  addr: redis.svc.cluster.local:6379
+  username: ""
+  password: ""
+  db: 0
+  useTls: true
+  dialTimeout: 3s
+  readTimeout: 2s
+  writeTimeout: 2s
+jwt:
+  issuer: SafeScholarGateway
+  audience: SafeScholarClients
+  privateKeyPemFile: /etc/safescholar/jwt/private.pem
+  publicKeyPemFile: /etc/safescholar/jwt/public.pem
+  accessTokenTtl: 15m
+  refreshTokenTtl: 720h
+  serviceTokenTtl: 10m
+  clockSkew: 1m
+oauth:
+  stateCookieName: ss_oauth_state
+  stateTtl: 10m
+  google:
+    enabled: true
+    clientId: ""
+    clientSecret: ""
+    redirectUrl: https://gateway.safescholar.example/api/oauth/google/callback
+    scopes: ["openid","email","profile"]
+    tenant: ""
+  microsoft:
+    enabled: true
+    clientId: ""
+    clientSecret: ""
+    redirectUrl: https://gateway.safescholar.example/api/oauth/microsoft/callback
+    scopes: ["openid","email","profile"]
+    tenant: common
+  apple:
+    enabled: true
+    clientId: ""
+    clientSecret: ""
+    redirectUrl: https://gateway.safescholar.example/api/oauth/apple/callback
+    scopes: ["openid","email","name"]
+    tenant: ""
+mtls:
+  enabled: true
+  clientCertFile: /etc/safescholar/mtls/client.crt
+  clientKeyFile: /etc/safescholar/mtls/client.key
+  caCertFile: /etc/safescholar/mtls/ca.crt
+  minVersion: 772
+  serverName: ""
+cors:
+  allowedOrigins: []
+  allowedMethods: ["GET","POST","PUT","PATCH","DELETE","OPTIONS"]
+  allowedHeaders: ["Authorization","Content-Type","X-Request-Id"]
+  allowCredentials: true
+  maxAgeSeconds: 600
+rateLimit:
+  enabled: true
+  capacity: 60
+  refillRate: 60
+  refillPeriod: 1m
+  prefix: ratelimit:
+serviceRegistry:
+  static: {}
+security:
+  requireTlsInDev: true
+  allowedClockSkew: 1m
+  strictTransportMaxAge: 31536000
+  contentSecurityPolicy: "default-src 'self'; base-uri 'none'; frame-ancestors 'none'; object-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'"
+audit:
+  enabled: true
+bootstrap:
+  sysAdminEmailEnv: SYS_ADMIN_EMAIL
+  sysAdminPasswordEnv: SYS_ADMIN_PASSWORD
+  sysAdminFirstNameEnv: SYS_ADMIN_FIRST_NAME
+  sysAdminLastNameEnv: SYS_ADMIN_LAST_NAME
+

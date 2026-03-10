@@ -1,0 +1,100 @@
+env: dev
+server:
+  host: 0.0.0.0
+  port: 8443
+  readHeaderTimeout: 5s
+  readTimeout: 15s
+  writeTimeout: 30s
+  idleTimeout: 60s
+  maxRequestBodyBytes: 1048576
+  tlsCertFile: config/dev_tls/server.crt
+  tlsKeyFile: config/dev_tls/server.key
+  trustedProxyCidrs: []
+  allowedHostnames:
+    - localhost
+  externalBaseUrl: https://localhost:8443
+postgres:
+  connString: postgres://safescholar:safescholar@localhost:5432/safescholar?sslmode=disable
+  appName: SafeScholarGatewayServiceWrapper
+  maxConns: 10
+  minConns: 2
+  healthCheckPeriod: 30s
+redis:
+  addr: localhost:6379
+  username: ""
+  password: ""
+  db: 0
+  useTls: false
+  dialTimeout: 3s
+  readTimeout: 2s
+  writeTimeout: 2s
+jwt:
+  issuer: SafeScholarGateway
+  audience: SafeScholarClients
+  privateKeyPemFile: config/dev_jwt/private.pem
+  publicKeyPemFile: config/dev_jwt/public.pem
+  accessTokenTtl: 15m
+  refreshTokenTtl: 720h
+  serviceTokenTtl: 10m
+  clockSkew: 1m
+oauth:
+  stateCookieName: ss_oauth_state
+  stateTtl: 10m
+  google:
+    enabled: false
+    clientId: ""
+    clientSecret: ""
+    redirectUrl: https://localhost:8443/api/oauth/google/callback
+    scopes: ["openid","email","profile"]
+    tenant: ""
+  microsoft:
+    enabled: false
+    clientId: ""
+    clientSecret: ""
+    redirectUrl: https://localhost:8443/api/oauth/microsoft/callback
+    scopes: ["openid","email","profile"]
+    tenant: common
+  apple:
+    enabled: false
+    clientId: ""
+    clientSecret: ""
+    redirectUrl: https://localhost:8443/api/oauth/apple/callback
+    scopes: ["openid","email","name"]
+    tenant: ""
+mtls:
+  enabled: false
+  clientCertFile: ""
+  clientKeyFile: ""
+  caCertFile: ""
+  minVersion: 772
+  serverName: ""
+cors:
+  allowedOrigins: ["https://localhost:5173"]
+  allowedMethods: ["GET","POST","PUT","PATCH","DELETE","OPTIONS"]
+  allowedHeaders: ["Authorization","Content-Type","X-Request-Id"]
+  allowCredentials: true
+  maxAgeSeconds: 600
+rateLimit:
+  enabled: true
+  capacity: 60
+  refillRate: 60
+  refillPeriod: 1m
+  prefix: ratelimit:
+serviceRegistry:
+  static:
+    worksheet: https://localhost:9443
+    assessment: https://localhost:9444
+    moderation: https://localhost:9445
+security:
+  requireTlsInDev: true
+  allowedClockSkew: 1m
+  strictTransportMaxAge: 31536000
+  contentSecurityPolicy: "default-src 'self'; base-uri 'none'; frame-ancestors 'none'; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://localhost:8443 https://localhost:9443 https://localhost:9444 https://localhost:9445"
+audit:
+  enabled: true
+bootstrap:
+  sysAdminEmailEnv: SYS_ADMIN_EMAIL
+  sysAdminPasswordEnv: SYS_ADMIN_PASSWORD
+  sysAdminFirstNameEnv: SYS_ADMIN_FIRST_NAME
+  sysAdminLastNameEnv: SYS_ADMIN_LAST_NAME
+
