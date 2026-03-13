@@ -25,11 +25,11 @@ type JWTManager struct {
 }
 
 type TokenClaims struct {
-	SessionID    string   `json:"sid"`
-	TokenID      string   `json:"tid"`
-	Roles        []string `json:"roles"`
-	Permissions  []string `json:"permissions"`
-	Institution  string   `json:"institution"`
+	SessionID   string   `json:"sid"`
+	TokenID     string   `json:"tid"`
+	Roles       []string `json:"roles"`
+	Permissions []string `json:"permissions"`
+	Institution string   `json:"institution"`
 	jwt.RegisteredClaims
 }
 

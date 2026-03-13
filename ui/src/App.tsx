@@ -12,9 +12,13 @@ import { UserManagement } from './pages/UserManagement'
 
 function AuthedLayout({ children }: { children: ReactNode }) {
   return (
-    <div style={{ maxWidth: 1100, margin: '0 auto', display: 'grid', gridTemplateColumns: '240px 1fr', gap: 16 }}>
-      <Sidebar />
-      <div>{children}</div>
+    <div className="container">
+      <div className="shell">
+        <div className="sidebar">
+          <Sidebar />
+        </div>
+        <div className="main">{children}</div>
+      </div>
     </div>
   )
 }

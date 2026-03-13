@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../services/authService'
+import { motion } from 'framer-motion'
+import { Apple, ArrowRight, Chrome, KeyRound, LayoutGrid, LockKeyhole, Mail, Shield } from 'lucide-react'
 
 export function LoginPage() {
   const { status, login, oauthLogin } = useAuth()
@@ -49,47 +51,131 @@ export function LoginPage() {
   }
 
   return (
-    <div style={{ maxWidth: 420, margin: '48px auto', padding: 16 }}>
-      <h2>Sign in</h2>
-      <form onSubmit={onSubmit}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <label>
-            Email
-            <input
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoComplete="username"
-              inputMode="email"
-              style={{ width: '100%' }}
-            />
-          </label>
-          <label>
-            Password
-            <input
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              type="password"
-              autoComplete="current-password"
-              style={{ width: '100%' }}
-            />
-          </label>
-          <button type="submit" disabled={busy}>
-            {busy ? 'Signing in…' : 'Sign in'}
-          </button>
-          {err ? <div style={{ color: 'crimson' }}>{err}</div> : null}
+    <div className="container">
+      <motion.div
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: 'easeOut' }}
+        style={{ maxWidth: 520, margin: '34px auto' }}
+      >
+        <div className="card">
+          <div className="cardInner">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div className="brandMark" style={{ width: 44, height: 44 }}>
+                <Shield size={22} />
+              </div>
+              <div>
+                <h2 className="pageTitle" style={{ margin: 0 }}>Sign in</h2>
+                <div className="pageSub">Use your SafeScholar account to continue.</div>
+              </div>
+            </div>
+
+            <div className="divider" />
+
+            <form onSubmit={onSubmit}>
+              <div className="stack12">
+                <div className="field">
+                  <div className="label">Email</div>
+                  <div style={{ position: 'relative' }}>
+                    <Mail size={18} style={{ position: 'absolute', left: 12, top: 12, opacity: 0.65 }} />
+                    <input
+                      className="input"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      autoComplete="username"
+                      inputMode="email"
+                      style={{ paddingLeft: 40 }}
+                    />
+                  </div>
+                </div>
+
+                <div className="field">
+                  <div className="label">Password</div>
+                  <div style={{ position: 'relative' }}>
+                    <LockKeyhole size={18} style={{ position: 'absolute', left: 12, top: 12, opacity: 0.65 }} />
+                    <input
+                      className="input"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      type="password"
+                      autoComplete="current-password"
+                      style={{ paddingLeft: 40 }}
+                    />
+                  </div>
+                </div>
+
+                {err ? (
+                  <div className="toast toastError" role="alert">
+                    {err}
+                  </div>
+                ) : null}
+
+                <button type="submit" className="btn btnPrimary" disabled={busy}>
+                  <KeyRound size={18} />
+                  {busy ? 'Signing in…' : 'Sign in'}
+                  <ArrowRight size={18} />
+                </button>
+              </div>
+            </form>
+
+            <div className="divider" />
+
+            <div className="pageSub" style={{ marginTop: 0 }}>Or continue with</div>
+            <div className="oauthGrid">
+              <motion.button
+                type="button"
+                className="btn btnGhost oauthBtn"
+                disabled={busy || !!oauthBusy}
+                onClick={() => void startOAuth('google')}
+                whileHover={{ y: -2 }}
+                whileTap={{ y: 0 }}
+              >
+                <span className="oauthIcon">
+                  <Chrome size={18} />
+                </span>
+                <span className="oauthText">
+                  <span className="oauthTitle">Google</span>
+                  <span className="oauthSub">{oauthBusy === 'google' ? 'Connecting…' : 'Continue'}</span>
+                </span>
+              </motion.button>
+
+              <motion.button
+                type="button"
+                className="btn btnGhost oauthBtn"
+                disabled={busy || !!oauthBusy}
+                onClick={() => void startOAuth('microsoft')}
+                whileHover={{ y: -2 }}
+                whileTap={{ y: 0 }}
+              >
+                <span className="oauthIcon">
+                  <LayoutGrid size={18} />
+                </span>
+                <span className="oauthText">
+                  <span className="oauthTitle">Microsoft</span>
+                  <span className="oauthSub">{oauthBusy === 'microsoft' ? 'Connecting…' : 'Continue'}</span>
+                </span>
+              </motion.button>
+
+              <motion.button
+                type="button"
+                className="btn btnGhost oauthBtn"
+                disabled={busy || !!oauthBusy}
+                onClick={() => void startOAuth('apple')}
+                whileHover={{ y: -2 }}
+                whileTap={{ y: 0 }}
+              >
+                <span className="oauthIcon">
+                  <Apple size={18} />
+                </span>
+                <span className="oauthText">
+                  <span className="oauthTitle">Apple</span>
+                  <span className="oauthSub">{oauthBusy === 'apple' ? 'Connecting…' : 'Continue'}</span>
+                </span>
+              </motion.button>
+            </div>
+          </div>
         </div>
-      </form>
-      <div style={{ marginTop: 16, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        <button type="button" disabled={busy || !!oauthBusy} onClick={() => void startOAuth('google')}>
-          {oauthBusy === 'google' ? 'Connecting…' : 'Continue with Google'}
-        </button>
-        <button type="button" disabled={busy || !!oauthBusy} onClick={() => void startOAuth('microsoft')}>
-          {oauthBusy === 'microsoft' ? 'Connecting…' : 'Continue with Microsoft'}
-        </button>
-        <button type="button" disabled={busy || !!oauthBusy} onClick={() => void startOAuth('apple')}>
-          {oauthBusy === 'apple' ? 'Connecting…' : 'Continue with Apple'}
-        </button>
-      </div>
+      </motion.div>
     </div>
   )
 }

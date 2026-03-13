@@ -18,14 +18,14 @@ type RouteMeta struct {
 }
 
 type UserContext struct {
-	UserID           string
-	SessionID        string
-	TokenID          string
-	InstitutionID    string
-	Roles            []string
-	Permissions      []string
-	IsSysAdmin       bool
-	IsAuthenticated  bool
+	UserID          string
+	SessionID       string
+	TokenID         string
+	InstitutionID   string
+	Roles           []string
+	Permissions     []string
+	IsSysAdmin      bool
+	IsAuthenticated bool
 }
 
 func contextWithRouteMeta(ctx context.Context, meta RouteMeta) context.Context {

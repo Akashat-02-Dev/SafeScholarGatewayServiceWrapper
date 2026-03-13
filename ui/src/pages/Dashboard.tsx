@@ -1,40 +1,58 @@
 import { useAuth } from '../services/authService'
-import { Link } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import { Building2, KeyRound, Shield } from 'lucide-react'
 
 export function Dashboard() {
-  const { me, hasPermission } = useAuth()
+  const { me } = useAuth()
   return (
-    <div style={{ padding: 16 }}>
-      <h2>Dashboard</h2>
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: 'easeOut' }} className="page">
+      <div className="card">
+        <div className="cardInner">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div className="brandMark" style={{ width: 40, height: 40 }}>
+              <Shield size={20} />
+            </div>
+            <div>
+              <h2 className="pageTitle">Dashboard</h2>
+              <div className="pageSub">Overview of your access and quick actions.</div>
+            </div>
+          </div>
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 12 }}>
-        {hasPermission('MANAGE_USERS') ? <Link to="/user-management">User Management</Link> : null}
-        {hasPermission('MANAGE_ROLES') ? <Link to="/role-management">Role Management</Link> : null}
-        {hasPermission('MODERATE_CONTENT') ? <Link to="/moderation">Moderation Panel</Link> : null}
-      </div>
+          <div className="divider" />
 
-      <div style={{ marginTop: 16 }}>
-        <div style={{ fontSize: 12, opacity: 0.75 }}>Signed in as</div>
-        <div style={{ fontWeight: 700 }}>{me?.email || '—'}</div>
-        <div style={{ fontSize: 12, opacity: 0.75, marginTop: 8 }}>Institution</div>
-        <div style={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace', fontSize: 12 }}>
-          {me?.institutionId || '—'}
+          <div className="kpiRow">
+            <div className="kpi">
+              <div className="kpiLabel" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <KeyRound size={16} /> Signed in as
+              </div>
+              <div className="kpiValue">{me?.email || '—'}</div>
+            </div>
+            <div className="kpi">
+              <div className="kpiLabel" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <Building2 size={16} /> Institution
+              </div>
+              <div className="kpiValue kpiValueMono mono">{me?.institutionId || '—'}</div>
+            </div>
+          </div>
+
+          <div className="divider" />
+
+          <div className="grid2">
+            <div className="toast">
+              <div style={{ fontSize: 12, opacity: 0.75 }}>Roles</div>
+              <div className="wrap" style={{ marginTop: 10 }}>
+                {(me?.roles || []).length ? (me?.roles || []).map((r) => <span key={r} className="chip">{r}</span>) : <span className="muted">—</span>}
+              </div>
+            </div>
+            <div className="toast">
+              <div style={{ fontSize: 12, opacity: 0.75 }}>Permissions</div>
+              <div className="wrap" style={{ marginTop: 10 }}>
+                {(me?.permissions || []).length ? (me?.permissions || []).map((p) => <span key={p} className="chip">{p}</span>) : <span className="muted">—</span>}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-
-      <div style={{ marginTop: 16 }}>
-        <div style={{ fontSize: 12, opacity: 0.75 }}>Roles</div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 6 }}>
-          {(me?.roles || []).length ? (me?.roles || []).map((r) => <span key={r}>{r}</span>) : <span>—</span>}
-        </div>
-      </div>
-
-      <div style={{ marginTop: 16 }}>
-        <div style={{ fontSize: 12, opacity: 0.75 }}>Permissions</div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 6 }}>
-          {(me?.permissions || []).length ? (me?.permissions || []).map((p) => <span key={p}>{p}</span>) : <span>—</span>}
-        </div>
-      </div>
-    </div>
+    </motion.div>
   )
 }

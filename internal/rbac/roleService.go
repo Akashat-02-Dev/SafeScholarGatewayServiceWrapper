@@ -87,8 +87,8 @@ func (s *RoleService) CreateRole(ctx context.Context, actor ActorContext, name, 
 	var roleID string
 	err = tx.QueryRow(ctx, `
 insert into roles(institution_id, name, description, is_system_role, created_by)
-values (nullif($1,''), $2, nullif($3,''), false, nullif($4,''))
-returning role_id`, actor.InstitutionID, n, strings.TrimSpace(description), actor.UserID).Scan(&roleID)
+values (nullif($1,'')::uuid, $2, nullif($3,''), false, nullif($4,'')::uuid)
+returning role_id::text`, actor.InstitutionID, n, strings.TrimSpace(description), actor.UserID).Scan(&roleID)
 	if err != nil {
 		return "", err
 	}
@@ -373,7 +373,7 @@ func (s *RoleService) ListRoles(ctx context.Context, actor ActorContext) ([]Role
 	}
 
 	rows, err := tx.Query(ctx, `
-select role_id, name, coalesce(description,''), is_system_role
+select role_id::text, name, coalesce(description,''), is_system_role
 from roles
 where institution_id is null or institution_id::text = nullif($1,'')
 order by is_system_role desc, name asc`, actor.InstitutionID)

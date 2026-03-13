@@ -93,13 +93,6 @@ func buildMTLSConfig(cfg config.MTLSConfig) (*tls.Config, error) {
 	}, nil
 }
 
-func tlsMinVersion(v uint16) uint16 {
-	if v == 0 {
-		return tls.VersionTLS13
-	}
-	return v
-}
-
 type secureRoundTripper struct {
 	base http.RoundTripper
 	deps HTTPClientDeps

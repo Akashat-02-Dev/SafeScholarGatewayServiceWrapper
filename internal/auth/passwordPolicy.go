@@ -8,12 +8,12 @@ import (
 )
 
 type PasswordPolicy struct {
-	MinLength        int
-	MaxLength        int
-	RequireUpper     bool
-	RequireLower     bool
-	RequireDigit     bool
-	RequireSpecial   bool
+	MinLength          int
+	MaxLength          int
+	RequireUpper       bool
+	RequireLower       bool
+	RequireDigit       bool
+	RequireSpecial     bool
 	DisallowWhitespace bool
 }
 

@@ -35,14 +35,14 @@ const (
 )
 
 type Worksheet struct {
-	WorksheetID   string         `json:"worksheetId"`
-	InstitutionID string         `json:"institutionId,omitempty"`
-	Title         string         `json:"title"`
-	Description   string         `json:"description,omitempty"`
+	WorksheetID   string          `json:"worksheetId"`
+	InstitutionID string          `json:"institutionId,omitempty"`
+	Title         string          `json:"title"`
+	Description   string          `json:"description,omitempty"`
 	Status        WorksheetStatus `json:"status"`
 	Items         []WorksheetItem `json:"items,omitempty"`
-	CreatedAt     time.Time      `json:"createdAt,omitempty"`
-	UpdatedAt     time.Time      `json:"updatedAt,omitempty"`
+	CreatedAt     time.Time       `json:"createdAt,omitempty"`
+	UpdatedAt     time.Time       `json:"updatedAt,omitempty"`
 }
 
 func (w Worksheet) Validate() error {
@@ -88,12 +88,12 @@ const (
 )
 
 type WorksheetItem struct {
-	ItemID    string           `json:"itemId"`
-	Prompt    string           `json:"prompt"`
+	ItemID    string            `json:"itemId"`
+	Prompt    string            `json:"prompt"`
 	Kind      WorksheetItemKind `json:"kind"`
-	Options   []string         `json:"options,omitempty"`
-	Required  bool             `json:"required"`
-	MaxLength int              `json:"maxLength,omitempty"`
+	Options   []string          `json:"options,omitempty"`
+	Required  bool              `json:"required"`
+	MaxLength int               `json:"maxLength,omitempty"`
 }
 
 func (i WorksheetItem) Validate() error {
@@ -128,8 +128,8 @@ func (i WorksheetItem) Validate() error {
 }
 
 type CreateWorksheetRequest struct {
-	Title       string         `json:"title"`
-	Description string         `json:"description,omitempty"`
+	Title       string          `json:"title"`
+	Description string          `json:"description,omitempty"`
 	Items       []WorksheetItem `json:"items,omitempty"`
 }
 
@@ -163,11 +163,11 @@ func (r CreateWorksheetResponse) Validate() error {
 }
 
 type UpdateWorksheetRequest struct {
-	WorksheetID  string         `json:"worksheetId"`
-	Title        string         `json:"title,omitempty"`
-	Description  string         `json:"description,omitempty"`
+	WorksheetID  string          `json:"worksheetId"`
+	Title        string          `json:"title,omitempty"`
+	Description  string          `json:"description,omitempty"`
 	Items        []WorksheetItem `json:"items,omitempty"`
-	ReplaceItems bool           `json:"replaceItems,omitempty"`
+	ReplaceItems bool            `json:"replaceItems,omitempty"`
 }
 
 func (r UpdateWorksheetRequest) Validate() error {
@@ -196,7 +196,7 @@ func (r UpdateWorksheetRequest) Validate() error {
 }
 
 type SubmitWorksheetRequest struct {
-	WorksheetID string           `json:"worksheetId"`
+	WorksheetID string            `json:"worksheetId"`
 	Answers     []WorksheetAnswer `json:"answers"`
 }
 

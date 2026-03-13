@@ -20,9 +20,9 @@ import (
 	"golang.org/x/oauth2"
 
 	"safescholar/gateway/config"
+	"safescholar/gateway/infrastructure/database"
 	"safescholar/gateway/internal/auth"
 	"safescholar/gateway/internal/security"
-	"safescholar/gateway/infrastructure/database"
 )
 
 type Provider string
@@ -40,9 +40,9 @@ type OAuthService struct {
 	sessionMgr  *auth.SessionManager
 	auditLogger *security.AuditLogger
 
-	stateCookieName string
+	stateCookieName    string
 	verifierCookieName string
-	stateTTL        time.Duration
+	stateTTL           time.Duration
 
 	providers map[Provider]*providerRuntime
 }
@@ -321,12 +321,12 @@ func (s *OAuthService) Callback(ctx context.Context, provider Provider, code, st
 
 	if s.sessionMgr != nil {
 		if err := s.sessionMgr.Create(ctx, auth.Session{
-			SessionID:     sessionID,
-			UserID:        userID,
-			IPAddress:     ipAddress,
-			UserAgent:     userAgent,
-			CreatedAt:     time.Now().UTC(),
-			ExpiresAt:     time.Now().UTC().Add(refreshTTL),
+			SessionID: sessionID,
+			UserID:    userID,
+			IPAddress: ipAddress,
+			UserAgent: userAgent,
+			CreatedAt: time.Now().UTC(),
+			ExpiresAt: time.Now().UTC().Add(refreshTTL),
 		}); err != nil {
 			return OAuthLoginResult{}, err
 		}
@@ -353,11 +353,11 @@ func (s *OAuthService) Callback(ctx context.Context, provider Provider, code, st
 	}
 
 	_ = s.auditLogger.Log(ctx, security.AuditEvent{
-		UserID:        userID,
-		Action:        "OAUTH_LOGIN_SUCCESS",
-		Resource:      "user",
-		ResourceID:    userID,
-		CreatedAt:     time.Now().UTC(),
+		UserID:     userID,
+		Action:     "OAUTH_LOGIN_SUCCESS",
+		Resource:   "user",
+		ResourceID: userID,
+		CreatedAt:  time.Now().UTC(),
 		Metadata: map[string]any{
 			"provider":      string(provider),
 			"correlationId": correlationID,

@@ -69,7 +69,7 @@ mtls:
   minVersion: 772
   serverName: ""
 cors:
-  allowedOrigins: ["https://localhost:5173"]
+  allowedOrigins: ["http://localhost:5173","http://127.0.0.1:5173","https://localhost:5173"]
   allowedMethods: ["GET","POST","PUT","PATCH","DELETE","OPTIONS"]
   allowedHeaders: ["Authorization","Content-Type","X-Request-Id"]
   allowCredentials: true
@@ -79,7 +79,7 @@ rateLimit:
   capacity: 60
   refillRate: 60
   refillPeriod: 1m
-  prefix: ratelimit:
+  prefix: "ratelimit:"
 serviceRegistry:
   static:
     worksheet: https://localhost:9443
@@ -97,4 +97,3 @@ bootstrap:
   sysAdminPasswordEnv: SYS_ADMIN_PASSWORD
   sysAdminFirstNameEnv: SYS_ADMIN_FIRST_NAME
   sysAdminLastNameEnv: SYS_ADMIN_LAST_NAME
-

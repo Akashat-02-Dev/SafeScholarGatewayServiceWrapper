@@ -3,6 +3,8 @@ import type { FormEvent } from 'react'
 import { ApiError } from '../services/apiClient'
 import { useAuth } from '../services/authService'
 import { assignRoleToUser, listRoles, type RoleSummary } from '../services/roleService'
+import { motion } from 'framer-motion'
+import { CheckCircle2, RefreshCw, UserPlus, Users } from 'lucide-react'
 
 export function UserManagement() {
   const { tokens, hasPermission } = useAuth()
@@ -59,54 +61,67 @@ export function UserManagement() {
   }
 
   return (
-    <div style={{ padding: 16 }}>
-      <h2>User Management</h2>
-      <div style={{ fontSize: 12, opacity: 0.75 }}>
-        Assign roles by user id. Listing users is not exposed by the gateway API.
-      </div>
-
-      <div style={{ marginTop: 12 }}>
-        <button disabled={!accessToken || busy} onClick={() => void refreshRoles()}>
-          Refresh roles
-        </button>
-      </div>
-
-      {err ? (
-        <div style={{ marginTop: 12, color: 'crimson' }}>
-          {err}
-        </div>
-      ) : null}
-      {ok ? (
-        <div style={{ marginTop: 12, color: 'green' }}>
-          {ok}
-        </div>
-      ) : null}
-
-      <div style={{ marginTop: 16, maxWidth: 520 }}>
-        <form onSubmit={onAssign}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <label>
-              User ID (uuid)
-              <input value={userId} onChange={(e) => setUserId(e.target.value)} style={{ width: '100%' }} />
-            </label>
-            <label>
-              Role
-              <select value={roleId} onChange={(e) => setRoleId(e.target.value)} style={{ width: '100%' }}>
-                <option value="" />
-                {roles.map((r) => (
-                  <option key={r.roleId} value={r.roleId}>
-                    {r.name}
-                    {r.isSystem ? ' (system)' : ''}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button type="submit" disabled={!hasPermission('MANAGE_USERS') || !accessToken || busy || !userId.trim() || !roleId}>
-              Assign role
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: 'easeOut' }} className="page">
+      <div className="card">
+        <div className="cardInner">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div className="brandMark" style={{ width: 40, height: 40 }}>
+              <Users size={20} />
+            </div>
+            <div>
+              <h2 className="pageTitle">User Management</h2>
+              <div className="pageSub">Assign roles by user id. Listing users is not exposed by the gateway API.</div>
+            </div>
+            <div className="grow" />
+            <button className="btn btnGhost" disabled={!accessToken || busy} onClick={() => void refreshRoles()}>
+              <RefreshCw size={18} />
+              Refresh roles
             </button>
           </div>
-        </form>
+
+          {err ? (
+            <div className="toast toastError" style={{ marginTop: 12 }}>
+              {err}
+            </div>
+          ) : null}
+          {ok ? (
+            <div className="toast toastOk" style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <CheckCircle2 size={18} />
+              {ok}
+            </div>
+          ) : null}
+
+          <div className="divider" />
+
+          <div style={{ maxWidth: 560 }}>
+            <form onSubmit={onAssign}>
+              <div className="stack12">
+                <div className="field">
+                  <div className="label">User ID (uuid)</div>
+                  <input className="input" value={userId} onChange={(e) => setUserId(e.target.value)} />
+                </div>
+                <div className="field">
+                  <div className="label">Role</div>
+                  <select className="select" value={roleId} onChange={(e) => setRoleId(e.target.value)}>
+                    <option value="" />
+                    {roles.map((r) => (
+                      <option key={r.roleId} value={r.roleId}>
+                        {r.name}
+                        {r.isSystem ? ' (system)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                  {selectedRole ? <div className="pageSub">Selected: {selectedRole.name}</div> : null}
+                </div>
+                <button type="submit" className="btn btnPrimary" disabled={!hasPermission('MANAGE_USERS') || !accessToken || busy || !userId.trim() || !roleId}>
+                  <UserPlus size={18} />
+                  Assign role
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       </div>
-    </div>
+    </motion.div>
   )
 }

@@ -78,7 +78,7 @@ rateLimit:
   capacity: 1000
   refillRate: 1000
   refillPeriod: 1m
-  prefix: ratelimit:
+  prefix: "ratelimit:"
 serviceRegistry:
   static: {}
 security:
@@ -93,4 +93,3 @@ bootstrap:
   sysAdminPasswordEnv: SYS_ADMIN_PASSWORD
   sysAdminFirstNameEnv: SYS_ADMIN_FIRST_NAME
   sysAdminLastNameEnv: SYS_ADMIN_LAST_NAME
-

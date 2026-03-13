@@ -21,69 +21,69 @@ const (
 )
 
 type Config struct {
-	Env             Environment      `yaml:"env"`
-	Server          ServerConfig     `yaml:"server"`
-	Postgres        PostgresConfig   `yaml:"postgres"`
-	Redis           RedisConfig      `yaml:"redis"`
-	JWT             JWTConfig        `yaml:"jwt"`
-	OAuth           OAuthConfig      `yaml:"oauth"`
-	MTLS            MTLSConfig       `yaml:"mtls"`
-	CORS            CORSConfig       `yaml:"cors"`
-	RateLimit       RateLimitConfig  `yaml:"rateLimit"`
-	ServiceRegistry RegistryConfig   `yaml:"serviceRegistry"`
-	Security        SecurityConfig   `yaml:"security"`
-	Audit           AuditConfig      `yaml:"audit"`
-	Bootstrap       BootstrapConfig  `yaml:"bootstrap"`
+	Env             Environment     `yaml:"env"`
+	Server          ServerConfig    `yaml:"server"`
+	Postgres        PostgresConfig  `yaml:"postgres"`
+	Redis           RedisConfig     `yaml:"redis"`
+	JWT             JWTConfig       `yaml:"jwt"`
+	OAuth           OAuthConfig     `yaml:"oauth"`
+	MTLS            MTLSConfig      `yaml:"mtls"`
+	CORS            CORSConfig      `yaml:"cors"`
+	RateLimit       RateLimitConfig `yaml:"rateLimit"`
+	ServiceRegistry RegistryConfig  `yaml:"serviceRegistry"`
+	Security        SecurityConfig  `yaml:"security"`
+	Audit           AuditConfig     `yaml:"audit"`
+	Bootstrap       BootstrapConfig `yaml:"bootstrap"`
 }
 
 type ServerConfig struct {
-	Host                 string        `yaml:"host"`
-	Port                 int           `yaml:"port"`
-	ReadHeaderTimeout    time.Duration `yaml:"readHeaderTimeout"`
-	ReadTimeout          time.Duration `yaml:"readTimeout"`
-	WriteTimeout         time.Duration `yaml:"writeTimeout"`
-	IdleTimeout          time.Duration `yaml:"idleTimeout"`
-	MaxRequestBodyBytes  int64         `yaml:"maxRequestBodyBytes"`
-	TLSCertFile          string        `yaml:"tlsCertFile"`
-	TLSKeyFile           string        `yaml:"tlsKeyFile"`
-	TrustedProxyCIDRs    []string      `yaml:"trustedProxyCidrs"`
-	AllowedHostnames     []string      `yaml:"allowedHostnames"`
-	ExternalBaseURL      string        `yaml:"externalBaseUrl"`
+	Host                string        `yaml:"host"`
+	Port                int           `yaml:"port"`
+	ReadHeaderTimeout   time.Duration `yaml:"readHeaderTimeout"`
+	ReadTimeout         time.Duration `yaml:"readTimeout"`
+	WriteTimeout        time.Duration `yaml:"writeTimeout"`
+	IdleTimeout         time.Duration `yaml:"idleTimeout"`
+	MaxRequestBodyBytes int64         `yaml:"maxRequestBodyBytes"`
+	TLSCertFile         string        `yaml:"tlsCertFile"`
+	TLSKeyFile          string        `yaml:"tlsKeyFile"`
+	TrustedProxyCIDRs   []string      `yaml:"trustedProxyCidrs"`
+	AllowedHostnames    []string      `yaml:"allowedHostnames"`
+	ExternalBaseURL     string        `yaml:"externalBaseUrl"`
 }
 
 type PostgresConfig struct {
-	ConnString        string `yaml:"connString"`
-	AppName           string `yaml:"appName"`
-	MaxConns          int32  `yaml:"maxConns"`
-	MinConns          int32  `yaml:"minConns"`
+	ConnString        string        `yaml:"connString"`
+	AppName           string        `yaml:"appName"`
+	MaxConns          int32         `yaml:"maxConns"`
+	MinConns          int32         `yaml:"minConns"`
 	HealthCheckPeriod time.Duration `yaml:"healthCheckPeriod"`
 }
 
 type RedisConfig struct {
-	Addr     string        `yaml:"addr"`
-	Username string        `yaml:"username"`
-	Password string        `yaml:"password"`
-	DB       int           `yaml:"db"`
-	UseTLS   bool          `yaml:"useTls"`
+	Addr         string        `yaml:"addr"`
+	Username     string        `yaml:"username"`
+	Password     string        `yaml:"password"`
+	DB           int           `yaml:"db"`
+	UseTLS       bool          `yaml:"useTls"`
 	DialTimeout  time.Duration `yaml:"dialTimeout"`
 	ReadTimeout  time.Duration `yaml:"readTimeout"`
 	WriteTimeout time.Duration `yaml:"writeTimeout"`
 }
 
 type JWTConfig struct {
-	Issuer              string        `yaml:"issuer"`
-	Audience            string        `yaml:"audience"`
-	PrivateKeyPEMFile   string        `yaml:"privateKeyPemFile"`
-	PublicKeyPEMFile    string        `yaml:"publicKeyPemFile"`
-	AccessTokenTTL      time.Duration `yaml:"accessTokenTtl"`
-	RefreshTokenTTL     time.Duration `yaml:"refreshTokenTtl"`
-	ServiceTokenTTL     time.Duration `yaml:"serviceTokenTtl"`
-	ClockSkew           time.Duration `yaml:"clockSkew"`
+	Issuer            string        `yaml:"issuer"`
+	Audience          string        `yaml:"audience"`
+	PrivateKeyPEMFile string        `yaml:"privateKeyPemFile"`
+	PublicKeyPEMFile  string        `yaml:"publicKeyPemFile"`
+	AccessTokenTTL    time.Duration `yaml:"accessTokenTtl"`
+	RefreshTokenTTL   time.Duration `yaml:"refreshTokenTtl"`
+	ServiceTokenTTL   time.Duration `yaml:"serviceTokenTtl"`
+	ClockSkew         time.Duration `yaml:"clockSkew"`
 }
 
 type OAuthConfig struct {
-	StateCookieName string `yaml:"stateCookieName"`
-	StateTTL        time.Duration `yaml:"stateTtl"`
+	StateCookieName string              `yaml:"stateCookieName"`
+	StateTTL        time.Duration       `yaml:"stateTtl"`
 	Google          OAuthProviderConfig `yaml:"google"`
 	Microsoft       OAuthProviderConfig `yaml:"microsoft"`
 	Apple           OAuthProviderConfig `yaml:"apple"`
@@ -99,20 +99,20 @@ type OAuthProviderConfig struct {
 }
 
 type MTLSConfig struct {
-	Enabled          bool   `yaml:"enabled"`
-	ClientCertFile   string `yaml:"clientCertFile"`
-	ClientKeyFile    string `yaml:"clientKeyFile"`
-	CACertFile       string `yaml:"caCertFile"`
-	MinVersion       uint16 `yaml:"minVersion"`
-	ServerName       string `yaml:"serverName"`
+	Enabled        bool   `yaml:"enabled"`
+	ClientCertFile string `yaml:"clientCertFile"`
+	ClientKeyFile  string `yaml:"clientKeyFile"`
+	CACertFile     string `yaml:"caCertFile"`
+	MinVersion     uint16 `yaml:"minVersion"`
+	ServerName     string `yaml:"serverName"`
 }
 
 type CORSConfig struct {
-	AllowedOrigins []string `yaml:"allowedOrigins"`
-	AllowedMethods []string `yaml:"allowedMethods"`
-	AllowedHeaders []string `yaml:"allowedHeaders"`
-	AllowCredentials bool   `yaml:"allowCredentials"`
-	MaxAgeSeconds int      `yaml:"maxAgeSeconds"`
+	AllowedOrigins   []string `yaml:"allowedOrigins"`
+	AllowedMethods   []string `yaml:"allowedMethods"`
+	AllowedHeaders   []string `yaml:"allowedHeaders"`
+	AllowCredentials bool     `yaml:"allowCredentials"`
+	MaxAgeSeconds    int      `yaml:"maxAgeSeconds"`
 }
 
 type RateLimitConfig struct {
@@ -128,10 +128,10 @@ type RegistryConfig struct {
 }
 
 type SecurityConfig struct {
-	RequireTLSInDev         bool          `yaml:"requireTlsInDev"`
-	AllowedClockSkew        time.Duration `yaml:"allowedClockSkew"`
-	StrictTransportMaxAge   int           `yaml:"strictTransportMaxAge"`
-	ContentSecurityPolicy   string        `yaml:"contentSecurityPolicy"`
+	RequireTLSInDev       bool          `yaml:"requireTlsInDev"`
+	AllowedClockSkew      time.Duration `yaml:"allowedClockSkew"`
+	StrictTransportMaxAge int           `yaml:"strictTransportMaxAge"`
+	ContentSecurityPolicy string        `yaml:"contentSecurityPolicy"`
 }
 
 type AuditConfig struct {
@@ -139,8 +139,8 @@ type AuditConfig struct {
 }
 
 type BootstrapConfig struct {
-	SysAdminEmailEnv    string `yaml:"sysAdminEmailEnv"`
-	SysAdminPasswordEnv string `yaml:"sysAdminPasswordEnv"`
+	SysAdminEmailEnv     string `yaml:"sysAdminEmailEnv"`
+	SysAdminPasswordEnv  string `yaml:"sysAdminPasswordEnv"`
 	SysAdminFirstNameEnv string `yaml:"sysAdminFirstNameEnv"`
 	SysAdminLastNameEnv  string `yaml:"sysAdminLastNameEnv"`
 }
@@ -234,4 +234,3 @@ func validateCertFileIfSet(path string) error {
 	}
 	return nil
 }
-

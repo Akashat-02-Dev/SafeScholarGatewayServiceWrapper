@@ -3,6 +3,8 @@ import type { FormEvent } from 'react'
 import { ApiError } from '../services/apiClient'
 import { useAuth } from '../services/authService'
 import { assignPermission, createRole, listRoles, type RoleSummary } from '../services/roleService'
+import { motion } from 'framer-motion'
+import { CheckCircle2, KeyRound, Plus, RefreshCw, Shield, Wand2 } from 'lucide-react'
 
 const immutablePermissions = [
   'VIEW_DASHBOARD',
@@ -20,6 +22,7 @@ export function RoleManagement() {
 
   const [roles, setRoles] = useState<RoleSummary[]>([])
   const [err, setErr] = useState<string | null>(null)
+  const [ok, setOk] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
   const [name, setName] = useState('')
@@ -35,6 +38,7 @@ export function RoleManagement() {
     void (async () => {
       try {
         setErr(null)
+        setOk(null)
         const data = await listRoles(accessToken)
         setRoles(data.roles || [])
       } catch (e) {
@@ -44,6 +48,7 @@ export function RoleManagement() {
         } else {
           setErr(e instanceof Error ? e.message : 'request failed')
         }
+        setOk(null)
         setRoles([])
       }
     })()
@@ -53,6 +58,7 @@ export function RoleManagement() {
     if (!accessToken) return
     try {
       setErr(null)
+      setOk(null)
       const data = await listRoles(accessToken)
       setRoles(data.roles || [])
     } catch (e) {
@@ -62,6 +68,7 @@ export function RoleManagement() {
       } else {
         setErr(e instanceof Error ? e.message : 'request failed')
       }
+      setOk(null)
     }
   }
 
@@ -74,6 +81,7 @@ export function RoleManagement() {
       await createRole(accessToken, name, description)
       setName('')
       setDescription('')
+      setOk('Role created.')
       await refresh()
     } catch (e2) {
       if (e2 instanceof ApiError) {
@@ -82,6 +90,7 @@ export function RoleManagement() {
       } else {
         setErr(e2 instanceof Error ? e2.message : 'request failed')
       }
+      setOk(null)
     } finally {
       setBusy(false)
     }
@@ -95,6 +104,7 @@ export function RoleManagement() {
     try {
       await assignPermission(accessToken, assignRoleId, assignPerm)
       setAssignPerm('')
+      setOk('Permission assigned.')
     } catch (e2) {
       if (e2 instanceof ApiError) {
         const rid = e2.requestId ? ` (requestId: ${e2.requestId})` : ''
@@ -102,97 +112,137 @@ export function RoleManagement() {
       } else {
         setErr(e2 instanceof Error ? e2.message : 'request failed')
       }
+      setOk(null)
     } finally {
       setBusy(false)
     }
   }
 
   return (
-    <div style={{ padding: 16 }}>
-      <h2>Role Management</h2>
-      {err ? <div style={{ color: 'crimson', marginBottom: 12 }}>{err}</div> : null}
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
-        <div>
-          <h3>Existing</h3>
-          <button onClick={() => void refresh()} disabled={!accessToken || busy}>
-            Refresh
-          </button>
-          <ul>
-            {roles.map((r) => (
-              <li key={r.roleId}>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <strong>{r.name}</strong>
-                  {r.isSystem ? <span>(system)</span> : null}
-                </div>
-                <div style={{ fontSize: 12, opacity: 0.8 }}>{r.roleId}</div>
-                {r.description ? <div>{r.description}</div> : null}
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-          <div>
-            <h3>Create</h3>
-            <form onSubmit={onCreate}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <label>
-                  Name
-                  <input value={name} onChange={(e) => setName(e.target.value)} style={{ width: '100%' }} />
-                </label>
-                <label>
-                  Description
-                  <input
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    style={{ width: '100%' }}
-                  />
-                </label>
-                <button type="submit" disabled={!accessToken || busy}>
-                  Create role
-                </button>
-              </div>
-            </form>
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: 'easeOut' }} className="page">
+      <div className="card">
+        <div className="cardInner">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div className="brandMark" style={{ width: 40, height: 40 }}>
+              <Shield size={20} />
+            </div>
+            <div>
+              <h2 className="pageTitle">Role Management</h2>
+              <div className="pageSub">Create roles and assign permission codes.</div>
+            </div>
+            <div className="grow" />
+            <button onClick={() => void refresh()} disabled={!accessToken || busy} className="btn btnGhost">
+              <RefreshCw size={18} />
+              Refresh
+            </button>
           </div>
 
-          <div>
-            <h3>Assign Permission</h3>
-            <form onSubmit={onAssignPermission}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <label>
-                  Role
-                  <select value={assignRoleId} onChange={(e) => setAssignRoleId(e.target.value)}>
-                    <option value="" />
-                    {roles.map((r) => (
-                      <option key={r.roleId} value={r.roleId} disabled={r.isSystem}>
-                        {r.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  Permission code
-                  <select value={assignPerm} onChange={(e) => setAssignPerm(e.target.value)} style={{ width: '100%' }}>
-                    <option value="" />
-                    {immutablePermissions.map((p) => (
-                      <option key={p} value={p}>
-                        {p}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <button type="submit" disabled={!hasPermission('MANAGE_PERMISSIONS') || !accessToken || busy || !assignRoleId || !assignPerm}>
-                  Assign to {selectedRole ? selectedRole.name : 'role'}
-                </button>
+          {err ? (
+            <div className="toast toastError" style={{ marginTop: 12 }}>
+              {err}
+            </div>
+          ) : null}
+          {ok ? (
+            <div className="toast toastOk" style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <CheckCircle2 size={18} />
+              {ok}
+            </div>
+          ) : null}
+
+          <div className="divider" />
+
+          <div className="grid2">
+            <div className="toast">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <Wand2 size={18} />
+                <div style={{ fontWeight: 700, letterSpacing: '-0.01em' }}>Existing roles</div>
+                <div className="grow" />
+                <div className="pageSub" style={{ marginTop: 0 }}>{roles.length} total</div>
               </div>
-            </form>
-            {!hasPermission('MANAGE_PERMISSIONS') ? (
-              <div style={{ fontSize: 12, opacity: 0.8, marginTop: 8 }}>Missing permission: MANAGE_PERMISSIONS</div>
-            ) : null}
+              <div className="divider" />
+              <div className="stack12">
+                {roles.map((r) => (
+                  <div key={r.roleId} className="toast" style={{ background: 'rgba(255,255,255,0.64)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span className="chip" style={{ fontWeight: 650 }}>{r.name}</span>
+                      {r.isSystem ? <span className="chip">system</span> : null}
+                    </div>
+                    <div className="pageSub mono" style={{ marginTop: 10 }}>{r.roleId}</div>
+                    {r.description ? <div className="pageSub" style={{ marginTop: 8 }}>{r.description}</div> : null}
+                  </div>
+                ))}
+                {roles.length === 0 ? <div className="pageSub">No roles found.</div> : null}
+              </div>
+            </div>
+
+            <div className="stack12">
+              <div className="toast">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <Plus size={18} />
+                  <div style={{ fontWeight: 700, letterSpacing: '-0.01em' }}>Create role</div>
+                </div>
+                <div className="divider" />
+                <form onSubmit={onCreate}>
+                  <div className="stack12">
+                    <div className="field">
+                      <div className="label">Name</div>
+                      <input className="input" value={name} onChange={(e) => setName(e.target.value)} />
+                    </div>
+                    <div className="field">
+                      <div className="label">Description</div>
+                      <input className="input" value={description} onChange={(e) => setDescription(e.target.value)} />
+                    </div>
+                    <button type="submit" className="btn btnPrimary" disabled={!accessToken || busy}>
+                      <Plus size={18} />
+                      Create role
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              <div className="toast">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <KeyRound size={18} />
+                  <div style={{ fontWeight: 700, letterSpacing: '-0.01em' }}>Assign permission</div>
+                </div>
+                <div className="divider" />
+                <form onSubmit={onAssignPermission}>
+                  <div className="stack12">
+                    <div className="field">
+                      <div className="label">Role</div>
+                      <select className="select" value={assignRoleId} onChange={(e) => setAssignRoleId(e.target.value)}>
+                        <option value="" />
+                        {roles.map((r) => (
+                          <option key={r.roleId} value={r.roleId} disabled={r.isSystem}>
+                            {r.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="field">
+                      <div className="label">Permission code</div>
+                      <select className="select" value={assignPerm} onChange={(e) => setAssignPerm(e.target.value)}>
+                        <option value="" />
+                        {immutablePermissions.map((p) => (
+                          <option key={p} value={p}>
+                            {p}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <button type="submit" className="btn btnGold" disabled={!hasPermission('MANAGE_PERMISSIONS') || !accessToken || busy || !assignRoleId || !assignPerm}>
+                      Assign to {selectedRole ? selectedRole.name : 'role'}
+                    </button>
+                    {!hasPermission('MANAGE_PERMISSIONS') ? (
+                      <div className="pageSub">Missing permission: MANAGE_PERMISSIONS</div>
+                    ) : null}
+                  </div>
+                </form>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   )
 }

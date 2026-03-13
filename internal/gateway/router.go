@@ -276,6 +276,11 @@ func (r *Router) handleAdmin(w http.ResponseWriter, req *http.Request, prefix st
 		return
 	}
 	uc := middleware.UserContextFromContext(req.Context())
+	ip := middleware.ClientIP(req)
+	ipStr := ""
+	if ip != nil {
+		ipStr = ip.String()
+	}
 	actor := rbac.ActorContext{
 		UserID:        uc.UserID,
 		InstitutionID: uc.InstitutionID,
@@ -284,7 +289,7 @@ func (r *Router) handleAdmin(w http.ResponseWriter, req *http.Request, prefix st
 		RoleNames:     uc.Roles,
 		Permissions:   uc.Permissions,
 		CorrelationID: middleware.CorrelationIDFromContext(req.Context()),
-		IP:            middleware.ClientIP(req).String(),
+		IP:            ipStr,
 		UserAgent:     req.UserAgent(),
 	}
 
@@ -307,7 +312,24 @@ func (r *Router) handleAdmin(w http.ResponseWriter, req *http.Request, prefix st
 			}
 			roleID, err := r.roleSvc.CreateRole(req.Context(), actor, cr.Name, cr.Description)
 			if err != nil {
-				w.WriteHeader(http.StatusForbidden)
+				if r.logger != nil {
+					r.logger.Error("create role failed",
+						"error", err.Error(),
+						"userId", actor.UserID,
+						"institutionId", actor.InstitutionID,
+						"requestId", actor.CorrelationID,
+					)
+				}
+				msg := strings.ToLower(strings.TrimSpace(err.Error()))
+				if msg == "forbidden" {
+					w.WriteHeader(http.StatusForbidden)
+					return
+				}
+				if strings.Contains(msg, "required") || strings.Contains(msg, "too long") || strings.Contains(msg, "invalid") {
+					w.WriteHeader(http.StatusBadRequest)
+					return
+				}
+				w.WriteHeader(http.StatusInternalServerError)
 				return
 			}
 			writeJSON(w, http.StatusCreated, map[string]any{"roleId": roleID})

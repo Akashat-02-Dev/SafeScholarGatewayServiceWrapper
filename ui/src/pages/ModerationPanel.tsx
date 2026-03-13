@@ -2,6 +2,8 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { ApiError, apiFetch } from '../services/apiClient'
 import { useAuth } from '../services/authService'
+import { motion } from 'framer-motion'
+import { Flag, Megaphone, SendHorizonal, ShieldCheck } from 'lucide-react'
 
 type ModerationAction = 'approve' | 'reject' | 'flag'
 
@@ -46,49 +48,68 @@ export function ModerationPanel() {
   }
 
   return (
-    <div style={{ padding: 16 }}>
-      <h2>Moderation Panel</h2>
-      <div style={{ fontSize: 12, opacity: 0.75 }}>
-        Sends moderation actions through the gateway proxy to the moderation service.
-      </div>
-
-      {err ? (
-        <div style={{ marginTop: 12, color: 'crimson' }}>
-          {err}
-        </div>
-      ) : null}
-      {result ? (
-        <div style={{ marginTop: 12 }}>
-          <div style={{ fontSize: 12, opacity: 0.75 }}>Response</div>
-          <pre style={{ whiteSpace: 'pre-wrap' }}>{result}</pre>
-        </div>
-      ) : null}
-
-      <div style={{ marginTop: 16, maxWidth: 520 }}>
-        <form onSubmit={onSubmit}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <label>
-              Content ID (uuid)
-              <input value={contentId} onChange={(e) => setContentId(e.target.value)} style={{ width: '100%' }} />
-            </label>
-            <label>
-              Action
-              <select value={action} onChange={(e) => setAction(e.target.value as ModerationAction)} style={{ width: '100%' }}>
-                <option value="approve">approve</option>
-                <option value="reject">reject</option>
-                <option value="flag">flag</option>
-              </select>
-            </label>
-            <label>
-              Reason (optional)
-              <input value={reason} onChange={(e) => setReason(e.target.value)} style={{ width: '100%' }} />
-            </label>
-            <button type="submit" disabled={!hasPermission('MODERATE_CONTENT') || !accessToken || busy || !contentId.trim()}>
-              Submit action
-            </button>
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: 'easeOut' }} className="page">
+      <div className="card">
+        <div className="cardInner">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div className="brandMark" style={{ width: 40, height: 40 }}>
+              <ShieldCheck size={20} />
+            </div>
+            <div>
+              <h2 className="pageTitle">Moderation Panel</h2>
+              <div className="pageSub">Send moderation actions via the gateway proxy.</div>
+            </div>
           </div>
-        </form>
+
+          {err ? (
+            <div className="toast toastError" style={{ marginTop: 12 }}>
+              {err}
+            </div>
+          ) : null}
+
+          {result ? (
+            <div className="toast" style={{ marginTop: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <Megaphone size={18} />
+                <div style={{ fontWeight: 700, letterSpacing: '-0.01em' }}>Response</div>
+              </div>
+              <div className="divider" />
+              <pre style={{ whiteSpace: 'pre-wrap', margin: 0 }}>{result}</pre>
+            </div>
+          ) : null}
+
+          <div className="divider" />
+
+          <div style={{ maxWidth: 640 }}>
+            <form onSubmit={onSubmit}>
+              <div className="stack12">
+                <div className="field">
+                  <div className="label">Content ID (uuid)</div>
+                  <input className="input" value={contentId} onChange={(e) => setContentId(e.target.value)} />
+                </div>
+                <div className="grid2">
+                  <div className="field">
+                    <div className="label">Action</div>
+                    <select className="select" value={action} onChange={(e) => setAction(e.target.value as ModerationAction)}>
+                      <option value="approve">approve</option>
+                      <option value="reject">reject</option>
+                      <option value="flag">flag</option>
+                    </select>
+                  </div>
+                  <div className="field">
+                    <div className="label">Reason (optional)</div>
+                    <input className="input" value={reason} onChange={(e) => setReason(e.target.value)} />
+                  </div>
+                </div>
+                <button type="submit" className="btn btnPrimary" disabled={!hasPermission('MODERATE_CONTENT') || !accessToken || busy || !contentId.trim()}>
+                  {action === 'flag' ? <Flag size={18} /> : <SendHorizonal size={18} />}
+                  Submit action
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       </div>
-    </div>
+    </motion.div>
   )
 }

@@ -1,27 +1,48 @@
 import { Link } from 'react-router-dom'
 import { useAuth } from '../services/authService'
+import { motion } from 'framer-motion'
+import { LogOut, UserRound } from 'lucide-react'
 
 export function Navbar() {
-  const { status, me, logout, hasPermission } = useAuth()
+  const { status, me, logout } = useAuth()
 
   return (
-    <div style={{ padding: 12, borderBottom: '1px solid #e5e5e5', background: '#fff' }}>
-      <div style={{ maxWidth: 1100, margin: '0 auto', display: 'flex', gap: 12, alignItems: 'center' }}>
-        <Link to="/dashboard" style={{ fontWeight: 700 }}>
-          SafeScholar
-        </Link>
-        <div style={{ flex: 1 }} />
-        {status === 'authenticated' ? (
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-            <div style={{ fontSize: 12, opacity: 0.75 }}>{me?.email}</div>
-            {hasPermission('MANAGE_ROLES') ? <Link to="/role-management">Roles</Link> : null}
-            {hasPermission('MANAGE_USERS') ? <Link to="/user-management">Users</Link> : null}
-            {hasPermission('MODERATE_CONTENT') ? <Link to="/moderation">Moderation</Link> : null}
-            <button onClick={() => void logout()}>Logout</button>
-          </div>
-        ) : (
-          <Link to="/login">Login</Link>
-        )}
+    <div className="topbar">
+      <div className="container">
+        <div className="topbarInner">
+          <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: 'easeOut' }}>
+            <Link to="/dashboard" className="brand">
+              <span className="brandMark">
+                <img className="brandLogo" src="/main-logo.png" alt="SafeScholar" />
+              </span>
+              SafeScholar
+            </Link>
+          </motion.div>
+
+          <div className="grow" />
+
+          {status === 'authenticated' ? (
+            <motion.div
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35, ease: 'easeOut', delay: 0.05 }}
+              style={{ display: 'flex', alignItems: 'center', gap: 10 }}
+            >
+              <div className="chip">
+                <UserRound size={16} color="rgba(0, 45, 91, 0.8)" />
+                <div style={{ fontSize: 12, fontWeight: 650, color: 'rgba(0, 45, 91, 0.88)' }}>{me?.email}</div>
+              </div>
+
+              <button className="btn btnPrimary iconBtn" onClick={() => void logout()} aria-label="Logout">
+                <LogOut size={18} />
+              </button>
+            </motion.div>
+          ) : (
+            <Link to="/login" className="btn btnPrimary">
+              Sign in
+            </Link>
+          )}
+        </div>
       </div>
     </div>
   )

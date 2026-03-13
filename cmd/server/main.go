@@ -2,15 +2,22 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
 	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"log/slog"
+	"math/big"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -34,6 +41,9 @@ func main() {
 
 	cfg, err := config.Load()
 	if err != nil {
+		fatal(err)
+	}
+	if err := ensureDevCryptoMaterial(cfg); err != nil {
 		fatal(err)
 	}
 
@@ -198,4 +208,125 @@ func validateStartupSecurity(cfg config.Config) error {
 	}
 
 	return nil
+}
+
+func ensureDevCryptoMaterial(cfg config.Config) error {
+	if cfg.Env != config.EnvDev {
+		return nil
+	}
+
+	if strings.TrimSpace(cfg.JWT.PrivateKeyPEMFile) != "" && strings.TrimSpace(cfg.JWT.PublicKeyPEMFile) != "" {
+		privMissing := !fileExists(cfg.JWT.PrivateKeyPEMFile)
+		pubMissing := !fileExists(cfg.JWT.PublicKeyPEMFile)
+		if privMissing || pubMissing {
+			if err := generateJWTKeypair(cfg.JWT.PrivateKeyPEMFile, cfg.JWT.PublicKeyPEMFile); err != nil {
+				return err
+			}
+		}
+	}
+
+	if strings.TrimSpace(cfg.Server.TLSCertFile) != "" && strings.TrimSpace(cfg.Server.TLSKeyFile) != "" {
+		certMissing := !fileExists(cfg.Server.TLSCertFile)
+		keyMissing := !fileExists(cfg.Server.TLSKeyFile)
+		if certMissing || keyMissing {
+			if err := generateDevTLSCert(cfg.Server.TLSCertFile, cfg.Server.TLSKeyFile); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func fileExists(path string) bool {
+	p := strings.TrimSpace(path)
+	if p == "" {
+		return false
+	}
+	_, err := os.Stat(filepath.Clean(p))
+	return err == nil
+}
+
+func generateJWTKeypair(privatePath, publicPath string) error {
+	privKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return err
+	}
+
+	privBlock := &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(privKey)}
+	pubBytes, err := x509.MarshalPKIXPublicKey(&privKey.PublicKey)
+	if err != nil {
+		return err
+	}
+	pubBlock := &pem.Block{Type: "PUBLIC KEY", Bytes: pubBytes}
+
+	if err := writePEMFile(privatePath, privBlock, 0o600); err != nil {
+		return err
+	}
+	if err := writePEMFile(publicPath, pubBlock, 0o644); err != nil {
+		return err
+	}
+	return nil
+}
+
+func generateDevTLSCert(certPath, keyPath string) error {
+	privKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return err
+	}
+
+	serialLimit := new(big.Int).Lsh(big.NewInt(1), 128)
+	serial, err := rand.Int(rand.Reader, serialLimit)
+	if err != nil {
+		return err
+	}
+
+	now := time.Now().UTC()
+	template := x509.Certificate{
+		SerialNumber: serial,
+		Subject: pkix.Name{
+			CommonName: "localhost",
+		},
+		NotBefore:             now.Add(-1 * time.Hour),
+		NotAfter:              now.Add(365 * 24 * time.Hour),
+		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+		DNSNames:              []string{"localhost"},
+		IPAddresses:           []net.IP{net.ParseIP("127.0.0.1"), net.ParseIP("::1")},
+	}
+
+	der, err := x509.CreateCertificate(rand.Reader, &template, &template, &privKey.PublicKey, privKey)
+	if err != nil {
+		return err
+	}
+
+	certBlock := &pem.Block{Type: "CERTIFICATE", Bytes: der}
+	keyBlock := &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(privKey)}
+
+	if err := writePEMFile(certPath, certBlock, 0o644); err != nil {
+		return err
+	}
+	if err := writePEMFile(keyPath, keyBlock, 0o600); err != nil {
+		return err
+	}
+	return nil
+}
+
+func writePEMFile(path string, block *pem.Block, perm os.FileMode) error {
+	p := filepath.Clean(strings.TrimSpace(path))
+	if p == "" || block == nil {
+		return errors.New("invalid pem write")
+	}
+	if dir := filepath.Dir(p); strings.TrimSpace(dir) != "" && dir != "." {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			return err
+		}
+	}
+	f, err := os.OpenFile(p, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, perm)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = f.Close() }()
+	return pem.Encode(f, block)
 }
