@@ -34,3 +34,53 @@ export async function assignRoleToUser(accessToken: string, userId: string, role
     body: { userId, roleId },
   })
 }
+
+export type UserSummary = {
+  userId: string
+  institutionId: string
+  email: string
+  firstName: string
+  lastName: string
+  status: string
+  isSysAdmin: boolean
+  roles: string[]
+}
+
+export async function listUsers(accessToken: string) {
+  return apiFetch<{ users: UserSummary[] }>('/api/admin/users', { method: 'GET', accessToken })
+}
+
+export async function approveUser(accessToken: string, userId: string, status: string, roleId?: string) {
+  return apiFetch<void>('/api/admin/users/approve', {
+    method: 'POST',
+    accessToken,
+    body: { userId, status, roleId },
+  })
+}
+
+export interface ApprovalRequest {
+  requestId: string
+  userId: string
+  email: string
+  firstName: string
+  lastName: string
+  requestedRole: string
+  status: string
+  createdAt: string
+}
+
+export async function listApprovalRequests(accessToken: string) {
+  return apiFetch<{ requests: ApprovalRequest[] }>('/api/admin/users/approvals', { method: 'GET', accessToken })
+}
+
+export async function deleteUser(accessToken: string, userId: string) {
+  return apiFetch<void>('/api/v1/admin/users/delete', {
+    method: 'POST',
+    accessToken,
+    body: { userId },
+  })
+}
+
+export async function isolateUser(accessToken: string, userId: string) {
+  return deleteUser(accessToken, userId)
+}

@@ -9,6 +9,14 @@ import { LoginPage } from './pages/LoginPage'
 import { ModerationPanel } from './pages/ModerationPanel'
 import { RoleManagement } from './pages/RoleManagement'
 import { UserManagement } from './pages/UserManagement'
+import { SocraticTutorPage } from './pages/SocraticTutorPage'
+import LessonPlanner from './pages/ai/LessonPlanner'
+import TextLeveler from './pages/ai/TextLeveler'
+import VideoAssessor from './pages/ai/VideoAssessor'
+import IepGenerator from './pages/ai/IepGenerator'
+import { RAGIngestionPanel } from './pages/admin/RAGIngestionPanel'
+import { InstitutionAdminDashboard } from './pages/admin/InstitutionAdminDashboard'
+import { SuperAdminDashboard } from './pages/superadmin/SuperAdminDashboard'
 
 function AuthedLayout({ children }: { children: ReactNode }) {
   return (
@@ -40,6 +48,94 @@ function App() {
               </AuthedLayout>
             }
           />
+
+          <Route element={<RoleGuard requiredPermissions={['EXECUTE_AI_TUTOR']} />}>
+            <Route
+              path="/socratic-tutor"
+              element={
+                <AuthedLayout>
+                  <SocraticTutorPage sessionId="student-sandbox-session-101" />
+                </AuthedLayout>
+              }
+            />
+          </Route>
+
+          <Route element={<RoleGuard requiredPermissions={['GENERATE_LESSON_PLAN']} />}>
+            <Route
+              path="/ai/lesson-planner"
+              element={
+                <AuthedLayout>
+                  <LessonPlanner />
+                </AuthedLayout>
+              }
+            />
+          </Route>
+
+          <Route element={<RoleGuard requiredPermissions={['USE_TEXT_LEVELER']} />}>
+            <Route
+              path="/ai/leveler"
+              element={
+                <AuthedLayout>
+                  <TextLeveler />
+                </AuthedLayout>
+              }
+            />
+          </Route>
+
+          <Route element={<RoleGuard requiredPermissions={['USE_VIDEO_ASSESSOR']} />}>
+            <Route
+              path="/ai/video-assessor"
+              element={
+                <AuthedLayout>
+                  <VideoAssessor />
+                </AuthedLayout>
+              }
+            />
+          </Route>
+
+          <Route element={<RoleGuard requiredPermissions={['GENERATE_IEP_RUBRIC']} />}>
+            <Route
+              path="/ai/iep-generator"
+              element={
+                <AuthedLayout>
+                  <IepGenerator />
+                </AuthedLayout>
+              }
+            />
+          </Route>
+
+          <Route element={<RoleGuard requiredPermissions={['MANAGE_GLOBAL_TENANTS']} />}>
+            <Route
+              path="/superadmin/dashboard"
+              element={
+                <AuthedLayout>
+                  <SuperAdminDashboard />
+                </AuthedLayout>
+              }
+            />
+          </Route>
+
+          <Route element={<RoleGuard requiredPermissions={['MANAGE_LOCAL_ROLES']} />}>
+            <Route
+              path="/admin/dashboard"
+              element={
+                <AuthedLayout>
+                  <InstitutionAdminDashboard />
+                </AuthedLayout>
+              }
+            />
+          </Route>
+
+          <Route element={<RoleGuard requiredPermissions={['MANAGE_DISTRICT_AI_KNOWLEDGE']} />}>
+            <Route
+              path="/rag-ingestion"
+              element={
+                <AuthedLayout>
+                  <RAGIngestionPanel />
+                </AuthedLayout>
+              }
+            />
+          </Route>
 
           <Route element={<RoleGuard requiredPermissions={['MANAGE_USERS']} />}>
             <Route

@@ -7,13 +7,24 @@ import { motion } from 'framer-motion'
 import { CheckCircle2, KeyRound, Plus, RefreshCw, Shield, Wand2 } from 'lucide-react'
 
 const immutablePermissions = [
-  'VIEW_DASHBOARD',
+  'SUPER_ADMIN',
   'MANAGE_USERS',
   'MANAGE_ROLES',
-  'MANAGE_PERMISSIONS',
+  'CREATE_ROLE',
+  'ASSIGN_ROLE',
+  'ASSIGN_PERMISSION',
   'VIEW_WORKSHEET',
   'VIEW_ASSESSMENT',
   'MODERATE_CONTENT',
+  'EXECUTE_AI_TUTOR',
+  'GENERATE_LESSON_PLAN',
+  'USE_TEXT_LEVELER',
+  'USE_VIDEO_ASSESSOR',
+  'GENERATE_IEP_RUBRIC',
+  'MANAGE_DISTRICT_AI_KNOWLEDGE',
+  'VIEW_AI_AUDIT_LOGS',
+  'MANAGE_GLOBAL_TENANTS',
+  'MANAGE_LOCAL_ROLES',
 ] as const
 
 export function RoleManagement() {

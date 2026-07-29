@@ -67,6 +67,8 @@ export async function apiFetch<T>(path: string, init: ApiFetchInit = {}): Promis
   const requestId = (init.requestId || createRequestId()).trim()
   if (requestId) {
     headers.set('X-Request-Id', requestId)
+    headers.set('X-Correlation-ID', requestId)
+    headers.set('X-SS-Correlation-ID', requestId)
   }
 
   if (init.accessToken) {

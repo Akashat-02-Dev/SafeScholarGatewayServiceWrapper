@@ -3,7 +3,9 @@ package clients
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
@@ -172,4 +174,34 @@ func escapeJSON(s string) string {
 	s = strings.ReplaceAll(s, "\r", "\\r")
 	s = strings.ReplaceAll(s, "\t", "\\t")
 	return s
+}
+
+func (c *ModerationClient) CheckContent(ctx context.Context, req *contracts.ModerationCheckRequest) (*contracts.ModerationCheckResponse, error) {
+	if req == nil {
+		return nil, errors.New("request required")
+	}
+	body, err := json.Marshal(req)
+	if err != nil {
+		return nil, err
+	}
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, "/moderation/check", bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	httpReq.Header.Set("Content-Type", "application/json")
+	resp, err := c.Do(ctx, httpReq)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("moderation service returned status %d", resp.StatusCode)
+	}
+
+	var res contracts.ModerationCheckResponse
+	if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
+		return nil, err
+	}
+	return &res, nil
 }

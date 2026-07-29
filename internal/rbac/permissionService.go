@@ -9,6 +9,26 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+// AiOS Atomic Permission Constants
+const (
+	// Student Workspace Permissions
+	PermissionExecuteAITutor     = "EXECUTE_AI_TUTOR"
+	
+	// Educator Workspace Permissions
+	PermissionGenerateLesson     = "GENERATE_LESSON_PLAN"
+	PermissionUseLeveler         = "USE_TEXT_LEVELER"
+	PermissionUseVideoAssessor   = "USE_VIDEO_ASSESSOR"
+	PermissionGenerateIEP        = "GENERATE_IEP_RUBRIC"
+	
+	// District / Administrative Permissions
+	PermissionManageDistrictAI   = "MANAGE_DISTRICT_AI_KNOWLEDGE"
+	PermissionViewAIAudits       = "VIEW_AI_AUDIT_LOGS"
+
+	// Multi-tenant Governance Permissions
+	PermissionManageGlobalTenants = "MANAGE_GLOBAL_TENANTS"
+	PermissionManageLocalRoles    = "MANAGE_LOCAL_ROLES"
+)
+
 type PermissionDefinition struct {
 	Name        string
 	Description string
@@ -35,12 +55,30 @@ func (s *PermissionService) ImmutableDefinitions() []PermissionDefinition {
 		{Name: "SUPER_ADMIN", Description: "Global super administrator", Module: "core"},
 		{Name: "CREATE_USER", Description: "Create users", Module: "users"},
 		{Name: "DELETE_USER", Description: "Delete users", Module: "users"},
+		{Name: "MANAGE_USERS", Description: "Manage system user signups and roles", Module: "users"},
 		{Name: "CREATE_ROLE", Description: "Create roles", Module: "rbac"},
 		{Name: "ASSIGN_ROLE", Description: "Assign roles to users", Module: "rbac"},
 		{Name: "ASSIGN_PERMISSION", Description: "Assign permissions to roles", Module: "rbac"},
 		{Name: "VIEW_WORKSHEET", Description: "Access worksheet service", Module: "worksheet"},
 		{Name: "VIEW_ASSESSMENT", Description: "Access assessment service", Module: "assessment"},
 		{Name: "MODERATE_CONTENT", Description: "Access moderation service", Module: "moderation"},
+
+		// Student Workspace
+		{Name: PermissionExecuteAITutor, Description: "Execute AI Tutor", Module: "ai"},
+
+		// Educator Workspace
+		{Name: PermissionGenerateLesson, Description: "Generate lesson plan", Module: "ai"},
+		{Name: PermissionUseLeveler, Description: "Use text leveler", Module: "ai"},
+		{Name: PermissionUseVideoAssessor, Description: "Use video assessor", Module: "ai"},
+		{Name: PermissionGenerateIEP, Description: "Generate IEP rubric", Module: "ai"},
+
+		// District / Administrative
+		{Name: PermissionManageDistrictAI, Description: "Manage district AI knowledge", Module: "ai"},
+		{Name: PermissionViewAIAudits, Description: "View AI audit logs", Module: "ai"},
+
+		// Multi-tenant Governance
+		{Name: PermissionManageGlobalTenants, Description: "Manage global tenant infrastructure", Module: "core"},
+		{Name: PermissionManageLocalRoles, Description: "Manage local tenant roles and approvals", Module: "core"},
 	}
 }
 

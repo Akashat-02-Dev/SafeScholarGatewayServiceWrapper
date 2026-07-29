@@ -681,5 +681,29 @@ create policy roles_isolation on roles using (
 );
 `,
 		},
+		{
+			Name: "004_institution_approval_requests",
+			SQL: `
+create table if not exists institution_approval_requests (
+  request_id uuid primary key default gen_random_uuid(),
+  institution_id uuid not null references institutions(institution_id) on delete cascade,
+  user_id uuid not null references users(user_id) on delete cascade,
+  requested_role varchar(50) not null,
+  status varchar(50) not null default 'PENDING',
+  reviewed_by uuid references users(user_id),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz
+);
+
+create index if not exists idx_approval_requests_tenant on institution_approval_requests(institution_id, status);
+
+alter table institution_approval_requests enable row level security;
+
+drop policy if exists approval_requests_isolation on institution_approval_requests;
+create policy approval_requests_isolation on institution_approval_requests using (
+  institution_id::text = current_setting('app.institution_id', true)
+);
+`,
+		},
 	}
 }

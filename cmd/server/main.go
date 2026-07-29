@@ -29,6 +29,7 @@ import (
 	"safescholar/gateway/infrastructure/service_registry"
 	"safescholar/gateway/internal/adapters"
 	"safescholar/gateway/internal/auth"
+	"safescholar/gateway/internal/clients"
 	"safescholar/gateway/internal/gateway"
 	"safescholar/gateway/internal/oauth"
 	"safescholar/gateway/internal/rbac"
@@ -108,6 +109,14 @@ func main() {
 	}
 	proxy := gateway.NewServiceProxy(httpClient)
 
+	aiClient := clients.NewAIOrchestratorClient(httpClient, registry)
+	modBaseURL, err := registry.Resolve(ctx, "moderation")
+	if err != nil {
+		modBaseURL = "https://localhost:9445"
+	}
+	modClient := clients.NewModerationClientWithDeps(modBaseURL, httpClient, tokenGen, auditLogger)
+	wsService := gateway.NewWSService(aiClient)
+
 	var limiter *security.TokenBucketLimiter
 	if cfg.RateLimit.Enabled {
 		limiter, err = security.NewTokenBucketLimiter(rdb, cfg.RateLimit.Prefix, cfg.RateLimit.Capacity, cfg.RateLimit.RefillRate, cfg.RateLimit.RefillPeriod)
@@ -117,15 +126,19 @@ func main() {
 	}
 
 	handler, err := gateway.NewRouter(gateway.RouterDeps{
-		Config:          cfg,
-		Logger:          logger,
-		RateLimiter:     limiter,
-		TokenValidator:  tokenValidator,
-		AuthService:     authSvc,
-		OAuthService:    oauthSvc,
-		RoleService:     roleSvc,
-		ServiceRegistry: registry,
-		ServiceProxy:    proxy,
+		Config:           cfg,
+		Logger:           logger,
+		RateLimiter:      limiter,
+		TokenValidator:   tokenValidator,
+		AuthService:      authSvc,
+		OAuthService:     oauthSvc,
+		RoleService:      roleSvc,
+		ServiceRegistry:  registry,
+		ServiceProxy:     proxy,
+		WSService:        wsService,
+		ModerationClient: modClient,
+		AuditLogger:      auditLogger,
+		RedisClient:      rdb,
 	})
 	if err != nil {
 		fatal(err)

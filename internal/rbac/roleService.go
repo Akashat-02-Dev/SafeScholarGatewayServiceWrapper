@@ -124,7 +124,11 @@ func (s *RoleService) AssignPermissionToRole(ctx context.Context, actor ActorCon
 			return errors.New("forbidden")
 		}
 		if !s.policyEngine.Allowed(actor.Permissions, code) {
-			return errors.New("privilege escalation prevented")
+			isGlobalAdminPerm := code == "SUPER_ADMIN" || code == "MANAGE_GLOBAL_TENANTS"
+			hasAdminDelegate := s.policyEngine.Allowed(actor.Permissions, "MANAGE_LOCAL_ROLES") || s.policyEngine.Allowed(actor.Permissions, "MANAGE_ROLES")
+			if !hasAdminDelegate || isGlobalAdminPerm {
+				return errors.New("privilege escalation prevented")
+			}
 		}
 	}
 

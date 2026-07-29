@@ -1,0 +1,29 @@
+# Binaries and build outputs
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+bin/
+dist/
+ui/dist/
+ui/node_modules/
+node_modules/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# IDE & OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

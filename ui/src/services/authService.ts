@@ -36,6 +36,27 @@ export type AuthContextValue = {
   refreshMe: () => Promise<void>
   hasRole: (...roles: string[]) => boolean
   hasPermission: (...permissions: string[]) => boolean
+  permissions: string[]
+}
+
+export interface DecodedToken {
+  sub: string
+  roles: string[]
+  permissions: string[]
+  institution: string
+  exp: number
+}
+
+export function decodeToken(token: string): DecodedToken | null {
+  try {
+    const parts = token.split('.')
+    if (parts.length !== 3) return null
+    const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/')
+    const payload = JSON.parse(atob(base64)) as DecodedToken
+    return payload
+  } catch {
+    return null
+  }
 }
 
 const tokenKey = 'safescholar.tokens.v1'
@@ -140,7 +161,34 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [tokens, setTokens] = useState<AuthTokens | null>(() => loadTokens())
   const [me, setMe] = useState<MeResponse | null>(null)
+  const [permissions, setPermissions] = useState<string[]>(() => {
+    const initialTokens = loadTokens()
+    if (initialTokens?.accessToken) {
+      const decoded = decodeToken(initialTokens.accessToken)
+      return decoded?.permissions || []
+    }
+    return []
+  })
   const [status, setStatus] = useState<AuthStatus>(() => (tokens?.accessToken ? 'loading' : 'anonymous'))
+
+  // Hydrate permissions immediately when token changes
+  useEffect(() => {
+    if (tokens?.accessToken) {
+      const decoded = decodeToken(tokens.accessToken)
+      if (decoded?.permissions) {
+        setPermissions(decoded.permissions)
+      }
+    } else {
+      setPermissions([])
+    }
+  }, [tokens?.accessToken])
+
+  // Hydrate from live me response once fetched
+  useEffect(() => {
+    if (me?.permissions) {
+      setPermissions(me.permissions)
+    }
+  }, [me])
 
   async function refreshMe() {
     if (!tokens?.accessToken) return
@@ -216,18 +264,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [me, status])
 
   const hasPermission = useMemo(() => {
-    return (...permissions: string[]) => {
-      if (status !== 'authenticated' || !me) return false
-      if (me.isSysAdmin) return true
-      const set = new Set((me.permissions || []).map((p) => p.trim().toUpperCase()).filter(Boolean))
-      if (set.has('SUPER_ADMIN')) return true
-      return permissions.some((p) => set.has(p.trim().toUpperCase()))
+    return (...requiredPermissions: string[]) => {
+      const activePermissions = permissions.length > 0 ? permissions : (me?.permissions || [])
+      const set = new Set(activePermissions.map((p) => p.trim().toUpperCase()).filter(Boolean))
+      if (set.has('SUPER_ADMIN') || me?.isSysAdmin) return true
+      return requiredPermissions.some((p) => set.has(p.trim().toUpperCase()))
     }
-  }, [me, status])
+  }, [permissions, me])
 
   return createElement(
     AuthContext.Provider,
-    { value: { status, tokens, me, login, oauthLogin, logout, refreshMe, hasRole, hasPermission } },
+    { value: { status, tokens, me, login, oauthLogin, logout, refreshMe, hasRole, hasPermission, permissions } },
     children,
   )
 }

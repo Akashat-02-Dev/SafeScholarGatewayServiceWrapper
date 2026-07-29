@@ -12,10 +12,13 @@ import (
 	"safescholar/gateway/config"
 	"safescholar/gateway/infrastructure/service_registry"
 	"safescholar/gateway/internal/auth"
+	"safescholar/gateway/internal/clients"
 	"safescholar/gateway/internal/middleware"
 	"safescholar/gateway/internal/oauth"
 	"safescholar/gateway/internal/rbac"
 	"safescholar/gateway/internal/security"
+
+	"github.com/redis/go-redis/v9"
 )
 
 type routeCtxKey string
@@ -26,23 +29,30 @@ type Router struct {
 	routes []Route
 	logger *slog.Logger
 
-	authSvc  *auth.AuthService
-	oauthSvc *oauth.OAuthService
-	roleSvc  *rbac.RoleService
-	registry *service_registry.Registry
-	proxy    *ServiceProxy
+	authSvc     *auth.AuthService
+	oauthSvc    *oauth.OAuthService
+	roleSvc     *rbac.RoleService
+	registry    *service_registry.Registry
+	proxy       *ServiceProxy
+	wsService   *WSService
+	modClient   *clients.ModerationClient
+	auditLogger *security.AuditLogger
 }
 
 type RouterDeps struct {
-	Config          config.Config
-	Logger          *slog.Logger
-	RateLimiter     *security.TokenBucketLimiter
-	TokenValidator  *auth.TokenValidator
-	AuthService     *auth.AuthService
-	OAuthService    *oauth.OAuthService
-	RoleService     *rbac.RoleService
-	ServiceRegistry *service_registry.Registry
-	ServiceProxy    *ServiceProxy
+	Config           config.Config
+	Logger           *slog.Logger
+	RateLimiter      *security.TokenBucketLimiter
+	TokenValidator   *auth.TokenValidator
+	AuthService      *auth.AuthService
+	OAuthService     *oauth.OAuthService
+	RoleService      *rbac.RoleService
+	ServiceRegistry  *service_registry.Registry
+	ServiceProxy     *ServiceProxy
+	WSService        *WSService
+	ModerationClient *clients.ModerationClient
+	AuditLogger      *security.AuditLogger
+	RedisClient      *redis.Client
 }
 
 func NewRouter(deps RouterDeps) (http.Handler, error) {
@@ -57,16 +67,24 @@ func NewRouter(deps RouterDeps) (http.Handler, error) {
 	}
 
 	r := &Router{
-		routes:   Routes(),
-		logger:   deps.Logger,
-		authSvc:  deps.AuthService,
-		oauthSvc: deps.OAuthService,
-		roleSvc:  deps.RoleService,
-		registry: deps.ServiceRegistry,
-		proxy:    deps.ServiceProxy,
+		routes:      Routes(),
+		logger:      deps.Logger,
+		authSvc:     deps.AuthService,
+		oauthSvc:    deps.OAuthService,
+		roleSvc:     deps.RoleService,
+		registry:    deps.ServiceRegistry,
+		proxy:       deps.ServiceProxy,
+		wsService:   deps.WSService,
+		modClient:   deps.ModerationClient,
+		auditLogger: deps.AuditLogger,
 	}
 
 	base := http.HandlerFunc(r.serve)
+
+	var telemetry middleware.TelemetryLogger
+	if deps.RedisClient != nil {
+		telemetry = middleware.NewTelemetryLogger(deps.RedisClient)
+	}
 
 	h := middleware.Chain(
 		base,
@@ -79,6 +97,12 @@ func NewRouter(deps RouterDeps) (http.Handler, error) {
 		middleware.RateLimitMiddleware(deps.RateLimiter, deps.TokenValidator),
 		middleware.AuthMiddleware(deps.TokenValidator),
 		middleware.RBACMiddleware(rbac.NewPolicyEngine()),
+		func(next http.Handler) http.Handler {
+			if telemetry != nil {
+				return middleware.TenantTelemetryMiddleware(telemetry)(next)
+			}
+			return next
+		},
 	)
 
 	return h, nil
@@ -96,6 +120,9 @@ func (r *Router) serve(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok"))
 		return
+	case route.PathPrefix == "/api/auth/register":
+		r.handleRegister(w, req)
+		return
 	case route.PathPrefix == "/api/auth/login":
 		r.handleLogin(w, req)
 		return
@@ -105,11 +132,23 @@ func (r *Router) serve(w http.ResponseWriter, req *http.Request) {
 	case route.PathPrefix == "/api/auth/me":
 		r.handleMe(w, req)
 		return
+	case route.PathPrefix == "/api/v1/dashboard/metrics":
+		r.handleDashboardMetrics(w, req)
+		return
 	case strings.HasPrefix(route.PathPrefix, "/api/oauth/"):
 		r.handleOAuth(w, req, route.PathPrefix)
 		return
 	case strings.HasPrefix(route.PathPrefix, "/api/admin/"):
 		r.handleAdmin(w, req, route.PathPrefix)
+		return
+	case route.PathPrefix == "/api/v1/ai/tutor":
+		if r.wsService == nil || r.modClient == nil {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
+		handler := http.HandlerFunc(r.wsService.HandleStudentSession)
+		moderated := middleware.AIModerationMiddleware(r.modClient, r.auditLogger)(handler)
+		moderated.ServeHTTP(w, req)
 		return
 	case route.ServiceName != "":
 		r.handleProxy(w, req, route)
@@ -351,6 +390,30 @@ func (r *Router) handleAdmin(w http.ResponseWriter, req *http.Request, prefix st
 			return
 		}
 		w.WriteHeader(http.StatusNoContent)
+	case "/api/admin/users":
+		if req.Method == http.MethodGet {
+			r.handleListUsers(w, req)
+			return
+		}
+		w.WriteHeader(http.StatusMethodNotAllowed)
+	case "/api/admin/users/approvals":
+		if req.Method == http.MethodGet {
+			r.handleGetApprovalRequests(w, req)
+			return
+		}
+		w.WriteHeader(http.StatusMethodNotAllowed)
+	case "/api/admin/users/approve":
+		if req.Method == http.MethodPost {
+			r.handleApproveUser(w, req)
+			return
+		}
+		w.WriteHeader(http.StatusMethodNotAllowed)
+	case "/api/admin/users/delete", "/api/v1/admin/users/delete":
+		if req.Method == http.MethodPost {
+			r.handleDeleteUser(w, req)
+			return
+		}
+		w.WriteHeader(http.StatusMethodNotAllowed)
 	case "/api/admin/users/assign-role":
 		if req.Method != http.MethodPost {
 			w.WriteHeader(http.StatusMethodNotAllowed)
@@ -449,4 +512,151 @@ func routePathMatches(prefix, path string) bool {
 		return path == base || strings.HasPrefix(path, pp)
 	}
 	return path == pp
+}
+
+func (r *Router) handleGetApprovalRequests(w http.ResponseWriter, req *http.Request) {
+	if r.authSvc == nil {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		return
+	}
+	uc := middleware.UserContextFromContext(req.Context())
+	reqs, err := r.authSvc.GetApprovalRequests(req.Context(), uc.InstitutionID)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"requests": reqs})
+}
+
+type registerRequest struct {
+	Email         string `json:"email"`
+	Password      string `json:"password"`
+	FirstName     string `json:"firstName"`
+	LastName      string `json:"lastName"`
+	RequestedRole string `json:"requestedRole"`
+}
+
+func (r *Router) handleRegister(w http.ResponseWriter, req *http.Request) {
+	if r.authSvc == nil {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		return
+	}
+	var rr registerRequest
+	if err := json.NewDecoder(req.Body).Decode(&rr); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	err := r.authSvc.RegisterUser(req.Context(), rr.Email, rr.Password, rr.FirstName, rr.LastName, rr.RequestedRole)
+	if err != nil {
+		msg := strings.ToLower(strings.TrimSpace(err.Error()))
+		if strings.Contains(msg, "exists") {
+			writeJSON(w, http.StatusConflict, map[string]any{"error": "user already exists"})
+			return
+		}
+		if strings.Contains(msg, "required") || strings.Contains(msg, "password") {
+			writeJSON(w, http.StatusBadRequest, map[string]any{"error": err.Error()})
+			return
+		}
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, http.StatusCreated, map[string]any{"status": "pending_approval"})
+}
+
+func (r *Router) handleListUsers(w http.ResponseWriter, req *http.Request) {
+	if r.authSvc == nil {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		return
+	}
+	users, err := r.authSvc.ListUsers(req.Context())
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"users": users})
+}
+
+type approveUserRequest struct {
+	UserID string `json:"userId"`
+	Status string `json:"status"`
+	RoleID string `json:"roleId"`
+}
+
+func (r *Router) handleApproveUser(w http.ResponseWriter, req *http.Request) {
+	if r.authSvc == nil {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		return
+	}
+	var ar approveUserRequest
+	if err := json.NewDecoder(req.Body).Decode(&ar); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	err := r.authSvc.ApproveUser(req.Context(), ar.UserID, ar.Status, ar.RoleID)
+	if err != nil {
+		msg := strings.ToLower(strings.TrimSpace(err.Error()))
+		if strings.Contains(msg, "not found") || strings.Contains(msg, "unknown") {
+			writeJSON(w, http.StatusNotFound, map[string]any{"error": err.Error()})
+			return
+		}
+		if strings.Contains(msg, "invalid") || strings.Contains(msg, "required") {
+			writeJSON(w, http.StatusBadRequest, map[string]any{"error": err.Error()})
+			return
+		}
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+type deleteUserRequest struct {
+	UserID string `json:"userId"`
+}
+
+func (r *Router) handleDeleteUser(w http.ResponseWriter, req *http.Request) {
+	if r.authSvc == nil {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		return
+	}
+	var dr deleteUserRequest
+	if err := json.NewDecoder(req.Body).Decode(&dr); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	uc := middleware.UserContextFromContext(req.Context())
+	ipObj := middleware.ClientIP(req)
+	ipStr := ""
+	if ipObj != nil {
+		ipStr = ipObj.String()
+	}
+	err := r.authSvc.DeleteUser(req.Context(), uc.UserID, uc.InstitutionID, uc.IsSysAdmin, dr.UserID, ipStr)
+	if err != nil {
+		r.logger.Error("DeleteUser failed", "error", err, "userId", dr.UserID, "actorUserID", uc.UserID, "actorInstitutionID", uc.InstitutionID)
+		msg := strings.ToLower(strings.TrimSpace(err.Error()))
+		if strings.Contains(msg, "forbidden") {
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
+		if strings.Contains(msg, "not found") || strings.Contains(msg, "no rows") || strings.Contains(msg, "unknown") {
+			writeJSON(w, http.StatusNotFound, map[string]any{"error": err.Error()})
+			return
+		}
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (r *Router) handleDashboardMetrics(w http.ResponseWriter, req *http.Request) {
+	if r.authSvc == nil {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		return
+	}
+	uc := middleware.UserContextFromContext(req.Context())
+	metrics, err := r.authSvc.GetDashboardMetrics(req.Context(), uc.UserID, uc.InstitutionID, uc.Roles, uc.IsSysAdmin)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, http.StatusOK, metrics)
 }

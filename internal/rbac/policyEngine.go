@@ -21,6 +21,24 @@ func (p *PolicyEngine) Allowed(userPermissions []string, required string) bool {
 		if v == req {
 			return true
 		}
+		// Local tenant admins with MANAGE_LOCAL_ROLES inherit sub-permissions for local RBAC/User curation
+		if v == "MANAGE_LOCAL_ROLES" {
+			if req == "CREATE_ROLE" || req == "ASSIGN_ROLE" || req == "ASSIGN_PERMISSION" || req == "MANAGE_USERS" {
+				return true
+			}
+		}
+		// Users with MANAGE_USERS inherit sub-permissions for role assignments and list retrieval
+		if v == "MANAGE_USERS" {
+			if req == "CREATE_ROLE" || req == "ASSIGN_ROLE" {
+				return true
+			}
+		}
+		// Users with MANAGE_ROLES inherit sub-permissions for role creation and permission mapping
+		if v == "MANAGE_ROLES" {
+			if req == "CREATE_ROLE" || req == "ASSIGN_ROLE" || req == "ASSIGN_PERMISSION" {
+				return true
+			}
+		}
 	}
 	return false
 }

@@ -247,6 +247,60 @@ func (m *SessionManager) IsTokenBlacklisted(ctx context.Context, tokenID string)
 	return v == 1, nil
 }
 
+func (m *SessionManager) RevokeAllUserSessions(ctx context.Context, userID string) error {
+	uid := strings.TrimSpace(userID)
+	if uid == "" {
+		return errors.New("user id required")
+	}
+
+	var sessionIDs []string
+	var tokenIDs []string
+
+	if m.pool != nil {
+		tx, err := m.pool.BeginTx(ctx, pgx.TxOptions{})
+		if err != nil {
+			return err
+		}
+		defer func() { _ = tx.Rollback(context.Background()) }()
+
+		if err := database.ApplyAppContext(ctx, tx, database.AppContext{AllowLogin: true}); err != nil {
+			return err
+		}
+
+		rows, err := tx.Query(ctx, `select session_id::text, coalesce(token_id::text,'') from sessions where user_id = nullif($1,'')::uuid`, uid)
+		if err == nil {
+			for rows.Next() {
+				var sid, tid string
+				if err := rows.Scan(&sid, &tid); err == nil {
+					if sid != "" {
+						sessionIDs = append(sessionIDs, sid)
+					}
+					if tid != "" {
+						tokenIDs = append(tokenIDs, tid)
+					}
+				}
+			}
+			rows.Close()
+		}
+
+		_, _ = tx.Exec(ctx, `update sessions set revoked=true where user_id = nullif($1,'')::uuid`, uid)
+		if err := tx.Commit(ctx); err != nil {
+			return err
+		}
+	}
+
+	if m.rdb != nil {
+		for _, sid := range sessionIDs {
+			_ = m.rdb.Del(ctx, m.keyPrefix+sid).Err()
+		}
+		for _, tid := range tokenIDs {
+			_ = m.BlacklistTokenID(ctx, tid, 24*time.Hour)
+		}
+	}
+
+	return nil
+}
+
 func validateSessionStruct(s Session) error {
 	if strings.TrimSpace(s.SessionID) == "" || strings.TrimSpace(s.UserID) == "" {
 		return errors.New("invalid session")
