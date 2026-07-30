@@ -22,6 +22,12 @@ func AIModerationMiddleware(modClient ContentModerator, logger *security.AuditLo
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			
+			// If it's a WebSocket upgrade request, bypass body reading/moderation in this HTTP middleware
+			if strings.ToLower(r.Header.Get("Upgrade")) == "websocket" {
+				next.ServeHTTP(w, r)
+				return
+			}
+
 			// 1. Read the body without destroying the buffer
 			bodyBytes, _ := io.ReadAll(r.Body)
 			r.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
