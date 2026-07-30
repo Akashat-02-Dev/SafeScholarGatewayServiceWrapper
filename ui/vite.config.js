@@ -11,6 +11,12 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
     proxy: {
+      '/api/v1/ai/tutor': {
+        target: 'wss://localhost:8443',
+        changeOrigin: true,
+        secure: false,
+        ws: true,
+      },
       '/api': {
         target: 'https://localhost:8443',
         changeOrigin: true,
