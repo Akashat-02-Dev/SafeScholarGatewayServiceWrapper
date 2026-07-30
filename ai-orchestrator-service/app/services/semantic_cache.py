@@ -5,7 +5,7 @@ from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
 settings = get_settings()
 redis_client = Redis.from_url(settings.REDIS_URL, decode_responses=True)
-embeddings = GoogleGenerativeAIEmbeddings(google_api_key=settings.GOOGLE_API_KEY, model="models/text-embedding-004")
+embeddings = GoogleGenerativeAIEmbeddings(google_api_key=settings.GOOGLE_API_KEY, model="text-embedding-004")
 
 class SemanticCache:
     SIMILARITY_THRESHOLD = 0.98  # Very strict threshold for educational accuracy

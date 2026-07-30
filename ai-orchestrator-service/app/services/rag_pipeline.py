@@ -13,7 +13,7 @@ class RAGPipeline:
     def __init__(self):
         self.embeddings = GoogleGenerativeAIEmbeddings(
             google_api_key=settings.GOOGLE_API_KEY, 
-            model="models/text-embedding-004"
+            model="text-embedding-004"
         )
         # Optimized chunking for pedagogical standards and legalistic text
         self.text_splitter = RecursiveCharacterTextSplitter(
