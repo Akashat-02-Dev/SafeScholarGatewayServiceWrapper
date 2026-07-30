@@ -3,6 +3,7 @@ from typing import Optional
 from tenacity import retry, stop_after_attempt, wait_exponential
 from langchain_openai import ChatOpenAI
 from langchain_anthropic import ChatAnthropic
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import SystemMessage, HumanMessage
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -111,6 +112,7 @@ class LLMOrchestrator:
         self.openai_engine = ChatOpenAI(
             model="gpt-4o", 
             api_key=settings.OPENAI_API_KEY, 
+            base_url="https://smart.ultimateai.org/v1",
             temperature=0.2, 
             timeout=settings.LLM_TIMEOUT_SECONDS
         )
@@ -118,6 +120,12 @@ class LLMOrchestrator:
             model="claude-3-5-sonnet-20240620", 
             api_key=settings.ANTHROPIC_API_KEY, 
             temperature=0.2, 
+            timeout=settings.LLM_TIMEOUT_SECONDS
+        )
+        self.google_engine = ChatGoogleGenerativeAI(
+            model="gemini-1.5-flash",
+            google_api_key=settings.GOOGLE_API_KEY,
+            temperature=0.2,
             timeout=settings.LLM_TIMEOUT_SECONDS
         )
 
@@ -168,12 +176,12 @@ class LLMOrchestrator:
         try:
             # Routing Logic
             if tool_id == "socratic_tutor" or tool_id == "iep_generator":
-                logger.info("Routing to Anthropic Claude 3.5 Sonnet")
-                response = await self.anthropic_engine.ainvoke(messages)
-                model_used = "claude-3.5-sonnet"
+                logger.info("Routing to Google Gemini 1.5 Flash")
+                response = await self.google_engine.ainvoke(messages)
+                model_used = "gemini-1.5-flash"
                 
             elif tool_id == "lesson_planner" or tool_id == "leveler" or tool_id == "video_question_maker":
-                logger.info("Routing to OpenAI GPT-4o")
+                logger.info("Routing to OpenAI GPT-4o (Ultimate AI)")
                 response = await self.openai_engine.ainvoke(messages)
                 model_used = "gpt-4o"
                 
@@ -189,10 +197,10 @@ class LLMOrchestrator:
         except Exception as e:
             logger.error(f"Primary LLM Failed: {str(e)}. Fallback circuit engaged.")
             # Automatic Fallback Logic (Circuit Breaker)
-            logger.info("Executing Fallback to Anthropic Claude.")
-            fallback_response = await self.anthropic_engine.ainvoke(messages)
+            logger.info("Executing Fallback to Google Gemini.")
+            fallback_response = await self.google_engine.ainvoke(messages)
             return AICompletionResponse(
                 response_text=fallback_response.content,
-                model_used="claude-3.5-sonnet-fallback",
+                model_used="gemini-1.5-flash-fallback",
                 tokens={"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
             )
