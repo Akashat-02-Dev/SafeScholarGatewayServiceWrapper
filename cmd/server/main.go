@@ -151,7 +151,7 @@ func main() {
 		ReadHeaderTimeout: cfg.Server.ReadHeaderTimeout,
 		WriteTimeout:      cfg.Server.WriteTimeout,
 		IdleTimeout:       cfg.Server.IdleTimeout,
-		TLSConfig:         &tls.Config{MinVersion: tls.VersionTLS13},
+		TLSConfig:         &tls.Config{MinVersion: tls.VersionTLS12},
 		ErrorLog:          slog.NewLogLogger(logger.Handler(), slog.LevelError),
 		BaseContext: func(_ net.Listener) context.Context {
 			return ctx
