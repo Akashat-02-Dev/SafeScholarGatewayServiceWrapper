@@ -1,6 +1,7 @@
 // src/pages/SocraticTutorPage.tsx
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { WSTutorService, ConnectionState } from '../services/wsTutorService';
+import { WSTutorService } from '../services/wsTutorService';
+import type { ConnectionState } from '../services/wsTutorService';
 import type { ChatMessage } from '../types/aios';
 import { Send, ShieldAlert, Sparkles, RefreshCw } from 'lucide-react';
 
