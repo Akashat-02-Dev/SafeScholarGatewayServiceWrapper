@@ -67,6 +67,7 @@ func Routes() []Route {
 		{Method: http.MethodPost, PathPrefix: "/api/v1/ai/educator/video-question-maker", StripPrefix: "/api", AuthRequired: true, RequiredPermission: rbac.PermissionUseVideoAssessor, ServiceName: "ai-orchestrator"},
 		{Method: http.MethodPost, PathPrefix: "/api/v1/ai/educator/iep-generator", StripPrefix: "/api", AuthRequired: true, RequiredPermission: rbac.PermissionGenerateIEP, ServiceName: "ai-orchestrator"},
 		{Method: http.MethodPost, PathPrefix: "/api/v1/rag/ingest", StripPrefix: "/api", AuthRequired: true, RequiredPermission: rbac.PermissionManageDistrictAI, ServiceName: "ai-orchestrator"},
+		{Method: http.MethodPost, PathPrefix: "/api/v1/lms/export", StripPrefix: "/api", AuthRequired: true, RequiredPermission: rbac.PermissionGenerateLesson, ServiceName: "lms-integration"},
 
 		{Method: "", PathPrefix: "/api/worksheet/", ServiceName: ServiceWorksheet, StripPrefix: "/api/worksheet", AuthRequired: true, RequiredPermission: PermissionViewWorksheet},
 		{Method: "", PathPrefix: "/api/assessment/", ServiceName: ServiceAssessment, StripPrefix: "/api/assessment", AuthRequired: true, RequiredPermission: PermissionViewAssessment},

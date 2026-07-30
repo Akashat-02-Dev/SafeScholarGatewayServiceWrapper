@@ -85,11 +85,13 @@ serviceRegistry:
     worksheet: https://localhost:9443
     assessment: https://localhost:9444
     moderation: https://localhost:9445
+    ai-orchestrator: http://localhost:8000
+    lms-integration: http://localhost:8001
 security:
   requireTlsInDev: true
   allowedClockSkew: 1m
   strictTransportMaxAge: 31536000
-  contentSecurityPolicy: "default-src 'self'; base-uri 'none'; frame-ancestors 'none'; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://localhost:8443 https://localhost:9443 https://localhost:9444 https://localhost:9445"
+  contentSecurityPolicy: "default-src 'self'; base-uri 'none'; frame-ancestors 'none'; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://localhost:8443 https://localhost:9443 https://localhost:9444 https://localhost:9445 http://localhost:8000 http://localhost:8001"
 audit:
   enabled: true
 bootstrap:
