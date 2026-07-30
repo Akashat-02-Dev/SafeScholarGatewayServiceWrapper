@@ -1,6 +1,6 @@
 // src/pages/SocraticTutorPage.tsx
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { WSTutorService } from '../services/wsTutorService';
+import { WSTutorService, ConnectionState } from '../services/wsTutorService';
 import type { ChatMessage } from '../types/aios';
 import { Send, ShieldAlert, Sparkles, RefreshCw } from 'lucide-react';
 
@@ -14,7 +14,7 @@ export const SocraticTutorPage: React.FC<{ sessionId: string }> = ({ sessionId }
     }
   ]);
   const [input, setInput] = useState('');
-  const [isConnected, setIsConnected] = useState(false);
+  const [connState, setConnState] = useState<ConnectionState>('disconnected');
   const [error, setError] = useState<string | null>(null);
   
   const wsRef = useRef<WSTutorService | null>(null);
@@ -52,28 +52,35 @@ export const SocraticTutorPage: React.FC<{ sessionId: string }> = ({ sessionId }
   }, []);
 
   useEffect(() => {
-    wsRef.current = new WSTutorService(
+    const ws = new WSTutorService(
       sessionId,
       (chunk) => {
-        setIsConnected(true);
         setError(null);
         handleIncomingToken(chunk);
       },
       (errMsg) => {
         setError(errMsg);
-        setIsConnected(false);
+      },
+      (state) => {
+        setConnState(state);
       }
     );
-    wsRef.current.connect();
+    wsRef.current = ws;
+    ws.connect();
 
     return () => {
-      wsRef.current?.disconnect();
+      ws.disconnect();
     };
   }, [sessionId, handleIncomingToken]);
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || !wsRef.current) return;
+
+    if (connState !== 'connected') {
+      setError('Cannot send message: WebSocket is offline.');
+      return;
+    }
 
     const userMsg: ChatMessage = {
       id: Date.now().toString(),
@@ -108,10 +115,16 @@ export const SocraticTutorPage: React.FC<{ sessionId: string }> = ({ sessionId }
                   width: '8px',
                   height: '8px',
                   borderRadius: '50%',
-                  backgroundColor: isConnected ? '#22c55e' : '#ffc107',
-                  boxShadow: isConnected ? '0 0 8px #22c55e' : '0 0 8px #ffc107'
+                  backgroundColor: 
+                    connState === 'connected' ? '#22c55e' : 
+                    connState === 'connecting' || connState === 'reconnecting' ? '#ffc107' : '#ef4444',
+                  boxShadow: 
+                    connState === 'connected' ? '0 0 8px #22c55e' : 
+                    connState === 'connecting' || connState === 'reconnecting' ? '0 0 8px #ffc107' : '0 0 8px #ef4444'
                 }} />
-                {isConnected ? 'Active Safety Guardrails Enforced' : 'Connecting to Edge Safety Mesh...'}
+                {connState === 'connected' ? 'Active Safety Guardrails Enforced' : 
+                 connState === 'connecting' ? 'Connecting to Edge Safety Mesh...' :
+                 connState === 'reconnecting' ? 'Reestablishing Secure Link...' : 'Connection Offline'}
               </div>
             </div>
           </div>
