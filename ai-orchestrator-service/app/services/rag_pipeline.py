@@ -1,7 +1,7 @@
 import logging
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from langchain_openai import OpenAIEmbeddings
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from app.models.vector_models import KnowledgeChunk
 from app.core.config import get_settings
@@ -11,9 +11,9 @@ settings = get_settings()
 
 class RAGPipeline:
     def __init__(self):
-        self.embeddings = OpenAIEmbeddings(
-            api_key=settings.OPENAI_API_KEY, 
-            model="text-embedding-3-small"
+        self.embeddings = GoogleGenerativeAIEmbeddings(
+            google_api_key=settings.GOOGLE_API_KEY, 
+            model="models/text-embedding-004"
         )
         # Optimized chunking for pedagogical standards and legalistic text
         self.text_splitter = RecursiveCharacterTextSplitter(

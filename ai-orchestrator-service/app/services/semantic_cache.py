@@ -1,11 +1,11 @@
 import json
 from redis.asyncio import Redis
 from app.core.config import get_settings
-from langchain_openai import OpenAIEmbeddings
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
 settings = get_settings()
 redis_client = Redis.from_url(settings.REDIS_URL, decode_responses=True)
-embeddings = OpenAIEmbeddings(api_key=settings.OPENAI_API_KEY, model="text-embedding-3-small")
+embeddings = GoogleGenerativeAIEmbeddings(google_api_key=settings.GOOGLE_API_KEY, model="models/text-embedding-004")
 
 class SemanticCache:
     SIMILARITY_THRESHOLD = 0.98  # Very strict threshold for educational accuracy
