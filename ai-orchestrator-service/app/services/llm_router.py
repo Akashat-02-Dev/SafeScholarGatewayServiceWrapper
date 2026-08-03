@@ -12,6 +12,23 @@ from app.core.config import get_settings
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
+def _extract_response_text(content) -> str:
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        text_parts = []
+        for part in content:
+            if isinstance(part, str):
+                text_parts.append(part)
+            elif isinstance(part, dict) and "text" in part:
+                text_parts.append(part["text"])
+            elif hasattr(part, "text"):
+                text_parts.append(getattr(part, "text"))
+            elif hasattr(part, "get") and part.get("text"):
+                text_parts.append(part.get("text"))
+        return "".join(text_parts)
+    return str(content)
+
 class AICompletionResponse(BaseModel):
     response_text: str
     model_used: str
@@ -189,7 +206,7 @@ class LLMOrchestrator:
                 raise ValueError(f"Unknown tool_id: {tool_id}")
 
             return AICompletionResponse(
-                response_text=response.content,
+                response_text=_extract_response_text(response.content),
                 model_used=model_used,
                 tokens={"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0} # Mocked for brevity
             )
@@ -200,7 +217,7 @@ class LLMOrchestrator:
             logger.info("Executing Fallback to Google Gemini.")
             fallback_response = await self.google_engine.ainvoke(messages)
             return AICompletionResponse(
-                response_text=fallback_response.content,
+                response_text=_extract_response_text(fallback_response.content),
                 model_used="gemini-3.5-flash-fallback",
                 tokens={"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
             )
