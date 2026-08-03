@@ -7,12 +7,12 @@ server:
   writeTimeout: 30s
   idleTimeout: 60s
   maxRequestBodyBytes: 1048576
-  tlsCertFile: config/dev_tls/server.crt
-  tlsKeyFile: config/dev_tls/server.key
+  tlsCertFile: ""
+  tlsKeyFile: ""
   trustedProxyCidrs: []
   allowedHostnames:
     - localhost
-  externalBaseUrl: https://localhost:8443
+  externalBaseUrl: http://localhost:8443
 postgres:
   connString: postgres://safescholar:safescholar@localhost:5432/safescholar?sslmode=disable
   appName: SafeScholarGatewayServiceWrapper
@@ -44,21 +44,21 @@ oauth:
     enabled: false
     clientId: ""
     clientSecret: ""
-    redirectUrl: https://localhost:8443/api/oauth/google/callback
+    redirectUrl: http://localhost:8443/api/oauth/google/callback
     scopes: ["openid","email","profile"]
     tenant: ""
   microsoft:
     enabled: false
     clientId: ""
     clientSecret: ""
-    redirectUrl: https://localhost:8443/api/oauth/microsoft/callback
+    redirectUrl: http://localhost:8443/api/oauth/microsoft/callback
     scopes: ["openid","email","profile"]
     tenant: common
   apple:
     enabled: false
     clientId: ""
     clientSecret: ""
-    redirectUrl: https://localhost:8443/api/oauth/apple/callback
+    redirectUrl: http://localhost:8443/api/oauth/apple/callback
     scopes: ["openid","email","name"]
     tenant: ""
 mtls:
@@ -88,10 +88,10 @@ serviceRegistry:
     ai-orchestrator: http://localhost:8000
     lms-integration: http://localhost:8001
 security:
-  requireTlsInDev: true
+  requireTlsInDev: false
   allowedClockSkew: 1m
   strictTransportMaxAge: 31536000
-  contentSecurityPolicy: "default-src 'self'; base-uri 'none'; frame-ancestors 'none'; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://localhost:8443 https://localhost:9443 https://localhost:9444 https://localhost:9445 http://localhost:8000 http://localhost:8001"
+  contentSecurityPolicy: "default-src 'self'; base-uri 'none'; frame-ancestors 'none'; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' http://localhost:8443 https://localhost:9443 https://localhost:9444 https://localhost:9445 http://localhost:8000 http://localhost:8001"
 audit:
   enabled: true
 bootstrap:
