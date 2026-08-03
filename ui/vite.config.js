@@ -1,6 +1,5 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import https from 'https'
 
 export default defineConfig({
   plugins: [react()],
@@ -17,7 +16,23 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
         ws: true,
-        agent: new https.Agent({ keepAlive: true, rejectUnauthorized: false }),
+        configure: (proxy, options) => {
+          proxy.on('error', (err, req, res) => {
+            console.log('[Vite Proxy Error]:', err);
+          });
+          proxy.on('proxyReq', (proxyReq, req, res) => {
+            console.log('[Vite Proxy Req]:', req.method, req.url);
+          });
+          proxy.on('proxyReqWs', (proxyReq, req, socket, options, head) => {
+            console.log('[Vite Proxy WS Req]:', req.url);
+          });
+          proxy.on('open', (proxySocket) => {
+            console.log('[Vite Proxy WS Socket Opened]');
+          });
+          proxy.on('close', (res, socket, head) => {
+            console.log('[Vite Proxy WS Socket Closed]');
+          });
+        }
       },
     },
   },
