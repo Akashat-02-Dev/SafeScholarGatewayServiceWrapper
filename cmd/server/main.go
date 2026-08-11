@@ -109,13 +109,24 @@ func main() {
 	}
 	proxy := gateway.NewServiceProxy(httpClient)
 
-	aiClient := clients.NewAIOrchestratorClient(httpClient, registry)
+	aiBaseURL := cfg.ServiceRegistry.Static["ai-orchestrator"]
+	if aiBaseURL == "" {
+		resolved, err := registry.Resolve(ctx, "ai-orchestrator")
+		if err == nil {
+			aiBaseURL = resolved
+		} else {
+			aiBaseURL = "http://localhost:8000"
+		}
+	}
+	aiHttpClient := *httpClient
+	aiHttpClient.Timeout = 45 * time.Second
+	aiClient := clients.NewAIOrchestratorClient(&aiHttpClient, aiBaseURL, auditLogger)
 	modBaseURL, err := registry.Resolve(ctx, "moderation")
 	if err != nil {
 		modBaseURL = "https://localhost:9445"
 	}
 	modClient := clients.NewModerationClientWithDeps(modBaseURL, httpClient, tokenGen, auditLogger)
-	wsService := gateway.NewWSService(aiClient)
+	wsService := gateway.NewWSService(aiClient, rdb, modClient, auditLogger)
 
 	var limiter *security.TokenBucketLimiter
 	if cfg.RateLimit.Enabled {
@@ -139,6 +150,7 @@ func main() {
 		ModerationClient: modClient,
 		AuditLogger:      auditLogger,
 		RedisClient:      rdb,
+		AIClient:         aiClient,
 	})
 	if err != nil {
 		fatal(err)

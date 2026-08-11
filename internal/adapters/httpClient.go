@@ -67,7 +67,7 @@ func NewHTTPClientWithDeps(cfg config.MTLSConfig, deps HTTPClientDeps) (*http.Cl
 	rt = &secureRoundTripper{base: rt, deps: deps}
 
 	return &http.Client{
-		Timeout:   15 * time.Second,
+		Timeout:   120 * time.Second,
 		Transport: rt,
 	}, nil
 }

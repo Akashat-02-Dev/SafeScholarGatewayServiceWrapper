@@ -33,6 +33,7 @@ class AICompletionResponse(BaseModel):
     response_text: str
     model_used: str
     tokens: dict
+    metadata: dict = {}
 
 # System Metaprompts
 SOCRATIC_TUTOR_PROMPT = """SYSTEM DIRECTIVE: You are an advanced, empathetic Socratic AI Tutor within the SafeScholar K-12 Educational Platform. 
@@ -147,43 +148,100 @@ class LLMOrchestrator:
         )
 
     @retry(
-        stop=stop_after_attempt(settings.MAX_RETRIES),
+        stop=stop_after_attempt(settings.MAX_RETRIES) | __import__('tenacity').stop_after_delay(90),
         wait=wait_exponential(multiplier=1, min=2, max=10),
         reraise=True
     )
     async def execute_tool(self, tool_id: str, parameters: dict, db: Optional[AsyncSession] = None) -> AICompletionResponse:
         """Routes the prompt to the optimal model based on the tool."""
+        import uuid
+        from sqlalchemy import select
+        from app.services.rag_pipeline import rag_service
         
         prompt_text = parameters.get("user_prompt", "")
         inst_id = parameters.get("institution_id", "")
+        bot_id = parameters.get("bot_id")
         
-        # 1. Fetch RAG Context if lesson planner and database session is active
-        rag_context = ""
-        if tool_id == "lesson_planner" and db is not None:
+        # A. Load Custom Socratic Bot config if requested
+        bot_config = None
+        if bot_id and db is not None:
             try:
-                from app.services.rag_pipeline import rag_service
-                logger.info(f"Querying RAG context for topic: '{prompt_text}' under Institution: '{inst_id}'")
-                rag_context = await rag_service.retrieve_context(db, institution_id=inst_id, query=prompt_text)
-            except Exception as rag_err:
-                logger.error(f"RAG retrieval failed: {rag_err}. Proceeding with default standards.")
-                rag_context = "Common Core standards apply."
+                from app.models.custom_bot import CustomBotConfig
+                stmt = select(CustomBotConfig).where(CustomBotConfig.bot_id == uuid.UUID(bot_id))
+                res = await db.execute(stmt)
+                bot_config = res.scalars().first()
+                if bot_config:
+                    logger.info(f"Loaded Custom Socratic Bot config for bot_id: {bot_id}")
+            except Exception as bot_err:
+                logger.error(f"Failed to load custom Socratic Socratic bot {bot_id}: {bot_err}")
 
-        # 2. Format system prompt message
+        # B. Fetch RAG Context if lesson planner or custom bot with document attachments
+        rag_chunks = []
+        if db is not None:
+            if tool_id == "lesson_planner":
+                try:
+                    logger.info(f"Querying RAG context for topic: '{prompt_text}' under Institution: '{inst_id}'")
+                    rag_chunks = await rag_service.retrieve_chunks(db, institution_id=inst_id, query=prompt_text)
+                except Exception as rag_err:
+                    logger.error(f"RAG retrieval failed: {rag_err}")
+            elif bot_config and bot_config.source_document_ids:
+                try:
+                    logger.info(f"Querying RAG context for bot documents: {bot_config.source_document_ids}")
+                    rag_chunks = await rag_service.retrieve_chunks(
+                        db, 
+                        institution_id=inst_id, 
+                        query=prompt_text, 
+                        document_names=bot_config.source_document_ids
+                    )
+                except Exception as bot_rag_err:
+                    logger.error(f"RAG retrieval for custom bot failed: {bot_rag_err}")
+
+        # C. Format system prompt message
         system_prompt = "You are a helpful educational AI assistant."
-        if tool_id == "socratic_tutor":
+        
+        if bot_config:
+            # Custom Socratic Bot
+            system_prompt = (
+                f"{bot_config.system_prompt}\n\n"
+                "Strict Socratic Pedagogical Instruction:\n"
+                "1. NEVER give direct answers or complete solutions.\n"
+                "2. Ask guiding Socratic questions to scaffold learning.\n"
+                "3. Adjust difficulty dynamically (Strictness index: {bot_config.strictness_level}/10).\n"
+                "4. If the student writes in a foreign language (ELL), respond in that same language while maintaining Socratic guiding."
+            )
+            # Add allowed topics boundaries
+            if bot_config.allowed_topics:
+                system_prompt += f"\n5. STICK STRICTLY to these allowed topics: {bot_config.allowed_topics}. Gently redirect the student if they wander off-topic."
+        elif tool_id == "socratic_tutor":
             system_prompt = SOCRATIC_TUTOR_PROMPT.format(
                 grade_level=parameters.get("grade_level", "Middle School"),
                 subject_topic=parameters.get("subject_topic", "Mathematics"),
                 chat_history=parameters.get("chat_history", "None")
             )
+            system_prompt += "\nIf the student writes in a foreign language (ELL), respond in that same language while maintaining Socratic guiding."
         elif tool_id == "lesson_planner":
+            rag_context = "\n\n".join([chunk.content for chunk in rag_chunks]) if rag_chunks else "Common Core standards apply."
             system_prompt = LESSON_PLANNER_PROMPT.format(
-                rag_retrieved_standards_chunk=rag_context if rag_context else "Common Core standards apply."
+                rag_retrieved_standards_chunk=rag_context
             )
         elif tool_id == "video_question_maker":
             system_prompt = VIDEO_ASSESSOR_PROMPT
+            youtube_url = parameters.get("youtube_url")
+            if youtube_url:
+                from app.services.youtube_service import YouTubeService
+                try:
+                    transcript = await YouTubeService.fetch_transcript(youtube_url)
+                    prompt_text = f"Video Transcript:\n{transcript}\n\nUser Request: {prompt_text}"
+                except Exception as yt_err:
+                    logger.error(f"Failed to fetch YouTube transcript: {yt_err}")
+                    raise ValueError(f"Could not process YouTube video: {yt_err}")
         elif tool_id == "iep_generator":
             system_prompt = IEP_GENERATOR_PROMPT
+
+        # Append RAG context if available to system prompt for context grounding
+        if rag_chunks and not bot_config:
+            rag_context = "\n\n".join([chunk.content for chunk in rag_chunks])
+            system_prompt += f"\n\nRetrieved District Knowledge Standards:\n{rag_context}"
 
         messages = [
             SystemMessage(content=system_prompt),
@@ -205,19 +263,47 @@ class LLMOrchestrator:
             else:
                 raise ValueError(f"Unknown tool_id: {tool_id}")
 
+            raw_text = _extract_response_text(response.content)
+            
+            # D. Run Anti-Hallucination Citation Enforcer if RAG context was used
+            citations = []
+            confidence_score = 1.0
+            if rag_chunks:
+                raw_text, confidence_score, citations = await rag_service.enforce_citations(raw_text, rag_chunks)
+
+            metadata_res = {}
+            if rag_chunks:
+                import json
+                metadata_res["citations"] = json.dumps(citations)
+                metadata_res["confidence_score"] = f"{confidence_score:.2f}"
+
             return AICompletionResponse(
-                response_text=_extract_response_text(response.content),
+                response_text=raw_text,
                 model_used=model_used,
-                tokens={"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0} # Mocked for brevity
+                tokens={"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
+                metadata=metadata_res
             )
             
         except Exception as e:
             logger.error(f"Primary LLM Failed: {str(e)}. Fallback circuit engaged.")
-            # Automatic Fallback Logic (Circuit Breaker)
             logger.info("Executing Fallback to Google Gemini.")
             fallback_response = await self.google_engine.ainvoke(messages)
+            fallback_text = _extract_response_text(fallback_response.content)
+            
+            citations = []
+            confidence_score = 1.0
+            if rag_chunks:
+                fallback_text, confidence_score, citations = await rag_service.enforce_citations(fallback_text, rag_chunks)
+
+            metadata_res = {}
+            if rag_chunks:
+                import json
+                metadata_res["citations"] = json.dumps(citations)
+                metadata_res["confidence_score"] = f"{confidence_score:.2f}"
+
             return AICompletionResponse(
-                response_text=_extract_response_text(fallback_response.content),
+                response_text=fallback_text,
                 model_used="gemini-3.5-flash-fallback",
-                tokens={"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+                tokens={"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
+                metadata=metadata_res
             )

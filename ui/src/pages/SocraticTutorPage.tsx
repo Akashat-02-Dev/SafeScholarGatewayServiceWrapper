@@ -4,9 +4,20 @@ import { WSTutorService } from '../services/wsTutorService';
 import type { ConnectionState } from '../services/wsTutorService';
 import type { ChatMessage } from '../types/aios';
 import { Send, ShieldAlert, Sparkles, RefreshCw } from 'lucide-react';
+import { CitationRenderer } from '../components/CitationRenderer';
+import { AudioSocraticRecorder } from '../components/AudioSocraticRecorder';
+
+// Extend ChatMessage local usage with optional citations
+interface ExtendedChatMessage extends ChatMessage {
+  citations?: string;
+}
 
 export const SocraticTutorPage: React.FC<{ sessionId: string }> = ({ sessionId }) => {
-  const [messages, setMessages] = useState<ChatMessage[]>([
+  // Check if bot_id is in query string to forward it
+  const queryParams = new URLSearchParams(window.location.search);
+  const botId = queryParams.get('bot_id') || '';
+
+  const [messages, setMessages] = useState<ExtendedChatMessage[]>([
     {
       id: 'welcome',
       sender: 'ai',
@@ -30,12 +41,28 @@ export const SocraticTutorPage: React.FC<{ sessionId: string }> = ({ sessionId }
   }, [messages]);
 
   const handleIncomingToken = useCallback((chunk: string) => {
+    let messageText = chunk;
+    let citationsJson: string | undefined = undefined;
+
+    // Check if chunk is a packed JSON metadata string
+    if (chunk.trim().startsWith('{')) {
+      try {
+        const payload = JSON.parse(chunk);
+        if (payload.text) {
+          messageText = payload.text;
+          citationsJson = payload.citations_json;
+        }
+      } catch {
+        // Fallback to raw text
+      }
+    }
+
     setMessages((prev) => {
       const lastMsg = prev[prev.length - 1];
       if (lastMsg && lastMsg.sender === 'ai' && lastMsg.isStreaming) {
         return [
           ...prev.slice(0, -1),
-          { ...lastMsg, text: lastMsg.text + chunk }
+          { ...lastMsg, text: messageText, citations: citationsJson, isStreaming: false }
         ];
       } else {
         return [
@@ -43,9 +70,10 @@ export const SocraticTutorPage: React.FC<{ sessionId: string }> = ({ sessionId }
           {
             id: Date.now().toString(),
             sender: 'ai',
-            text: chunk,
+            text: messageText,
             timestamp: new Date(),
-            isStreaming: true
+            citations: citationsJson,
+            isStreaming: false
           }
         ];
       }
@@ -53,8 +81,9 @@ export const SocraticTutorPage: React.FC<{ sessionId: string }> = ({ sessionId }
   }, []);
 
   useEffect(() => {
+    // Override WSTutorService to support optional bot_id parameter
     const ws = new WSTutorService(
-      sessionId,
+      sessionId + (botId ? `&bot_id=${botId}` : ''),
       (chunk) => {
         setError(null);
         handleIncomingToken(chunk);
@@ -72,10 +101,10 @@ export const SocraticTutorPage: React.FC<{ sessionId: string }> = ({ sessionId }
     return () => {
       ws.disconnect();
     };
-  }, [sessionId, handleIncomingToken]);
+  }, [sessionId, botId, handleIncomingToken]);
 
-  const handleSend = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSend = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!input.trim() || !wsRef.current) return;
 
     if (connState !== 'connected') {
@@ -83,7 +112,7 @@ export const SocraticTutorPage: React.FC<{ sessionId: string }> = ({ sessionId }
       return;
     }
 
-    const userMsg: ChatMessage = {
+    const userMsg: ExtendedChatMessage = {
       id: Date.now().toString(),
       sender: 'student',
       text: input,
@@ -172,7 +201,11 @@ export const SocraticTutorPage: React.FC<{ sessionId: string }> = ({ sessionId }
                   borderBottomLeftRadius: msg.sender === 'student' ? '16px' : '2px',
                 }}
               >
-                {msg.text}
+                {msg.sender === 'ai' ? (
+                  <CitationRenderer text={msg.text} citations={msg.citations} />
+                ) : (
+                  msg.text
+                )}
                 {msg.isStreaming && (
                   <span style={{
                     display: 'inline-block',
@@ -191,25 +224,37 @@ export const SocraticTutorPage: React.FC<{ sessionId: string }> = ({ sessionId }
         </div>
       </div>
 
-      {/* Input Form */}
-      <form onSubmit={handleSend} style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask a conceptual question or explain your reasoning..."
-          className="input"
-          style={{ flex: 1, padding: '14px 18px', borderRadius: '18px' }}
+      {/* Speech adapter and Input Form */}
+      <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+        <AudioSocraticRecorder
+          onTranscript={(text) => {
+            setInput(text);
+          }}
+          aiResponseText={
+            messages.length > 0 && messages[messages.length - 1].sender === 'ai'
+              ? messages[messages.length - 1].text
+              : undefined
+          }
         />
-        <button
-          type="submit"
-          disabled={!input.trim()}
-          className="btn btnPrimary"
-          style={{ width: '50px', height: '50px', borderRadius: '18px', padding: 0 }}
-        >
-          <Send size={18} />
-        </button>
-      </form>
+        <form onSubmit={handleSend} style={{ display: 'flex', gap: '10px', alignItems: 'center', flex: 1 }}>
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Ask a conceptual question or explain your reasoning..."
+            className="input"
+            style={{ flex: 1, padding: '14px 18px', borderRadius: '18px' }}
+          />
+          <button
+            type="submit"
+            disabled={!input.trim()}
+            className="btn btnPrimary"
+            style={{ width: '50px', height: '50px', borderRadius: '18px', padding: 0 }}
+          >
+            <Send size={18} />
+          </button>
+        </form>
+      </div>
     </div>
   );
 };

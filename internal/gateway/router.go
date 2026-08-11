@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -13,6 +14,7 @@ import (
 	"safescholar/gateway/infrastructure/service_registry"
 	"safescholar/gateway/internal/auth"
 	"safescholar/gateway/internal/clients"
+	"safescholar/gateway/internal/contracts"
 	"safescholar/gateway/internal/middleware"
 	"safescholar/gateway/internal/oauth"
 	"safescholar/gateway/internal/rbac"
@@ -37,6 +39,8 @@ type Router struct {
 	wsService   *WSService
 	modClient   *clients.ModerationClient
 	auditLogger *security.AuditLogger
+	oversightSvc *OversightService
+	aiClient    clients.AIOrchestratorClient
 }
 
 type RouterDeps struct {
@@ -53,6 +57,7 @@ type RouterDeps struct {
 	ModerationClient *clients.ModerationClient
 	AuditLogger      *security.AuditLogger
 	RedisClient      *redis.Client
+	AIClient         clients.AIOrchestratorClient
 }
 
 func NewRouter(deps RouterDeps) (http.Handler, error) {
@@ -77,6 +82,8 @@ func NewRouter(deps RouterDeps) (http.Handler, error) {
 		wsService:   deps.WSService,
 		modClient:   deps.ModerationClient,
 		auditLogger: deps.AuditLogger,
+		oversightSvc: NewOversightService(deps.RedisClient),
+		aiClient:    deps.AIClient,
 	}
 
 	base := http.HandlerFunc(r.serve)
@@ -149,6 +156,23 @@ func (r *Router) serve(w http.ResponseWriter, req *http.Request) {
 		handler := http.HandlerFunc(r.wsService.HandleStudentSession)
 		moderated := middleware.AIModerationMiddleware(r.modClient, r.auditLogger)(handler)
 		moderated.ServeHTTP(w, req)
+		return
+	case route.PathPrefix == "/api/v1/admin/oversight/stream":
+		if r.oversightSvc == nil {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
+		r.oversightSvc.HandleOversightStream(w, req)
+		return
+	case route.PathPrefix == "/api/v1/admin/oversight/freeze":
+		if r.oversightSvc == nil {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
+		r.oversightSvc.HandleOversightFreeze(w, req)
+		return
+	case strings.HasPrefix(route.PathPrefix, "/api/v1/ai/educator/"):
+		r.handleEducatorAI(w, req, route)
 		return
 	case route.ServiceName != "":
 		r.handleProxy(w, req, route)
@@ -659,4 +683,62 @@ func (r *Router) handleDashboardMetrics(w http.ResponseWriter, req *http.Request
 		return
 	}
 	writeJSON(w, http.StatusOK, metrics)
+}
+
+func (r *Router) handleEducatorAI(w http.ResponseWriter, req *http.Request, route Route) {
+	if r.aiClient == nil {
+		r.logger.Error("AI orchestrator client is not configured")
+		writeJSON(w, http.StatusServiceUnavailable, map[string]any{"error": "AI Orchestration client unavailable"})
+		return
+	}
+
+	// 1. Extract tool_id from path
+	toolID := strings.TrimPrefix(req.URL.Path, "/api/v1/ai/educator/")
+	if toolID == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "Missing tool_id in path"})
+		return
+	}
+
+	// 2. Decode incoming request body into contracts.AICompletionRequest
+	var completionReq contracts.AICompletionRequest
+	if err := json.NewDecoder(req.Body).Decode(&completionReq); err != nil {
+		r.logger.Warn("Failed to decode AI completion request", "error", err)
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "Invalid request payload"})
+		return
+	}
+
+	// 3. Override ToolID and InstitutionID from secure context/path
+	uc := middleware.UserContextFromContext(req.Context())
+	completionReq.ToolID = toolID
+	completionReq.InstitutionID = uc.InstitutionID
+
+	// 4. Execute prompt securely
+	r.logger.Info("Executing secure AI completion request", "tool_id", toolID, "institution_id", uc.InstitutionID)
+	resp, err := r.aiClient.ExecutePrompt(req.Context(), &completionReq)
+	if err != nil {
+		r.logger.Error("AI completion request failed", "tool_id", toolID, "error", err)
+		
+		if r.auditLogger != nil {
+			ipObj := middleware.ClientIP(req)
+			ipStr := ""
+			if ipObj != nil {
+				ipStr = ipObj.String()
+			}
+			_ = r.auditLogger.Log(req.Context(), security.AuditEvent{
+				UserID:     uc.UserID,
+				Action:     "EXECUTE_SECURE_AI_PROMPT_FAILED",
+				Resource:   "AI_Orchestrator",
+				ResourceID: toolID,
+				IPAddress:  ipStr,
+				Metadata:   map[string]any{"error": err.Error(), "user_agent": req.UserAgent()},
+				CreatedAt:  time.Now(),
+			})
+		}
+		
+		writeJSON(w, http.StatusBadGateway, map[string]any{"error": fmt.Sprintf("AI Completion error: %v", err)})
+		return
+	}
+
+	// 5. Return resulting JSON response
+	writeJSON(w, http.StatusOK, resp)
 }

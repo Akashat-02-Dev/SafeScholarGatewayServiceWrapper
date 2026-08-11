@@ -1,7 +1,7 @@
 import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api.v1 import orchestrator
+from app.api.v1 import orchestrator, bots
 from app.core.config import get_settings
 
 # Configure standard JSON logging for Datadog / ELK
@@ -26,6 +26,32 @@ app.add_middleware(
 
 # Register internal microservice routes
 app.include_router(orchestrator.router, prefix="/v1")
+app.include_router(bots.router, prefix="/v1/bots", tags=["bots"])
+
+@app.on_event("startup")
+async def startup_event():
+    """Bootstraps database extensions and tables for vector RAG and Custom Bots."""
+    from sqlalchemy import text
+    from app.core.database import engine
+    from app.models.vector_models import KnowledgeChunk
+    from app.models.custom_bot import CustomBotConfig
+    
+    # 1. Try to create custom_bots table (uses standard columns, always works)
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(lambda sync_conn: CustomBotConfig.__table__.create(sync_conn, checkfirst=True))
+        logging.info("custom_bots table verified/created successfully.")
+    except Exception as err:
+        logging.error(f"Failed to create custom_bots table: {err}")
+
+    # 2. Try to create pgvector extension and knowledge_chunks table
+    try:
+        async with engine.begin() as conn:
+            await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
+            await conn.run_sync(lambda sync_conn: KnowledgeChunk.__table__.create(sync_conn, checkfirst=True))
+        logging.info("knowledge_chunks table verified/created successfully.")
+    except Exception as err:
+        logging.warning(f"Failed to create knowledge_chunks table (probably missing pgvector): {err}")
 
 @app.get("/health")
 async def health_check():

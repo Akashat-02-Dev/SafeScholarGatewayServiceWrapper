@@ -18,6 +18,8 @@ const teacherRoutes: NavItem[] = [
   { label: 'Text Leveler', path: '/ai/leveler', icon: Scissors, permission: 'USE_TEXT_LEVELER' },
   { label: 'YouTube Assessor', path: '/ai/video-assessor', icon: Video, permission: 'USE_VIDEO_ASSESSOR' },
   { label: 'IEP & Rubrics', path: '/ai/iep-generator', icon: FileText, permission: 'GENERATE_IEP_RUBRIC' },
+  { label: 'Custom Bot Studio', path: '/ai/bot-studio', icon: Sparkles, permission: 'GENERATE_LESSON_PLAN' },
+  { label: 'Student Oversight', path: '/ai/student-oversight', icon: ShieldCheck, permission: 'GENERATE_LESSON_PLAN' },
 ]
 
 export function Sidebar() {

@@ -152,8 +152,27 @@ export class WSTutorService {
       this.reconnectTimeoutId = null;
     }
     if (this.socket) {
-      this.socket.close(1000, 'Client disconnect');
-      this.cleanupSocket();
+      const sock = this.socket;
+      if (sock.readyState === WebSocket.CONNECTING) {
+        sock.onopen = () => {
+          try {
+            sock.close(1000, 'Component unmounted');
+          } catch {}
+        };
+        sock.onerror = () => {
+          try {
+            sock.close();
+          } catch {}
+        };
+        sock.onmessage = null;
+        sock.onclose = null;
+        this.socket = null;
+      } else {
+        try {
+          sock.close(1000, 'Client disconnect');
+        } catch {}
+        this.cleanupSocket();
+      }
     }
     this.updateState('disconnected');
   }

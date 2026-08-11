@@ -124,14 +124,15 @@ func AuthMiddleware(validator *auth.TokenValidator) Middleware {
 }
 
 func tryBearerToken(r *http.Request) (string, bool, error) {
+	if token := r.URL.Query().Get("token"); token != "" {
+		return token, true, nil
+	}
+	if token := r.URL.Query().Get("access_token"); token != "" {
+		return token, true, nil
+	}
+
 	h := strings.TrimSpace(r.Header.Get("Authorization"))
 	if h == "" {
-		if token := r.URL.Query().Get("token"); token != "" {
-			return token, true, nil
-		}
-		if token := r.URL.Query().Get("access_token"); token != "" {
-			return token, true, nil
-		}
 		return "", false, nil
 	}
 	parts := strings.SplitN(h, " ", 2)

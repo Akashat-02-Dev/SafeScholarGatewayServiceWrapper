@@ -705,5 +705,33 @@ create policy approval_requests_isolation on institution_approval_requests using
 );
 `,
 		},
+		{
+			Name: "005_custom_bots",
+			SQL: `
+create table if not exists custom_bots (
+  bot_id uuid primary key default gen_random_uuid(),
+  institution_id uuid not null references institutions(institution_id) on delete cascade,
+  teacher_id uuid not null references users(user_id) on delete cascade,
+  name text not null,
+  system_prompt text not null,
+  source_document_ids text[],
+  allowed_topics text[],
+  strictness_level int not null default 5,
+  created_at timestamptz not null default now()
+);
+
+alter table custom_bots enable row level security;
+
+do $$
+begin
+  if not exists(select 1 from pg_policies where schemaname='public' and tablename='custom_bots' and policyname='custom_bots_isolation') then
+    create policy custom_bots_isolation on custom_bots using (
+      institution_id::text = current_setting('app.institution_id', true)
+    );
+  end if;
+end
+$$;
+`,
+		},
 	}
 }

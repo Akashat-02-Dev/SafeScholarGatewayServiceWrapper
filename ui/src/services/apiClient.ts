@@ -93,7 +93,7 @@ export async function apiFetch<T>(path: string, init: ApiFetchInit = {}): Promis
     }
   }
 
-  const timeoutMs = typeof init.timeoutMs === 'number' && init.timeoutMs > 0 ? init.timeoutMs : 15_000
+  const timeoutMs = typeof init.timeoutMs === 'number' && init.timeoutMs > 0 ? init.timeoutMs : 120_000
   const ac = new AbortController()
   const t = window.setTimeout(() => ac.abort(), timeoutMs)
 

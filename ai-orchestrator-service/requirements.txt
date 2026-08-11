@@ -14,3 +14,5 @@ sqlalchemy>=2.0.28
 asyncpg>=0.29.0
 pgvector>=0.2.5
 tiktoken>=0.6.0
+python-multipart>=0.0.9
+youtube-transcript-api>=0.6.2

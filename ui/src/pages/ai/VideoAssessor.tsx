@@ -70,7 +70,8 @@ export default function VideoAssessor() {
         tool_id: 'video_question_maker' as const,
         institution_id: institutionId,
         parameters: {
-          user_prompt: videoUrl,
+          user_prompt: `Please generate ${numQuestions} multiple-choice questions for the following video transcript.`,
+          youtube_url: videoUrl,
           num_questions: numQuestions
         }
       }

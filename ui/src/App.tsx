@@ -14,6 +14,8 @@ import LessonPlanner from './pages/ai/LessonPlanner'
 import TextLeveler from './pages/ai/TextLeveler'
 import VideoAssessor from './pages/ai/VideoAssessor'
 import IepGenerator from './pages/ai/IepGenerator'
+import CustomBotStudio from './pages/educator/CustomBotStudio'
+import StudentOversightDashboard from './pages/educator/StudentOversightDashboard'
 import { RAGIngestionPanel } from './pages/admin/RAGIngestionPanel'
 import { InstitutionAdminDashboard } from './pages/admin/InstitutionAdminDashboard'
 import { SuperAdminDashboard } from './pages/superadmin/SuperAdminDashboard'
@@ -66,6 +68,22 @@ function App() {
               element={
                 <AuthedLayout>
                   <LessonPlanner />
+                </AuthedLayout>
+              }
+            />
+            <Route
+              path="/ai/bot-studio"
+              element={
+                <AuthedLayout>
+                  <CustomBotStudio />
+                </AuthedLayout>
+              }
+            />
+            <Route
+              path="/ai/student-oversight"
+              element={
+                <AuthedLayout>
+                  <StudentOversightDashboard />
                 </AuthedLayout>
               }
             />
