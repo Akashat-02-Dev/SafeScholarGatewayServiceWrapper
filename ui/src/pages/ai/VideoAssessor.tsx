@@ -81,7 +81,12 @@ export default function VideoAssessor() {
         payload
       )
       
-      const parsed = JSON.parse(res.response_text) as QuizQuestion[]
+      let cleanText = res.response_text;
+      const match = cleanText.match(/\[[\s\S]*\]/);
+      if (match) {
+        cleanText = match[0];
+      }
+      const parsed = JSON.parse(cleanText) as QuizQuestion[]
       setQuestions(parsed)
       setOk('YouTube transcript parsed successfully and formatted as timeline questions.')
     } catch (e2) {
