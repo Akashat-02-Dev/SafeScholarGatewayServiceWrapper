@@ -26,3 +26,39 @@ class CustomBotResponse(BaseModel):
     class Config:
         from_attributes = True
         orm_mode = True
+
+class VideoQuestionSchema(BaseModel):
+    timestamp: str
+    question: str
+    options: List[str]
+    answer: str
+    explanation: str
+
+class LessonPhaseSchema(BaseModel):
+    phase_name: str
+    duration_minutes: int
+    teacher_actions: str
+    student_actions: str
+    differentiation_notes: dict
+
+class LessonPlanSchema(BaseModel):
+    lesson_title: str
+    grade_level: str
+    duration_minutes: int
+    aligned_standards: List[dict]
+    essential_questions: List[str]
+    learning_objectives: List[str]
+    materials_required: List[str]
+    instructional_phases: List[LessonPhaseSchema]
+    formative_assessment: dict
+
+class IEPCriteriaSchema(BaseModel):
+    name: str
+    novice: str
+    developing: str
+    proficient: str
+    exemplary: str
+
+class IEPRubricSchema(BaseModel):
+    title: str
+    criteria: List[IEPCriteriaSchema]

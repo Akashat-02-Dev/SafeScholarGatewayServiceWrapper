@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"safescholar/gateway/internal/middleware"
+	"safescholar/gateway/internal/security"
 )
 
 type ServiceProxy struct {
@@ -42,7 +43,7 @@ func (p *ServiceProxy) Forward(w http.ResponseWriter, req *http.Request, baseURL
 		proxy.Transport = p.client.Transport
 	}
 	proxy.ErrorHandler = func(rw http.ResponseWriter, r *http.Request, e error) {
-		rw.WriteHeader(http.StatusBadGateway)
+		security.WriteJSONError(rw, http.StatusBadGateway, "Bad Gateway")
 	}
 	proxy.ModifyResponse = func(resp *http.Response) error {
 		removeHopByHopHeaders(resp.Header)

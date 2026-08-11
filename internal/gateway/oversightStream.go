@@ -9,6 +9,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/redis/go-redis/v9"
 	"safescholar/gateway/internal/middleware"
+	"safescholar/gateway/internal/security"
 )
 
 type OversightService struct {
@@ -98,12 +99,12 @@ func (s *OversightService) HandleOversightFreeze(w http.ResponseWriter, r *http.
 
 	var req FreezeRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid JSON payload", http.StatusBadRequest)
+		security.WriteJSONError(w, http.StatusBadRequest, "Invalid JSON payload")
 		return
 	}
 
 	if req.SessionID == "" {
-		http.Error(w, "session_id required", http.StatusBadRequest)
+		security.WriteJSONError(w, http.StatusBadRequest, "session_id required")
 		return
 	}
 
@@ -113,12 +114,12 @@ func (s *OversightService) HandleOversightFreeze(w http.ResponseWriter, r *http.
 	if req.Freeze {
 		// Set freeze flag for 12 hours (session auto-suspension lifetime)
 		if err := s.redisClient.Set(ctx, key, true, 12*time.Hour).Err(); err != nil {
-			http.Error(w, "Failed to apply suspension in cache", http.StatusInternalServerError)
+			security.WriteJSONError(w, http.StatusInternalServerError, "Failed to apply suspension in cache")
 			return
 		}
 	} else {
 		if err := s.redisClient.Del(ctx, key).Err(); err != nil {
-			http.Error(w, "Failed to lift suspension in cache", http.StatusInternalServerError)
+			security.WriteJSONError(w, http.StatusInternalServerError, "Failed to lift suspension in cache")
 			return
 		}
 	}

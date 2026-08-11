@@ -171,8 +171,17 @@ func (r *Router) serve(w http.ResponseWriter, req *http.Request) {
 		}
 		r.oversightSvc.HandleOversightFreeze(w, req)
 		return
-	case strings.HasPrefix(route.PathPrefix, "/api/v1/ai/educator/"):
-		r.handleEducatorAI(w, req, route)
+	case route.PathPrefix == "/api/v1/ai/educator/lesson-planner":
+		r.handleSpecificAITool(w, req, "lesson_planner")
+		return
+	case route.PathPrefix == "/api/v1/ai/educator/video-question-maker":
+		r.handleSpecificAITool(w, req, "video_question_maker")
+		return
+	case route.PathPrefix == "/api/v1/ai/educator/iep-generator":
+		r.handleSpecificAITool(w, req, "iep_generator")
+		return
+	case route.PathPrefix == "/api/v1/ai/educator/leveler":
+		r.handleSpecificAITool(w, req, "leveler")
 		return
 	case route.ServiceName != "":
 		r.handleProxy(w, req, route)
@@ -207,7 +216,7 @@ func (r *Router) handleLogin(w http.ResponseWriter, req *http.Request) {
 	}
 	var lr loginRequest
 	if err := json.NewDecoder(req.Body).Decode(&lr); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		security.WriteJSONError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	ip := middleware.ClientIP(req)
@@ -215,7 +224,7 @@ func (r *Router) handleLogin(w http.ResponseWriter, req *http.Request) {
 	refreshTTL := 30 * 24 * time.Hour
 	result, err := r.authSvc.Login(req.Context(), lr.Email, lr.Password, ip, req.UserAgent(), middleware.CorrelationIDFromContext(req.Context()), accessTTL, refreshTTL)
 	if err != nil {
-		w.WriteHeader(http.StatusUnauthorized)
+		security.WriteJSONError(w, http.StatusUnauthorized, "invalid credentials")
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
@@ -232,11 +241,11 @@ func (r *Router) handleLogout(w http.ResponseWriter, req *http.Request) {
 	}
 	uc := middleware.UserContextFromContext(req.Context())
 	if !uc.IsAuthenticated {
-		w.WriteHeader(http.StatusUnauthorized)
+		security.WriteJSONError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 	if err := r.authSvc.Logout(req.Context(), uc.InstitutionID, uc.SessionID, uc.TokenID); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		security.WriteJSONError(w, http.StatusInternalServerError, "failed to logout")
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -245,7 +254,7 @@ func (r *Router) handleLogout(w http.ResponseWriter, req *http.Request) {
 func (r *Router) handleMe(w http.ResponseWriter, req *http.Request) {
 	uc := middleware.UserContextFromContext(req.Context())
 	if !uc.IsAuthenticated {
-		w.WriteHeader(http.StatusUnauthorized)
+		security.WriteJSONError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 	if r.authSvc == nil {
@@ -254,7 +263,7 @@ func (r *Router) handleMe(w http.ResponseWriter, req *http.Request) {
 	}
 	me, err := r.authSvc.Me(req.Context(), uc.UserID, uc.InstitutionID, uc.Roles, uc.Permissions)
 	if err != nil {
-		w.WriteHeader(http.StatusUnauthorized)
+		security.WriteJSONError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
@@ -277,15 +286,15 @@ func (r *Router) handleOAuth(w http.ResponseWriter, req *http.Request, prefix st
 	switch prefix {
 	case "/api/oauth/google/start":
 		if err := r.oauthSvc.Start(w, req, oauth.ProviderGoogle); err != nil {
-			w.WriteHeader(http.StatusBadRequest)
+			security.WriteJSONError(w, http.StatusBadRequest, "failed to start oauth")
 		}
 	case "/api/oauth/microsoft/start":
 		if err := r.oauthSvc.Start(w, req, oauth.ProviderMicrosoft); err != nil {
-			w.WriteHeader(http.StatusBadRequest)
+			security.WriteJSONError(w, http.StatusBadRequest, "failed to start oauth")
 		}
 	case "/api/oauth/apple/start":
 		if err := r.oauthSvc.Start(w, req, oauth.ProviderApple); err != nil {
-			w.WriteHeader(http.StatusBadRequest)
+			security.WriteJSONError(w, http.StatusBadRequest, "failed to start oauth")
 		}
 	case "/api/oauth/google/callback":
 		r.handleOAuthCallback(w, req, oauth.ProviderGoogle)
@@ -308,7 +317,7 @@ func (r *Router) handleOAuthCallback(w http.ResponseWriter, req *http.Request, p
 	}
 	res, err := r.oauthSvc.Callback(req.Context(), provider, code, state, req.Cookies(), ipStr, req.UserAgent(), middleware.CorrelationIDFromContext(req.Context()))
 	if err != nil {
-		w.WriteHeader(http.StatusUnauthorized)
+		security.WriteJSONError(w, http.StatusUnauthorized, "oauth failed")
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
@@ -361,7 +370,7 @@ func (r *Router) handleAdmin(w http.ResponseWriter, req *http.Request, prefix st
 		if req.Method == http.MethodGet {
 			roles, err := r.roleSvc.ListRoles(req.Context(), actor)
 			if err != nil {
-				w.WriteHeader(http.StatusForbidden)
+				security.WriteJSONError(w, http.StatusForbidden, "forbidden")
 				return
 			}
 			writeJSON(w, http.StatusOK, map[string]any{"roles": roles})
@@ -370,7 +379,7 @@ func (r *Router) handleAdmin(w http.ResponseWriter, req *http.Request, prefix st
 		if req.Method == http.MethodPost {
 			var cr createRoleRequest
 			if err := json.NewDecoder(req.Body).Decode(&cr); err != nil {
-				w.WriteHeader(http.StatusBadRequest)
+				security.WriteJSONError(w, http.StatusBadRequest, "invalid request body")
 				return
 			}
 			roleID, err := r.roleSvc.CreateRole(req.Context(), actor, cr.Name, cr.Description)
@@ -385,14 +394,14 @@ func (r *Router) handleAdmin(w http.ResponseWriter, req *http.Request, prefix st
 				}
 				msg := strings.ToLower(strings.TrimSpace(err.Error()))
 				if msg == "forbidden" {
-					w.WriteHeader(http.StatusForbidden)
+					security.WriteJSONError(w, http.StatusForbidden, "forbidden")
 					return
 				}
 				if strings.Contains(msg, "required") || strings.Contains(msg, "too long") || strings.Contains(msg, "invalid") {
-					w.WriteHeader(http.StatusBadRequest)
+					security.WriteJSONError(w, http.StatusBadRequest, err.Error())
 					return
 				}
-				w.WriteHeader(http.StatusInternalServerError)
+				security.WriteJSONError(w, http.StatusInternalServerError, "internal server error")
 				return
 			}
 			writeJSON(w, http.StatusCreated, map[string]any{"roleId": roleID})
@@ -406,11 +415,11 @@ func (r *Router) handleAdmin(w http.ResponseWriter, req *http.Request, prefix st
 		}
 		var ap assignPermissionRequest
 		if err := json.NewDecoder(req.Body).Decode(&ap); err != nil {
-			w.WriteHeader(http.StatusBadRequest)
+			security.WriteJSONError(w, http.StatusBadRequest, "invalid request body")
 			return
 		}
 		if err := r.roleSvc.AssignPermissionToRole(req.Context(), actor, ap.RoleID, ap.PermissionCode); err != nil {
-			w.WriteHeader(http.StatusForbidden)
+			security.WriteJSONError(w, http.StatusForbidden, "forbidden")
 			return
 		}
 		w.WriteHeader(http.StatusNoContent)
@@ -445,11 +454,11 @@ func (r *Router) handleAdmin(w http.ResponseWriter, req *http.Request, prefix st
 		}
 		var ar assignRoleRequest
 		if err := json.NewDecoder(req.Body).Decode(&ar); err != nil {
-			w.WriteHeader(http.StatusBadRequest)
+			security.WriteJSONError(w, http.StatusBadRequest, "invalid request body")
 			return
 		}
 		if err := r.roleSvc.AssignRoleToUser(req.Context(), actor, ar.UserID, ar.RoleID); err != nil {
-			w.WriteHeader(http.StatusForbidden)
+			security.WriteJSONError(w, http.StatusForbidden, "forbidden")
 			return
 		}
 		if r.authSvc != nil {
@@ -461,10 +470,13 @@ func (r *Router) handleAdmin(w http.ResponseWriter, req *http.Request, prefix st
 	}
 }
 
+// writeJSON is deprecated, use security.WriteJSONError for errors. Keeping for successful responses.
 func writeJSON(w http.ResponseWriter, status int, body any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(body)
+	if body != nil {
+		_ = json.NewEncoder(w).Encode(body)
+	}
 }
 
 func RouteFromContext(ctx context.Context) (Route, bool) {
@@ -685,34 +697,30 @@ func (r *Router) handleDashboardMetrics(w http.ResponseWriter, req *http.Request
 	writeJSON(w, http.StatusOK, metrics)
 }
 
-func (r *Router) handleEducatorAI(w http.ResponseWriter, req *http.Request, route Route) {
+func (r *Router) handleSpecificAITool(w http.ResponseWriter, req *http.Request, toolID string) {
 	if r.aiClient == nil {
 		r.logger.Error("AI orchestrator client is not configured")
-		writeJSON(w, http.StatusServiceUnavailable, map[string]any{"error": "AI Orchestration client unavailable"})
+		security.WriteJSONError(w, http.StatusServiceUnavailable, "AI Orchestrator client unavailable")
 		return
 	}
 
-	// 1. Extract tool_id from path
-	toolID := strings.TrimPrefix(req.URL.Path, "/api/v1/ai/educator/")
-	if toolID == "" {
-		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "Missing tool_id in path"})
-		return
+	var body struct {
+		Parameters map[string]interface{} `json:"parameters"`
 	}
-
-	// 2. Decode incoming request body into contracts.AICompletionRequest
-	var completionReq contracts.AICompletionRequest
-	if err := json.NewDecoder(req.Body).Decode(&completionReq); err != nil {
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
 		r.logger.Warn("Failed to decode AI completion request", "error", err)
-		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "Invalid request payload"})
+		security.WriteJSONError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
-	// 3. Override ToolID and InstitutionID from secure context/path
 	uc := middleware.UserContextFromContext(req.Context())
-	completionReq.ToolID = toolID
-	completionReq.InstitutionID = uc.InstitutionID
+	
+	completionReq := contracts.AICompletionRequest{
+		ToolID:        toolID,
+		InstitutionID: uc.InstitutionID,
+		Parameters:    body.Parameters,
+	}
 
-	// 4. Execute prompt securely
 	r.logger.Info("Executing secure AI completion request", "tool_id", toolID, "institution_id", uc.InstitutionID)
 	resp, err := r.aiClient.ExecutePrompt(req.Context(), &completionReq)
 	if err != nil {
@@ -735,10 +743,9 @@ func (r *Router) handleEducatorAI(w http.ResponseWriter, req *http.Request, rout
 			})
 		}
 		
-		writeJSON(w, http.StatusBadGateway, map[string]any{"error": fmt.Sprintf("AI Completion error: %v", err)})
+		security.WriteJSONError(w, http.StatusBadGateway, fmt.Sprintf("Upstream Error: %v", err))
 		return
 	}
 
-	// 5. Return resulting JSON response
 	writeJSON(w, http.StatusOK, resp)
 }

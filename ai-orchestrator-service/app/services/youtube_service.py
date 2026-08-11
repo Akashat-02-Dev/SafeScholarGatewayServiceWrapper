@@ -1,43 +1,35 @@
-import re
-from typing import Optional
-from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled, NoTranscriptFound
+import asyncio
+from fastapi import HTTPException
+from langchain_community.document_loaders import YoutubeLoader
 
 class YouTubeService:
     @staticmethod
-    def extract_video_id(url: str) -> Optional[str]:
-        # Matches formats like youtube.com/watch?v=VIDEO_ID, youtu.be/VIDEO_ID, etc.
-        pattern = r'(?:v=|\/)([0-9A-Za-z_-]{11}).*'
-        match = re.search(pattern, url)
-        if match:
-            return match.group(1)
-        return None
-
-    @staticmethod
     async def fetch_transcript(url: str) -> str:
-        video_id = YouTubeService.extract_video_id(url)
-        if not video_id:
-            raise ValueError(f"Could not extract a valid YouTube video ID from URL: {url}")
-        
+        """
+        Asynchronously fetches and parses YouTube transcripts using LangChain's native loader.
+        Offloads the synchronous load() method to a background thread to prevent FastAPI event loop deadlocks.
+        """
         try:
-            import asyncio
-            # Fetch the transcript; offload blocking call to a separate thread
-            transcript_list = await asyncio.to_thread(YouTubeTranscriptApi.get_transcript, video_id)
+            # YoutubeLoader natively extracts the video ID and handles the API handshakes
+            loader = YoutubeLoader.from_youtube_url(
+                url, 
+                add_video_info=False, # Set False to avoid requiring the fragile 'pytube' dependency
+                language=["en", "en-US", "es", "fr"] # Fallback language support
+            )
             
-            # Format into a contiguous string with timestamps
-            formatted_transcript = []
-            for item in transcript_list:
-                start_time = item['start']
-                text = item['text'].replace('\n', ' ')
-                # Convert seconds to MM:SS format
-                minutes, seconds = divmod(int(start_time), 60)
-                timestamp = f"{minutes:02d}:{seconds:02d}"
-                formatted_transcript.append(f"[{timestamp}] {text}")
+            # The load() method is blocking. We must wrap it in to_thread.
+            docs = await asyncio.to_thread(loader.load)
+            
+            if not docs:
+                raise ValueError("Transcript is empty or unavailable for this video.")
                 
-            return " ".join(formatted_transcript)
-        
-        except TranscriptsDisabled:
-            raise ValueError(f"Transcripts are disabled for this video: {url}")
-        except NoTranscriptFound:
-            raise ValueError(f"No transcript found for this video: {url}")
+            # Combine the chunked LangChain Document objects into a single context string
+            transcript_text = " ".join([doc.page_content for doc in docs])
+            return transcript_text
+            
         except Exception as e:
-            raise ValueError(f"Failed to fetch transcript: {str(e)}")
+            # Catch disabled subtitles, private videos, or invalid URLs gracefully
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Unable to parse closed captions. The video may not have subtitles enabled. Error: {str(e)}"
+            )

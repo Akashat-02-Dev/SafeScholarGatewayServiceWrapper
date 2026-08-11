@@ -88,7 +88,10 @@ REQUIRED JSON SCHEMA:
 }}
 
 GROUND-TRUTH STANDARDS CONTEXT (RAG HYDRATION):
-{rag_retrieved_standards_chunk}"""
+{rag_retrieved_standards_chunk}
+
+You must output your response strictly as a valid JSON object.
+"""
 
 VIDEO_ASSESSOR_PROMPT = """SYSTEM DIRECTIVE: You are an expert Curriculum Designer and Assessment Architect. 
 Your task is to generate rigorous, curriculum-grounded multiple-choice questions from the provided video transcripts.
@@ -104,6 +107,8 @@ Output MUST be a valid JSON list of objects matching this exact schema:
     "explanation": "string"
   }}
 ]
+
+You must output your response strictly as a valid JSON object (or JSON list).
 """
 
 IEP_GENERATOR_PROMPT = """SYSTEM DIRECTIVE: You are an expert Special Education Specialist and Rubric Architect.
@@ -122,7 +127,26 @@ Output MUST be a valid, parseable JSON object matching this exact schema:
     }}
   ]
 }}
+
+You must output your response strictly as a valid JSON object.
 """
+
+from langchain_core.prompts import ChatPromptTemplate
+
+PROMPT_REGISTRY = {
+    "lesson_planner": ChatPromptTemplate.from_messages([
+        ("system", "You are an expert instructional designer. Output ONLY valid JSON matching the schema. No markdown backticks."),
+        ("human", "Create a lesson plan for {grade_level} about {topic} aligned to standard: {standard_code}.")
+    ]),
+    "video_question_maker": ChatPromptTemplate.from_messages([
+        ("system", "Generate 5 multiple choice questions based on the following transcript. Output ONLY valid JSON. No markdown backticks."),
+        ("human", "Transcript: {transcript}")
+    ]),
+    "socratic_tutor": ChatPromptTemplate.from_messages([
+        ("system", "You are a Socratic tutor. Never give direct answers. Guide the student."),
+        ("human", "{user_prompt}")
+    ])
+}
 
 class LLMOrchestrator:
     def __init__(self):
@@ -132,7 +156,8 @@ class LLMOrchestrator:
             api_key=settings.OPENAI_API_KEY, 
             base_url="https://smart.ultimateai.org/v1",
             temperature=0.2, 
-            timeout=settings.LLM_TIMEOUT_SECONDS
+            timeout=settings.LLM_TIMEOUT_SECONDS,
+            model_kwargs={"response_format": {"type": "json_object"}}
         )
         self.anthropic_engine = ChatAnthropic(
             model="claude-3-5-sonnet-20240620", 
@@ -179,9 +204,10 @@ class LLMOrchestrator:
         rag_chunks = []
         if db is not None:
             if tool_id == "lesson_planner":
+                query_text = parameters.get("topic", prompt_text)
                 try:
-                    logger.info(f"Querying RAG context for topic: '{prompt_text}' under Institution: '{inst_id}'")
-                    rag_chunks = await rag_service.retrieve_chunks(db, institution_id=inst_id, query=prompt_text)
+                    logger.info(f"Querying RAG context for topic: '{query_text}' under Institution: '{inst_id}'")
+                    rag_chunks = await rag_service.retrieve_chunks(db, institution_id=inst_id, query=query_text)
                 except Exception as rag_err:
                     logger.error(f"RAG retrieval failed: {rag_err}")
             elif bot_config and bot_config.source_document_ids:
@@ -197,8 +223,6 @@ class LLMOrchestrator:
                     logger.error(f"RAG retrieval for custom bot failed: {bot_rag_err}")
 
         # C. Format system prompt message
-        system_prompt = "You are a helpful educational AI assistant."
-        
         if bot_config:
             # Custom Socratic Bot
             system_prompt = (
@@ -206,47 +230,37 @@ class LLMOrchestrator:
                 "Strict Socratic Pedagogical Instruction:\n"
                 "1. NEVER give direct answers or complete solutions.\n"
                 "2. Ask guiding Socratic questions to scaffold learning.\n"
-                "3. Adjust difficulty dynamically (Strictness index: {bot_config.strictness_level}/10).\n"
+                f"3. Adjust difficulty dynamically (Strictness index: {bot_config.strictness_level}/10).\n"
                 "4. If the student writes in a foreign language (ELL), respond in that same language while maintaining Socratic guiding."
             )
-            # Add allowed topics boundaries
             if bot_config.allowed_topics:
                 system_prompt += f"\n5. STICK STRICTLY to these allowed topics: {bot_config.allowed_topics}. Gently redirect the student if they wander off-topic."
-        elif tool_id == "socratic_tutor":
-            system_prompt = SOCRATIC_TUTOR_PROMPT.format(
-                grade_level=parameters.get("grade_level", "Middle School"),
-                subject_topic=parameters.get("subject_topic", "Mathematics"),
-                chat_history=parameters.get("chat_history", "None")
-            )
-            system_prompt += "\nIf the student writes in a foreign language (ELL), respond in that same language while maintaining Socratic guiding."
-        elif tool_id == "lesson_planner":
-            rag_context = "\n\n".join([chunk.content for chunk in rag_chunks]) if rag_chunks else "Common Core standards apply."
-            system_prompt = LESSON_PLANNER_PROMPT.format(
-                rag_retrieved_standards_chunk=rag_context
-            )
-        elif tool_id == "video_question_maker":
-            system_prompt = VIDEO_ASSESSOR_PROMPT
-            youtube_url = parameters.get("youtube_url")
-            if youtube_url:
+            
+            if rag_chunks:
+                rag_context = "\n\n".join([chunk.content for chunk in rag_chunks])
+                system_prompt += f"\n\nRetrieved District Knowledge Standards:\n{rag_context}"
+            
+            messages = [
+                SystemMessage(content=system_prompt),
+                HumanMessage(content=prompt_text)
+            ]
+        else:
+            if tool_id not in PROMPT_REGISTRY:
+                raise ValueError(f"Unknown tool_id: {tool_id}")
+                
+            prompt_template = PROMPT_REGISTRY[tool_id]
+            
+            if tool_id == "video_question_maker" and "youtube_url" in parameters:
                 from app.services.youtube_service import YouTubeService
-                try:
-                    transcript = await YouTubeService.fetch_transcript(youtube_url)
-                    prompt_text = f"Video Transcript:\n{transcript}\n\nUser Request: {prompt_text}"
-                except Exception as yt_err:
-                    logger.error(f"Failed to fetch YouTube transcript: {yt_err}")
-                    raise ValueError(f"Could not process YouTube video: {yt_err}")
-        elif tool_id == "iep_generator":
-            system_prompt = IEP_GENERATOR_PROMPT
+                parameters["transcript"] = await YouTubeService.fetch_transcript(parameters["youtube_url"])
+                
+            try:
+                messages = prompt_template.format_messages(**parameters)
+            except KeyError as e:
+                logger.error(f"Missing required parameter for {tool_id}: {e}")
+                from fastapi import HTTPException
+                raise HTTPException(status_code=400, detail=f"Missing required parameter for this tool: {e}")
 
-        # Append RAG context if available to system prompt for context grounding
-        if rag_chunks and not bot_config:
-            rag_context = "\n\n".join([chunk.content for chunk in rag_chunks])
-            system_prompt += f"\n\nRetrieved District Knowledge Standards:\n{rag_context}"
-
-        messages = [
-            SystemMessage(content=system_prompt),
-            HumanMessage(content=prompt_text)
-        ]
         
         try:
             # Routing Logic
@@ -264,6 +278,22 @@ class LLMOrchestrator:
                 raise ValueError(f"Unknown tool_id: {tool_id}")
 
             raw_text = _extract_response_text(response.content)
+            
+            if tool_id in ["lesson_planner", "video_question_maker", "iep_generator"]:
+                import re
+                match = re.search(r'\[[\s\S]*\]|\{[\s\S]*\}', raw_text)
+                if match:
+                    raw_text = match.group(0)
+                
+                from app.models.schemas import LessonPlanSchema, VideoQuestionSchema, IEPRubricSchema
+                from pydantic import TypeAdapter
+                from typing import List
+                if tool_id == "lesson_planner":
+                    LessonPlanSchema.model_validate_json(raw_text)
+                elif tool_id == "video_question_maker":
+                    TypeAdapter(List[VideoQuestionSchema]).validate_json(raw_text)
+                elif tool_id == "iep_generator":
+                    IEPRubricSchema.model_validate_json(raw_text)
             
             # D. Run Anti-Hallucination Citation Enforcer if RAG context was used
             citations = []

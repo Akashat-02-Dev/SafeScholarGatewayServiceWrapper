@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 
@@ -66,7 +67,11 @@ func (c *aiOrchestratorClientImpl) ExecutePrompt(ctx context.Context, req *contr
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("AI orchestrator returned status %d", resp.StatusCode)
+		bodyBytes, readErr := io.ReadAll(resp.Body)
+		if readErr != nil {
+			return nil, fmt.Errorf("AI orchestrator returned status %d and failed to read body", resp.StatusCode)
+		}
+		return nil, fmt.Errorf("AI orchestrator returned status %d: %s", resp.StatusCode, string(bodyBytes))
 	}
 
 	var aiResponse contracts.AICompletionResponse
