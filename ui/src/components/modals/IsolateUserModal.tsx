@@ -1,246 +1,125 @@
-import React, { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { AlertTriangle, ShieldAlert, Loader2, X } from 'lucide-react'
-import { deleteUser, isolateUser } from '../../services/roleService'
-import { ApiError } from '../../services/apiClient'
-
-interface UserTarget {
-  userId: string
-  email: string
-  firstName?: string
-  lastName?: string
-}
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { AlertTriangle, X, Loader2 } from 'lucide-react';
+import { isolateUserAccount } from '../../services/roleService';
 
 interface IsolateUserModalProps {
-  isOpen: boolean
-  user: UserTarget | null
-  accessToken: string | null
-  onClose: () => void
-  onSuccess: (message: string) => void
+  isOpen: boolean;
+  onClose: () => void;
+  userId: string;
+  institutionId: string;
+  userEmail: string;
+  onSuccess: () => void;
 }
 
-export const IsolateUserModal: React.FC<IsolateUserModalProps> = ({
-  isOpen,
-  user,
-  accessToken,
-  onClose,
-  onSuccess,
+export const IsolateUserModal: React.FC<IsolateUserModalProps> = ({ 
+  isOpen, onClose, userId, institutionId, userEmail, onSuccess 
 }) => {
-  const [confirmEmail, setConfirmEmail] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [confirmText, setConfirmText] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  if (!isOpen || !user) return null
-
-  const targetEmail = user.email.trim().toLowerCase()
-  const typedEmail = confirmEmail.trim().toLowerCase()
-  const isMatch = targetEmail === typedEmail && targetEmail.length > 0
-
-  const handleExecuteIsolate = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!isMatch || !accessToken || busy) return
-
-    setBusy(true)
-    setErrorMsg(null)
-
+  const handleIsolate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (confirmText !== userEmail) return;
+    
+    setIsSubmitting(true);
+    setError(null);
     try {
-      // Calls the Go backend soft-isolation & session-revocation workflow
-      await isolateUser(accessToken, user.userId)
-      onSuccess(`Account for ${user.email} has been soft-isolated and sessions revoked successfully.`)
-      setConfirmEmail('')
-      onClose()
-    } catch (err) {
-      if (err instanceof ApiError) {
-        setErrorMsg(err.message || 'Failed to isolate account.')
-      } else if (err instanceof Error) {
-        setErrorMsg(err.message)
-      } else {
-        setErrorMsg('An unexpected network error occurred while isolating account.')
-      }
+      await isolateUserAccount(userId, institutionId);
+      onSuccess();
+      onClose();
+    } catch (err: any) {
+      setError(err.payload?.message || err.message || 'Failed to isolate account. Please try again.');
     } finally {
-      setBusy(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6" style={{ zIndex: 1000 }}>
-        {/* Backdrop overlay */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={busy ? undefined : onClose}
-          className="fixed inset-0 bg-slate-900/40 backdrop-blur-md"
-          style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(8px)' }}
-        />
-
-        {/* Modal Container */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 15 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 15 }}
-          transition={{ type: 'spring', duration: 0.3, bounce: 0.1 }}
-          className="relative w-full max-w-md overflow-hidden rounded-2xl border border-white/30 bg-white/85 p-6 shadow-2xl backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/85 dark:shadow-slate-950/50"
-          style={{
-            position: 'relative',
-            width: '100%',
-            maxWidth: '440px',
-            borderRadius: '20px',
-            border: '1px solid rgba(255, 255, 255, 0.4)',
-            background: 'rgba(255, 255, 255, 0.85)',
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
-            padding: '24px',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-          }}
-        >
-          {/* Close Icon */}
-          <button
-            type="button"
-            disabled={busy}
-            onClick={onClose}
-            style={{
-              position: 'absolute',
-              top: '16px',
-              right: '16px',
-              background: 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-              color: '#64748b',
-              padding: '4px',
-              borderRadius: '8px',
-            }}
+      {isOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
+          {/* Backdrop Lock */}
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={!isSubmitting ? onClose : undefined}
+            className="absolute inset-0 bg-zinc-900/40 backdrop-blur-sm"
+          />
+          
+          {/* Modal Container */}
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 10 }}
+            className="relative w-full max-w-md bg-white/95 dark:bg-zinc-900/95 backdrop-blur-2xl rounded-3xl shadow-2xl border border-zinc-200/50 dark:border-zinc-800/50 overflow-hidden flex flex-col max-h-[90vh]"
           >
-            <X size={18} />
-          </button>
-
-          {/* Rose Icon Badge */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: '48px',
-              height: '48px',
-              borderRadius: '16px',
-              background: 'rgba(244, 63, 94, 0.12)',
-              color: '#e11d48',
-              marginBottom: '16px',
-              border: '1px solid rgba(244, 63, 94, 0.2)',
-            }}
-          >
-            <ShieldAlert size={26} />
-          </div>
-
-          <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#0f172a', margin: '0 0 6px 0' }}>
-            Isolate User Account
-          </h3>
-          <p style={{ fontSize: '13px', color: '#64748b', margin: '0 0 16px 0', lineHeight: 1.5 }}>
-            This security action updates account status to <strong style={{ color: '#e11d48' }}>ISOLATED</strong> and immediately invalidates active sessions in Redis.
-          </p>
-
-          {errorMsg && (
-            <div
-              style={{
-                marginBottom: '16px',
-                padding: '12px 14px',
-                borderRadius: '10px',
-                background: 'rgba(239, 68, 68, 0.08)',
-                border: '1px solid rgba(239, 68, 68, 0.2)',
-                color: '#dc2626',
-                fontSize: '12px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-              }}
-            >
-              <AlertTriangle size={16} />
-              <span>{errorMsg}</span>
-            </div>
-          )}
-
-          <form onSubmit={handleExecuteIsolate} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#475569', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                Behavioral Safety Verification
-              </label>
-              <div style={{ fontSize: '12px', color: '#334155', marginBottom: '8px' }}>
-                Type <strong style={{ userSelect: 'all', color: '#0f172a' }}>{user.email}</strong> below to confirm isolation:
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200/50 dark:border-zinc-800/50 shrink-0">
+              <div className="flex items-center space-x-3 text-rose-600 dark:text-rose-400">
+                <AlertTriangle className="w-6 h-6"/>
+                <h2 className="text-lg font-semibold tracking-tight">Isolate User Account</h2>
               </div>
-              <input
-                type="email"
-                value={confirmEmail}
-                onChange={(e) => setConfirmEmail(e.target.value)}
-                placeholder={user.email}
-                disabled={busy}
-                style={{
-                  width: '100%',
-                  padding: '10px 14px',
-                  borderRadius: '10px',
-                  border: isMatch ? '1px solid #e11d48' : '1px solid #cbd5e1',
-                  background: 'rgba(255, 255, 255, 0.7)',
-                  fontSize: '13px',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                }}
-              />
-            </div>
-
-            <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={onClose}
-                style={{
-                  flex: 1,
-                  padding: '10px 16px',
-                  borderRadius: '10px',
-                  border: '1px solid #cbd5e1',
-                  background: '#f8fafc',
-                  color: '#475569',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
+              <button 
+                onClick={onClose} 
+                disabled={isSubmitting}
+                className="p-2 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors disabled:opacity-50"
               >
-                Cancel
-              </button>
-
-              <button
-                type="submit"
-                disabled={!isMatch || busy}
-                style={{
-                  flex: 1,
-                  padding: '10px 16px',
-                  borderRadius: '10px',
-                  border: 'none',
-                  background: isMatch ? '#e11d48' : '#94a3b8',
-                  color: '#ffffff',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  cursor: isMatch && !busy ? 'pointer' : 'not-allowed',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  boxShadow: isMatch ? '0 4px 12px rgba(225, 29, 72, 0.3)' : 'none',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                {busy ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin" style={{ animation: 'spin 1s linear infinite' }} />
-                    <span>Isolating...</span>
-                  </>
-                ) : (
-                  <span>Confirm Isolation</span>
-                )}
+                <X className="w-5 h-5 text-zinc-500"/>
               </button>
             </div>
-          </form>
-        </motion.div>
-      </div>
+
+            {/* Scrollable Body */}
+            <div className="p-6 overflow-y-auto">
+              <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-6 leading-relaxed">
+                You are about to cryptographically isolate this user. This will instantly revoke all active sessions and block further access. This action is logged for compliance.
+              </p>
+
+              {error && (
+                <div className="p-3 mb-6 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-sm">
+                  {error}
+                </div>
+              )}
+
+              <form onSubmit={handleIsolate} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                    Type <span className="font-bold text-zinc-900 dark:text-white select-all">{userEmail}</span> to confirm
+                  </label>
+                  <input
+                    type="text"
+                    value={confirmText}
+                    onChange={(e) => setConfirmText(e.target.value)}
+                    disabled={isSubmitting}
+                    className="w-full px-4 py-3 rounded-xl bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 focus:outline-none focus:ring-2 focus:ring-rose-500/50 text-zinc-900 dark:text-white transition-all disabled:opacity-50"
+                    placeholder={userEmail}
+                  />
+                </div>
+
+                <div className="pt-4 flex justify-end space-x-3">
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    disabled={isSubmitting}
+                    className="px-5 py-2.5 rounded-xl text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={confirmText !== userEmail || isSubmitting}
+                    className="flex items-center justify-center px-5 py-2.5 rounded-xl text-sm font-medium bg-rose-600 hover:bg-rose-700 text-white transition-colors disabled:opacity-50 disabled:hover:bg-rose-600 min-w-[140px]"
+                  >
+                    {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin"/> : 'Confirm Isolation'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </AnimatePresence>
-  )
-}
+  );
+};

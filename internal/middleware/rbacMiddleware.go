@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"net/http"
+	"strings"
 
 	"safescholar/gateway/internal/rbac"
 )
@@ -25,6 +26,21 @@ func RBACMiddleware(engine *rbac.PolicyEngine) Middleware {
 			if !uc.IsAuthenticated {
 				w.WriteHeader(http.StatusUnauthorized)
 				return
+			}
+			// Phase 5: Hardcode hierarchy boundaries for admin routes
+			if strings.HasPrefix(r.URL.Path, "/api/admin/") || strings.HasPrefix(r.URL.Path, "/api/v1/admin/") {
+				isAdmin := false
+				for _, role := range uc.Roles {
+					rStr := strings.ToLower(strings.TrimSpace(role))
+					if rStr == "sys_admin" || rStr == "super_admin" || rStr == "admin" || rStr == "sysadmin" || rStr == "institute" {
+						isAdmin = true
+						break
+					}
+				}
+				if !isAdmin {
+					w.WriteHeader(http.StatusForbidden)
+					return
+				}
 			}
 			if !engine.Allowed(uc.Permissions, meta.RequiredPermission) {
 				w.WriteHeader(http.StatusForbidden)

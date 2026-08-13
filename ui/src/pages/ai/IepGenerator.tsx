@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { FileText, Sparkles, CheckCircle2, Table, Plus, Trash2 } from 'lucide-react'
+import { FileText, Sparkles, CheckCircle2, Plus, Trash2 } from 'lucide-react'
 import { useAuth } from '../../services/authService'
 import { aiService } from '../../services/aiService'
 

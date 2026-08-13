@@ -84,6 +84,7 @@ func (ws *WSService) HandleStudentSession(w http.ResponseWriter, r *http.Request
 	// 2. Extract Session Context (Requires Auth Middleware execution prior to routing)
 	sessionID := r.URL.Query().Get("session_id")
 	botID := r.URL.Query().Get("bot_id")
+	botType := r.URL.Query().Get("bot_type")
 	if sessionID == "" {
 		_ = conn.WriteMessage(websocket.CloseMessage, []byte("Missing session ID"))
 		return
@@ -152,9 +153,18 @@ func (ws *WSService) HandleStudentSession(w http.ResponseWriter, r *http.Request
 			}
 		}
 
+		toolID := "socratic_tutor"
+		if botType == "character" {
+			toolID = "character_bot"
+		} else if botType == "custom" {
+			toolID = "custom_bot"
+		} else if botType == "research" {
+			toolID = "research_assistant" // If needed later
+		}
+
 		// C. Prepare prompt payload for the AI Orchestrator
 		req := &contracts.AICompletionRequest{
-			ToolID:        "socratic_tutor",
+			ToolID:        toolID,
 			SessionID:     sessionID,
 			InstitutionID: institutionID,
 			Parameters: map[string]interface{}{
@@ -162,6 +172,7 @@ func (ws *WSService) HandleStudentSession(w http.ResponseWriter, r *http.Request
 				"student_id":    studentID,
 				"session_id":    sessionID,
 				"bot_id":        botID,
+				"bot_type":      botType,
 				"grade_level":   "Middle School", // default/fallback
 				"subject_topic": "General Study",
 			},

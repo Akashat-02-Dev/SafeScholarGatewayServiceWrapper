@@ -79,7 +79,7 @@ export const LessonPlannerPage: React.FC = () => {
     setError(null);
 
     try {
-      const questions = lessonPlan.formative_assessment.rubric_criteria.map((criteria, idx) => ({
+      const questions = lessonPlan.formative_assessment.rubric_criteria.map((criteria) => ({
         question_text: `Rubric Evaluation Item: ${criteria}`,
         question_type: 'multiple_choice',
         options: ['Needs Improvement', 'Approaching Standard', 'Meets Standard', 'Exceeds Standard'],

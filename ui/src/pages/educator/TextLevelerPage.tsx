@@ -251,7 +251,7 @@ export const TextLevelerPage: React.FC = () => {
               whiteSpace: 'pre-wrap'
             }}>
               {isLeveling ? (
-                <div style={{ height: '100%', display: 'flex', flexDirection: 'column', itemsAlign: 'center', justifyContent: 'center', textAlign: 'center', gap: '10px', paddingTop: '100px' }}>
+                <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', gap: '10px', paddingTop: '100px' }}>
                   <div style={{ display: 'flex', justifyContent: 'center' }}>
                     <Loader2 size={32} style={{ color: 'var(--c-navy)', animation: 'spin 1.2s linear infinite' }} />
                   </div>

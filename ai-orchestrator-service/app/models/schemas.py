@@ -62,3 +62,20 @@ class IEPCriteriaSchema(BaseModel):
 class IEPRubricSchema(BaseModel):
     title: str
     criteria: List[IEPCriteriaSchema]
+
+class FeedbackPoint(BaseModel):
+    category: str
+    comment: str
+
+class WritingFeedbackSchema(BaseModel):
+    feedback_points: List[FeedbackPoint]
+
+class QuizQuestionSchema(BaseModel):
+    question: str
+    options: List[str]
+    answer: str
+    explanation: str
+
+class QuizGeneratorSchema(BaseModel):
+    title: str
+    questions: List[QuizQuestionSchema]

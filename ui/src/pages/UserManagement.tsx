@@ -422,7 +422,7 @@ export function UserManagement() {
                             type="button"
                             className="btn btnGhost"
                             disabled={busy}
-                            onClick={() => setIsIsolateModalOpen(true)}
+                            onClick={() => handleConfirmDelete()}
                             style={{ color: '#dc2626', border: '1px solid rgba(220, 38, 38, 0.2)', fontSize: 12, padding: '8px 12px', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
                           >
                             <Trash2 size={14} />
@@ -451,11 +451,12 @@ export function UserManagement() {
 
       <IsolateUserModal
         isOpen={isIsolateModalOpen}
-        user={selectedUser}
-        accessToken={accessToken}
+        userId={selectedUser?.userId || ''}
+        institutionId={selectedUser?.institutionId || ''}
+        userEmail={selectedUser?.email || ''}
         onClose={() => setIsIsolateModalOpen(false)}
-        onSuccess={(msg) => {
-          setOk(msg)
+        onSuccess={() => {
+          setOk(`Account for ${selectedUser?.email} has been soft-isolated and sessions revoked successfully.`)
           setSelectedUser(null)
           void loadData()
         }}

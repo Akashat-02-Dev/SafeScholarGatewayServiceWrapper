@@ -875,6 +875,15 @@ func (s *AuthService) GetDashboardMetrics(ctx context.Context, userID, instituti
 		}
 		res["telemetry"] = telemetryList
 	} else {
+		isInstitute := false
+		for _, r := range roles {
+			rStr := strings.ToLower(strings.TrimSpace(r))
+			if rStr == "institute" || rStr == "institute_admin" {
+				isInstitute = true
+				break
+			}
+		}
+
 		isTeacher := false
 		for _, r := range roles {
 			if strings.ToLower(strings.TrimSpace(r)) == "teacher" {
@@ -891,7 +900,66 @@ func (s *AuthService) GetDashboardMetrics(ctx context.Context, userID, instituti
 			}
 		}
 
-		if isTeacher {
+		if isInstitute {
+			// Query specific metrics for this institute
+			var totalTeachers int64
+			var totalStudents int64
+			var activeUsers int64
+			var pendingUsers int64
+
+			// Teachers in this institute
+			_ = tx.QueryRow(ctx, `
+				select count(distinct ur.user_id) 
+				from user_roles ur 
+				join roles r on ur.role_id = r.role_id 
+				join users u on ur.user_id = u.user_id
+				where lower(r.name) = 'teacher' and u.institution_id = $1
+			`, institutionID).Scan(&totalTeachers)
+
+			// Students in this institute
+			_ = tx.QueryRow(ctx, `
+				select count(distinct ur.user_id) 
+				from user_roles ur 
+				join roles r on ur.role_id = r.role_id 
+				join users u on ur.user_id = u.user_id
+				where lower(r.name) = 'student' and u.institution_id = $1
+			`, institutionID).Scan(&totalStudents)
+
+			// Active vs Pending Users
+			_ = tx.QueryRow(ctx, `select count(*) from users where status='active' and institution_id = $1`, institutionID).Scan(&activeUsers)
+			_ = tx.QueryRow(ctx, `select count(*) from users where status='pending' and institution_id = $1`, institutionID).Scan(&pendingUsers)
+
+			// Institute Telemetry from Redis
+			activeTeachers := 0
+			activeCandidates := 0
+			totalRequests := 0
+			promptTokens := 0
+			completionTokens := 0
+
+			if institutionID != "" {
+				tenantKey := fmt.Sprintf("tenant_load:%s", institutionID)
+				metrics, _ := s.rdb.HGetAll(ctx, tenantKey).Result()
+				
+				if val, ok := metrics["active_teachers"]; ok { activeTeachers = parseIntVal(val) }
+				if val, ok := metrics["active_candidates"]; ok { activeCandidates = parseIntVal(val) }
+				if val, ok := metrics["total_requests"]; ok { totalRequests = parseIntVal(val) }
+				if val, ok := metrics["total_prompt_tokens"]; ok { promptTokens = parseIntVal(val) }
+				if val, ok := metrics["total_completion_tokens"]; ok { completionTokens = parseIntVal(val) }
+			}
+
+			res["role"] = "institute"
+			res["totalTeachers"] = totalTeachers
+			res["totalStudents"] = totalStudents
+			res["activeUsers"] = activeUsers
+			res["pendingUsers"] = pendingUsers
+			res["activeTeachers"] = activeTeachers
+			res["activeCandidates"] = activeCandidates
+			res["totalRequests"] = totalRequests
+			res["promptTokens"] = promptTokens
+			res["completionTokens"] = completionTokens
+			// Artificial progress history for the chart
+			res["progressHistory"] = []int{45, 52, 60, 58, 65, 78, 85, 92}
+		} else if isTeacher {
 			res["role"] = "teacher"
 			res["totalStudents"] = 28
 			res["averageAttendance"] = 96.4
@@ -922,7 +990,7 @@ func parseIntVal(s string) int {
 	return i
 }
 
-func (s *AuthService) DeleteUser(ctx context.Context, actorUserID, actorInstitutionID string, isSysAdmin bool, userID, ipAddress string) error {
+func (s *AuthService) IsolateUser(ctx context.Context, actorUserID, actorInstitutionID string, isSysAdmin bool, userID, ipAddress string) error {
 	if s.pool == nil {
 		return errors.New("auth pool not configured")
 	}
@@ -986,6 +1054,84 @@ func (s *AuthService) DeleteUser(ctx context.Context, actorUserID, actorInstitut
 				"target_user_id": uid,
 				"target_email":   targetEmail,
 				"status":         "ISOLATED",
+				"is_sys_admin":   isSysAdmin,
+				"timestamp":      time.Now().UTC(),
+			},
+		})
+	}
+
+	return nil
+}
+
+func (s *AuthService) DeleteUser(ctx context.Context, actorUserID, actorInstitutionID string, isSysAdmin bool, userID, ipAddress string) error {
+	if s.pool == nil {
+		return errors.New("auth pool not configured")
+	}
+	uid := strings.TrimSpace(userID)
+	if uid == "" {
+		return errors.New("userId required")
+	}
+	if !isSysAdmin {
+		return errors.New("forbidden: system administrator privileges required for account deletion")
+	}
+
+	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback(context.Background()) }()
+
+	appCtx := database.AppContext{AllowLogin: true}
+	if err := database.ApplyAppContext(ctx, tx, appCtx); err != nil {
+		return err
+	}
+
+	var targetEmail string
+	err = tx.QueryRow(ctx, `select email from users where user_id=nullif($1,'')::uuid`, uid).Scan(&targetEmail)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return errors.New("user not found")
+		}
+		return err
+	}
+
+	// Hard Deletion Pattern
+	_, err = tx.Exec(ctx, `delete from user_roles where user_id=nullif($1,'')::uuid`, uid)
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(ctx, `delete from institution_approval_requests where user_id=nullif($1,'')::uuid`, uid)
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(ctx, `delete from users where user_id=nullif($1,'')::uuid`, uid)
+	if err != nil {
+		return err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return err
+	}
+
+	// Session Revocation: Purge all session keys from Redis and set revoked=true
+	if s.sessions != nil {
+		_ = s.sessions.RevokeAllUserSessions(ctx, uid)
+	}
+
+	// Global Audit Logging
+	if s.auditLogger != nil {
+		_ = s.auditLogger.Log(ctx, security.AuditEvent{
+			UserID:     actorUserID,
+			Action:     "DELETE_USER",
+			Resource:   "user",
+			ResourceID: uid,
+			IPAddress:  ipAddress,
+			Metadata: map[string]any{
+				"target_user_id": uid,
+				"target_email":   targetEmail,
+				"status":         "DELETED",
 				"is_sys_admin":   isSysAdmin,
 				"timestamp":      time.Now().UTC(),
 			},

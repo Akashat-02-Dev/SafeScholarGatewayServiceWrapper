@@ -442,10 +442,21 @@ where oa.provider=$1 and oa.provider_user_id=$2`, provider, providerSubject).Sca
 
 	err = tx.QueryRow(ctx, `select user_id::text, coalesce(institution_id::text,'') from users where lower(email)=lower($1) limit 1`, email).Scan(&userID, &institutionID)
 	if err != nil {
+		// Phase 2: Map domain suffix to institution_id
+		parts := strings.Split(email, "@")
+		var mappedInstID *string
+		if len(parts) == 2 {
+			domain := strings.ToLower(parts[1])
+			var instUUID string
+			if err := tx.QueryRow(ctx, `SELECT institution_id::text FROM institutions WHERE domain_suffix = $1 LIMIT 1`, domain).Scan(&instUUID); err == nil {
+				mappedInstID = &instUUID
+			}
+		}
+
 		err = tx.QueryRow(ctx, `
-insert into users(email, first_name, last_name, status, is_sys_admin)
-values ($1, nullif($2,''), nullif($3,''), 'active', false)
-returning user_id::text, coalesce(institution_id::text,'')`, email, firstName, lastName).Scan(&userID, &institutionID)
+insert into users(email, first_name, last_name, status, is_sys_admin, institution_id)
+values ($1, nullif($2,''), nullif($3,''), 'active', false, nullif($4,'')::uuid)
+returning user_id::text, coalesce(institution_id::text,'')`, email, firstName, lastName, mappedInstID).Scan(&userID, &institutionID)
 		if err != nil {
 			return "", "", errors.New("oauth user create failed")
 		}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { apiFetch } from '../../services/apiClient'
 import { useAuth } from '../../services/authService'
 import { Activity, Shield, Smile, Meh, Frown, Snowflake, Flame, RefreshCw, AlertTriangle } from 'lucide-react'
@@ -11,7 +11,7 @@ interface StudentEvent {
   response: string
   timestamp: string
   sentiment: 'positive' | 'neutral' | 'frustrated'
-  is_flagged: bool
+  is_flagged: boolean
 }
 
 interface ActiveSession {
@@ -127,7 +127,7 @@ export default function StudentOversightDashboard() {
       }
     }
 
-    ws.onclose = (event: CloseEvent) => {
+    ws.onclose = () => {
       setConnStatus('disconnected')
 
       // Do not spam console. Limit and retry with backoff.

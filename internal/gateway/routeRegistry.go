@@ -50,6 +50,11 @@ func Routes() []Route {
 		{Method: http.MethodGet, PathPrefix: "/api/oauth/apple/start", AuthRequired: false},
 		{Method: http.MethodGet, PathPrefix: "/api/oauth/apple/callback", AuthRequired: false},
 
+		// LTI 1.3 Endpoints (Phase 2)
+		{Method: http.MethodPost, PathPrefix: "/api/v1/lti/login/init", AuthRequired: false},
+		{Method: http.MethodPost, PathPrefix: "/api/v1/lti/launch", AuthRequired: false},
+		{Method: http.MethodGet, PathPrefix: "/.well-known/jwks.json", AuthRequired: false},
+
 		{Method: http.MethodGet, PathPrefix: "/api/admin/users", AuthRequired: true, RequiredPermission: PermissionManageUsers},
 		{Method: http.MethodGet, PathPrefix: "/api/admin/users/approvals", AuthRequired: true, RequiredPermission: PermissionManageUsers},
 		{Method: http.MethodPost, PathPrefix: "/api/admin/users/approve", AuthRequired: true, RequiredPermission: PermissionManageUsers},
@@ -66,6 +71,10 @@ func Routes() []Route {
 		{Method: http.MethodPost, PathPrefix: "/api/v1/ai/educator/leveler", AuthRequired: true, RequiredPermission: rbac.PermissionUseLeveler},
 		{Method: http.MethodPost, PathPrefix: "/api/v1/ai/educator/video-question-maker", AuthRequired: true, RequiredPermission: rbac.PermissionUseVideoAssessor},
 		{Method: http.MethodPost, PathPrefix: "/api/v1/ai/educator/iep-generator", AuthRequired: true, RequiredPermission: rbac.PermissionGenerateIEP},
+		{Method: http.MethodPost, PathPrefix: "/api/v1/ai/student/writing-feedback", AuthRequired: true, RequiredPermission: rbac.PermissionExecuteAITutor},
+		{Method: http.MethodPost, PathPrefix: "/api/v1/ai/student/quiz-generator", AuthRequired: true, RequiredPermission: rbac.PermissionExecuteAITutor},
+		{Method: http.MethodPost, PathPrefix: "/api/v1/ai/student/character-bot", AuthRequired: true, RequiredPermission: rbac.PermissionExecuteAITutor},
+		{Method: http.MethodPost, PathPrefix: "/api/v1/ai/student/custom-bot", AuthRequired: true, RequiredPermission: rbac.PermissionExecuteAITutor},
 		{Method: http.MethodPost, PathPrefix: "/api/v1/rag/ingest", StripPrefix: "/api", AuthRequired: true, RequiredPermission: rbac.PermissionManageDistrictAI, ServiceName: "ai-orchestrator"},
 		{Method: http.MethodGet, PathPrefix: "/api/v1/rag/documents", StripPrefix: "/api", AuthRequired: true, RequiredPermission: rbac.PermissionGenerateLesson, ServiceName: "ai-orchestrator"},
 		{Method: http.MethodPost, PathPrefix: "/api/v1/lms/export", StripPrefix: "/api", AuthRequired: true, RequiredPermission: rbac.PermissionGenerateLesson, ServiceName: "lms-integration"},

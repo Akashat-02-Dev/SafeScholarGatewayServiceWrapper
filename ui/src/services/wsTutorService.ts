@@ -35,13 +35,17 @@ export class WSTutorService {
     sessionId: string,
     onMessage: MessageCallback,
     onError: ErrorCallback,
-    onStateChange: StateCallback
+    onStateChange: StateCallback,
+    botType?: string,
+    botId?: string
   ) {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = import.meta.env.VITE_GATEWAY_HOST || window.location.host;
     const token = getAccessToken();
     const tokenParam = token ? `&token=${encodeURIComponent(token)}` : '';
-    this.url = `${protocol}//${host}/api/v1/ai/tutor?session_id=${sessionId}${tokenParam}`;
+    const typeParam = botType ? `&bot_type=${encodeURIComponent(botType)}` : '';
+    const idParam = botId ? `&bot_id=${encodeURIComponent(botId)}` : '';
+    this.url = `${protocol}//${host}/api/v1/ai/tutor?session_id=${sessionId}${tokenParam}${typeParam}${idParam}`;
     this.onMessage = onMessage;
     this.onError = onError;
     this.onStateChange = onStateChange;

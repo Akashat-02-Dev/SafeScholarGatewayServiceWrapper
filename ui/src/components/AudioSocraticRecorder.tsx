@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react'
-import { apiFetch } from '../services/apiClient'
+import { useState, useRef } from 'react'
+
 import { Mic, MicOff, Volume2, VolumeX, Sparkles } from 'lucide-react'
 
 interface AudioSocraticRecorderProps {
@@ -17,7 +17,7 @@ export function AudioSocraticRecorder({ onTranscript, aiResponseText }: AudioSoc
   const audioPlayerRef = useRef<HTMLAudioElement | null>(null)
 
   const getTokens = () => {
-    const raw = sessionStorage.getItem('safescholar.tokens.v1')
+    const raw = sessionStorage.getItem('safescholar.token.v1')
     if (!raw) return null
     try {
       return JSON.parse(raw)
@@ -71,8 +71,8 @@ export function AudioSocraticRecorder({ onTranscript, aiResponseText }: AudioSoc
 
   const simulateMockTranscription = async () => {
     setIsTranscribing(true)
-    const tokens = getTokens()
-    const token = tokens ? tokens.accessToken : null
+    const token = getTokens()
+    // const token = token ? token.accessToken : null
     
     // Create a tiny mock audio blob to satisfy FormData upload
     const dummyBlob = new Blob([new Uint8Array(1000)], { type: 'audio/wav' })
@@ -81,8 +81,8 @@ export function AudioSocraticRecorder({ onTranscript, aiResponseText }: AudioSoc
 
   const sendAudioBlobForTranscription = async (blob: Blob) => {
     setIsTranscribing(true)
-    const tokens = getTokens()
-    const token = tokens ? tokens.accessToken : null
+    const token = getTokens()
+    // const token = token ? token.accessToken : null
 
     try {
       const formData = new FormData()
@@ -118,8 +118,8 @@ export function AudioSocraticRecorder({ onTranscript, aiResponseText }: AudioSoc
     if (!aiResponseText || isPlaying) return
 
     setIsPlaying(true)
-    const tokens = getTokens()
-    const token = tokens ? tokens.accessToken : null
+    const token = getTokens()
+    // const token = token ? token.accessToken : null
 
     try {
       const apiBase = (import.meta as any).env?.VITE_API_BASE_URL || ''

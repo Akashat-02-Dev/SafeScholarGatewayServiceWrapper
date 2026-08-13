@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { BookOpen, Send, GraduationCap, CheckCircle2, CloudUpload, Sparkles } from 'lucide-react'
+import { BookOpen, CheckCircle2, CloudUpload, Sparkles } from 'lucide-react'
 import { useAuth } from '../../services/authService'
 import { aiService } from '../../services/aiService'
 import type { LessonPlanSchema } from '../../types/aios'
@@ -57,25 +57,30 @@ export default function LessonPlanner() {
 
     try {
       const payload = {
-        title: lessonPlan.lesson_title,
-        description: `Aligned Standards: ${lessonPlan.aligned_standards?.map(s => s.code).join(', ')}`,
-        lms_provider: 'canvas' as const,
-        quiz_data: {
-          title: `${lessonPlan.lesson_title} Assessment`,
-          description: `Formative assessment for ${lessonPlan.lesson_title}`,
-          questions: [
-            {
-              question_text: `Which primary standard code does this align to?`,
-              question_type: 'multiple_choice' as const,
-              points: 5,
-              options: [
-                lessonPlan.aligned_standards?.[0]?.code || 'Selected Standard',
-                'General Standard',
-                'Unrelated standard'
-              ],
-              correct_answer: lessonPlan.aligned_standards?.[0]?.code || 'Selected Standard'
-            }
-          ]
+        user_id: me?.userId || 'unknown',
+        institution_id: institutionId,
+        target_lms: 'canvas' as const,
+        payload: {
+          title: lessonPlan.lesson_title,
+          description: `Aligned Standards: ${lessonPlan.aligned_standards?.map((s: any) => s.code).join(', ')}`,
+          lms_provider: 'canvas' as const,
+          quiz_data: {
+            title: `${lessonPlan.lesson_title} Assessment`,
+            description: `Formative assessment for ${lessonPlan.lesson_title}`,
+            questions: [
+              {
+                question_text: `Which primary standard code does this align to?`,
+                question_type: 'multiple_choice' as const,
+                points: 5,
+                options: [
+                  lessonPlan.aligned_standards?.[0]?.code || 'Selected Standard',
+                  'General Standard',
+                  'Unrelated standard'
+                ],
+                correct_answer: lessonPlan.aligned_standards?.[0]?.code || 'Selected Standard'
+              }
+            ]
+          }
         }
       }
       

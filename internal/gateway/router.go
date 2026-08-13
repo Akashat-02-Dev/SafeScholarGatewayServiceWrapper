@@ -20,6 +20,7 @@ import (
 	"safescholar/gateway/internal/rbac"
 	"safescholar/gateway/internal/security"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -41,6 +42,8 @@ type Router struct {
 	auditLogger *security.AuditLogger
 	oversightSvc *OversightService
 	aiClient    clients.AIOrchestratorClient
+	redisClient *redis.Client
+	dbPool      *pgxpool.Pool
 }
 
 type RouterDeps struct {
@@ -57,18 +60,19 @@ type RouterDeps struct {
 	ModerationClient *clients.ModerationClient
 	AuditLogger      *security.AuditLogger
 	RedisClient      *redis.Client
+	DBPool           *pgxpool.Pool
 	AIClient         clients.AIOrchestratorClient
 }
 
-func NewRouter(deps RouterDeps) (http.Handler, error) {
+func NewRouter(deps RouterDeps) (http.Handler, func(), error) {
 	if deps.Logger == nil {
 		deps.Logger = slog.Default()
 	}
 	if deps.ServiceRegistry == nil {
-		return nil, errors.New("service registry required")
+		return nil, nil, errors.New("service registry required")
 	}
 	if deps.ServiceProxy == nil {
-		return nil, errors.New("service proxy required")
+		return nil, nil, errors.New("service proxy required")
 	}
 
 	r := &Router{
@@ -84,13 +88,15 @@ func NewRouter(deps RouterDeps) (http.Handler, error) {
 		auditLogger: deps.AuditLogger,
 		oversightSvc: NewOversightService(deps.RedisClient),
 		aiClient:    deps.AIClient,
+		redisClient: deps.RedisClient,
+		dbPool:      deps.DBPool,
 	}
 
 	base := http.HandlerFunc(r.serve)
 
 	var telemetry middleware.TelemetryLogger
-	if deps.RedisClient != nil {
-		telemetry = middleware.NewTelemetryLogger(deps.RedisClient)
+	if deps.RedisClient != nil && deps.DBPool != nil {
+		telemetry = middleware.NewTelemetryLogger(deps.RedisClient, deps.DBPool)
 	}
 
 	h := middleware.Chain(
@@ -111,8 +117,13 @@ func NewRouter(deps RouterDeps) (http.Handler, error) {
 			return next
 		},
 	)
+	cleanup := func() {
+		if telemetry != nil {
+			telemetry.Close()
+		}
+	}
 
-	return h, nil
+	return h, cleanup, nil
 }
 
 func (r *Router) serve(w http.ResponseWriter, req *http.Request) {
@@ -145,18 +156,6 @@ func (r *Router) serve(w http.ResponseWriter, req *http.Request) {
 	case strings.HasPrefix(route.PathPrefix, "/api/oauth/"):
 		r.handleOAuth(w, req, route.PathPrefix)
 		return
-	case strings.HasPrefix(route.PathPrefix, "/api/admin/"):
-		r.handleAdmin(w, req, route.PathPrefix)
-		return
-	case route.PathPrefix == "/api/v1/ai/tutor":
-		if r.wsService == nil || r.modClient == nil {
-			w.WriteHeader(http.StatusServiceUnavailable)
-			return
-		}
-		handler := http.HandlerFunc(r.wsService.HandleStudentSession)
-		moderated := middleware.AIModerationMiddleware(r.modClient, r.auditLogger)(handler)
-		moderated.ServeHTTP(w, req)
-		return
 	case route.PathPrefix == "/api/v1/admin/oversight/stream":
 		if r.oversightSvc == nil {
 			w.WriteHeader(http.StatusServiceUnavailable)
@@ -171,6 +170,18 @@ func (r *Router) serve(w http.ResponseWriter, req *http.Request) {
 		}
 		r.oversightSvc.HandleOversightFreeze(w, req)
 		return
+	case strings.HasPrefix(route.PathPrefix, "/api/admin/") || strings.HasPrefix(route.PathPrefix, "/api/v1/admin/"):
+		r.handleAdmin(w, req, route.PathPrefix)
+		return
+	case route.PathPrefix == "/api/v1/ai/tutor":
+		if r.wsService == nil || r.modClient == nil {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
+		handler := http.HandlerFunc(r.wsService.HandleStudentSession)
+		moderated := middleware.AIModerationMiddleware(r.modClient, r.auditLogger, r.redisClient, r.dbPool)(handler)
+		moderated.ServeHTTP(w, req)
+		return
 	case route.PathPrefix == "/api/v1/ai/educator/lesson-planner":
 		r.handleSpecificAITool(w, req, "lesson_planner")
 		return
@@ -183,6 +194,35 @@ func (r *Router) serve(w http.ResponseWriter, req *http.Request) {
 	case route.PathPrefix == "/api/v1/ai/educator/leveler":
 		r.handleSpecificAITool(w, req, "leveler")
 		return
+	case route.PathPrefix == "/api/v1/ai/student/writing-feedback":
+		handler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			r.handleSpecificAITool(w, req, "writing_feedback")
+		})
+		if r.modClient != nil {
+			moderated := middleware.AIModerationMiddleware(r.modClient, r.auditLogger, r.redisClient, r.dbPool)(handler)
+			moderated.ServeHTTP(w, req)
+		} else {
+			handler.ServeHTTP(w, req)
+		}
+		return
+	case route.PathPrefix == "/api/v1/ai/student/quiz-generator":
+		r.handleSpecificAITool(w, req, "quiz_generator")
+		return
+	case route.PathPrefix == "/api/v1/ai/student/character-bot":
+		r.handleSpecificAITool(w, req, "character_bot")
+		return
+	case route.PathPrefix == "/api/v1/ai/student/custom-bot":
+		r.handleSpecificAITool(w, req, "custom_bot")
+		return
+	case route.PathPrefix == "/api/v1/lti/login/init":
+		r.handleLTIInit(w, req)
+		return
+	case route.PathPrefix == "/api/v1/lti/launch":
+		r.handleLTILaunch(w, req)
+		return
+	case route.PathPrefix == "/.well-known/jwks.json":
+		r.handleJWKS(w, req)
+		return
 	case route.ServiceName != "":
 		r.handleProxy(w, req, route)
 		return
@@ -190,6 +230,22 @@ func (r *Router) serve(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
+}
+
+// Phase 2: Strict IMS Global LTI 1.3 Endpoints
+func (r *Router) handleLTIInit(w http.ResponseWriter, req *http.Request) {
+	// 1. OIDC Initiation
+	security.WriteJSONError(w, http.StatusNotImplemented, "LTI Init not fully implemented")
+}
+
+func (r *Router) handleLTILaunch(w http.ResponseWriter, req *http.Request) {
+	// 2. The secure redirect
+	security.WriteJSONError(w, http.StatusNotImplemented, "LTI Launch not fully implemented")
+}
+
+func (r *Router) handleJWKS(w http.ResponseWriter, req *http.Request) {
+	// 3. Public key exposure for LMS verification
+	writeJSON(w, http.StatusOK, map[string]any{"keys": []any{}})
 }
 
 func (r *Router) handleProxy(w http.ResponseWriter, req *http.Request, route Route) {
@@ -442,8 +498,22 @@ func (r *Router) handleAdmin(w http.ResponseWriter, req *http.Request, prefix st
 		}
 		w.WriteHeader(http.StatusMethodNotAllowed)
 	case "/api/admin/users/delete", "/api/v1/admin/users/delete":
-		if req.Method == http.MethodPost {
+		if req.Method == http.MethodPost || req.Method == http.MethodOptions {
+			if req.Method == http.MethodOptions {
+				w.WriteHeader(http.StatusOK)
+				return
+			}
 			r.handleDeleteUser(w, req)
+			return
+		}
+		w.WriteHeader(http.StatusMethodNotAllowed)
+	case "/api/admin/users/isolate", "/api/v1/admin/users/isolate":
+		if req.Method == http.MethodPost || req.Method == http.MethodOptions {
+			if req.Method == http.MethodOptions {
+				w.WriteHeader(http.StatusOK)
+				return
+			}
+			r.handleIsolateUser(w, req)
 			return
 		}
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -668,6 +738,40 @@ func (r *Router) handleDeleteUser(w http.ResponseWriter, req *http.Request) {
 	err := r.authSvc.DeleteUser(req.Context(), uc.UserID, uc.InstitutionID, uc.IsSysAdmin, dr.UserID, ipStr)
 	if err != nil {
 		r.logger.Error("DeleteUser failed", "error", err, "userId", dr.UserID, "actorUserID", uc.UserID, "actorInstitutionID", uc.InstitutionID)
+		msg := strings.ToLower(strings.TrimSpace(err.Error()))
+		if strings.Contains(msg, "forbidden") {
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
+		if strings.Contains(msg, "not found") || strings.Contains(msg, "no rows") || strings.Contains(msg, "unknown") {
+			writeJSON(w, http.StatusNotFound, map[string]any{"error": err.Error()})
+			return
+		}
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (r *Router) handleIsolateUser(w http.ResponseWriter, req *http.Request) {
+	if r.authSvc == nil {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		return
+	}
+	var dr deleteUserRequest
+	if err := json.NewDecoder(req.Body).Decode(&dr); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	uc := middleware.UserContextFromContext(req.Context())
+	ipObj := middleware.ClientIP(req)
+	ipStr := ""
+	if ipObj != nil {
+		ipStr = ipObj.String()
+	}
+	err := r.authSvc.IsolateUser(req.Context(), uc.UserID, uc.InstitutionID, uc.IsSysAdmin, dr.UserID, ipStr)
+	if err != nil {
+		r.logger.Error("IsolateUser failed", "error", err, "userId", dr.UserID, "actorUserID", uc.UserID, "actorInstitutionID", uc.InstitutionID)
 		msg := strings.ToLower(strings.TrimSpace(err.Error()))
 		if strings.Contains(msg, "forbidden") {
 			w.WriteHeader(http.StatusForbidden)

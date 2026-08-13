@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Text, DateTime, func, JSON
+from sqlalchemy import Column, String, Text, DateTime, func, JSON, Boolean
 from sqlalchemy.dialects.postgresql import UUID
 from pgvector.sqlalchemy import Vector
 from app.core.database import Base
@@ -8,8 +8,11 @@ class KnowledgeChunk(Base):
     __tablename__ = "knowledge_chunks"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    institution_id = Column(String, index=True, nullable=False) # Multi-tenant boundary
+    institution_id = Column(UUID(as_uuid=True), index=True, nullable=False) # Multi-tenant boundary
     document_name = Column(String, nullable=False)
+    
+    # RAG Row-Level Security Column
+    is_vetted_for_students = Column(Boolean, default=False, index=True)
     
     # The actual text chunk and its vector representation
     content = Column(Text, nullable=False)

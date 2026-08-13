@@ -81,6 +81,19 @@ export async function deleteUser(accessToken: string, userId: string) {
   })
 }
 
-export async function isolateUser(accessToken: string, userId: string) {
-  return deleteUser(accessToken, userId)
+export async function isolateUserAccount(userId: string, institutionId: string) {
+  const raw = sessionStorage.getItem('safescholar.tokens.v1')
+  let accessToken = ''
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw)
+      accessToken = parsed.accessToken
+    } catch {}
+  }
+  
+  return apiFetch<void>('/api/v1/admin/users/isolate', {
+    method: 'POST',
+    accessToken,
+    body: { userId, institution_id: institutionId },
+  })
 }

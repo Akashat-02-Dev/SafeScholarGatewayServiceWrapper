@@ -7,7 +7,7 @@ import {
   BookOpen, Clock, Calendar, CheckSquare, Sparkles,
   TrendingUp, Award, ClipboardList
 } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 
 interface AdminMetrics {
   role: 'sysadmin'
@@ -183,7 +183,113 @@ export function Dashboard() {
   }
 
   // ----------------------------------------------------
-  // 🍎 2. TEACHER VIEW
+  // 🏫 2. INSTITUTE ADMIN VIEW
+  // ----------------------------------------------------
+  if (metrics?.role === 'institute') {
+    const inst = metrics as any
+    return (
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }} className="page">
+        <div className="card shadow-lg border border-slate-200/50 dark:border-white/10 bg-white/70 dark:bg-zinc-900/70 backdrop-blur-3xl rounded-3xl overflow-hidden">
+          <div className="cardInner p-4 sm:p-6 md:p-8">
+            <div className="flex items-start justify-between border-b border-slate-200 dark:border-zinc-800 pb-6 mb-6">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-cyan-500 to-blue-600 text-white shadow-lg">
+                  <Building2 size={28} />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">District Metrics Dashboard</h2>
+                  <div className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-1">Holistic view of {me?.institutionId}'s district-wide adoption.</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+              <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 p-6 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="text-slate-600 dark:text-slate-300 font-semibold text-sm flex items-center gap-2">
+                    <GraduationCap size={18} className="text-blue-500" /> Total Teachers
+                  </div>
+                </div>
+                <div className="text-3xl font-black text-slate-800 dark:text-white tracking-tight">{inst.totalTeachers}</div>
+                <div className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-2">Active Educators</div>
+              </div>
+
+              <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 p-6 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="text-slate-600 dark:text-slate-300 font-semibold text-sm flex items-center gap-2">
+                    <Users size={18} className="text-emerald-500" /> Total Students
+                  </div>
+                </div>
+                <div className="text-3xl font-black text-slate-800 dark:text-white tracking-tight">{inst.totalStudents}</div>
+                <div className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-2">Enrolled Learners</div>
+              </div>
+
+              <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 p-6 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="text-slate-600 dark:text-slate-300 font-semibold text-sm flex items-center gap-2">
+                    <Sparkles size={18} className="text-indigo-500" /> AI Requests
+                  </div>
+                </div>
+                <div className="text-3xl font-black text-slate-800 dark:text-white tracking-tight">{inst.totalRequests || 0}</div>
+                <div className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-2">In this billing cycle</div>
+              </div>
+
+              <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 p-6 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="text-slate-600 dark:text-slate-300 font-semibold text-sm flex items-center gap-2">
+                    <Clock size={18} className="text-amber-500" /> Pending Users
+                  </div>
+                </div>
+                <div className="text-3xl font-black text-amber-600 tracking-tight">{inst.pendingUsers}</div>
+                <div className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-2">Awaiting your approval</div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="bg-white/60 dark:bg-zinc-800/60 backdrop-blur-md rounded-2xl p-6 border border-slate-200/60 dark:border-zinc-700/60">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-2">
+                    <TrendingUp size={16} className="text-blue-500" /> AI Adoption Trend
+                  </h3>
+                </div>
+                <div className="flex justify-center items-center h-40">
+                  <Sparkline data={inst.progressHistory || [10, 20, 15, 30, 40, 50, 60]} />
+                </div>
+              </div>
+
+              <div className="bg-white/60 dark:bg-zinc-800/60 backdrop-blur-md rounded-2xl p-6 border border-slate-200/60 dark:border-zinc-700/60 flex flex-col gap-4">
+                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider mb-2 flex items-center gap-2">
+                  <Shield size={16} className="text-emerald-500" /> Quick Actions
+                </h3>
+                <Link to="/admin/dashboard" className="flex items-center gap-3 p-4 rounded-xl bg-slate-50 dark:bg-zinc-900/50 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors border border-slate-200 dark:border-zinc-700/80 group">
+                  <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
+                    <CheckSquare size={18} />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-slate-800 dark:text-slate-200">Review Pending Users</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Approve or reject waiting candidates</div>
+                  </div>
+                </Link>
+                <Link to="/admin/dashboard" className="flex items-center gap-3 p-4 rounded-xl bg-slate-50 dark:bg-zinc-900/50 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors border border-slate-200 dark:border-zinc-700/80 group">
+                  <div className="p-2 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400">
+                    <Users size={18} />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-slate-800 dark:text-slate-200">Manage Role Matrix</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Delegate AI tools to your local staff</div>
+                  </div>
+                </Link>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </motion.div>
+    )
+  }
+
+  // ----------------------------------------------------
+  // 🍎 3. TEACHER VIEW
   // ----------------------------------------------------
   if (metrics?.role === 'teacher') {
     const teacher = metrics as TeacherMetrics
@@ -357,55 +463,82 @@ export function Dashboard() {
   }
 
   // ----------------------------------------------------
-  // 👤 4. DEFAULT USER VIEW
+  // 👤 4. DEFAULT USER VIEW (Security & Profile Dashboard)
   // ----------------------------------------------------
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }} className="page">
-      <div className="card">
-        <div className="cardInner">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div className="brandMark" style={{ width: 40, height: 40 }}>
-              <Shield size={20} />
+      <div className="card shadow-lg border border-slate-200/50 dark:border-white/10 bg-white/70 dark:bg-zinc-900/70 backdrop-blur-3xl rounded-3xl overflow-hidden">
+        <div className="cardInner p-4 sm:p-6 md:p-8 relative overflow-hidden">
+          {/* Ambient background blur */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 dark:bg-blue-500/20 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none"></div>
+
+          {/* Header */}
+          <div className="flex items-center gap-5 border-b border-slate-200 dark:border-zinc-800 pb-6 mb-8 relative z-10">
+            <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-500/20">
+              <Shield size={32} />
             </div>
             <div>
-              <h2 className="pageTitle">SafeScholar Portal</h2>
-              <div className="pageSub">Logged in under: {me?.email}</div>
+              <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">Personal Workspace</h2>
+              <div className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-1">Logged in under: <span className="text-slate-700 dark:text-slate-300">{me?.email}</span></div>
             </div>
           </div>
 
-          <div className="divider" />
-
-          <div className="kpiRow">
-            <div className="kpi">
-              <div className="kpiLabel" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <KeyRound size={16} /> Signed in as
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
+            {/* Identity Card */}
+            <div className="bg-white/60 dark:bg-zinc-800/60 backdrop-blur-md rounded-2xl p-6 border border-slate-200/60 dark:border-zinc-700/60 shadow-sm hover:shadow-md transition-shadow">
+              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider mb-6 flex items-center gap-2">
+                <KeyRound size={16} className="text-indigo-500" /> Identity Overview
+              </h3>
+              
+              <div className="space-y-5">
+                <div>
+                  <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Email Address</div>
+                  <div className="font-medium text-slate-800 dark:text-slate-200">{me?.email || '—'}</div>
+                </div>
+                
+                <div>
+                  <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Institution GUID</div>
+                  <div className="font-mono text-sm px-3 py-1.5 bg-slate-100 dark:bg-zinc-900 rounded-lg text-slate-700 dark:text-slate-300 inline-block border border-slate-200 dark:border-zinc-700">
+                    {me?.institutionId || '—'}
+                  </div>
+                </div>
               </div>
-              <div className="kpiValue">{me?.email || '—'}</div>
             </div>
-            <div className="kpi">
-              <div className="kpiLabel" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <Building2 size={16} /> Institution
+
+            {/* Access Rights */}
+            <div className="bg-white/60 dark:bg-zinc-800/60 backdrop-blur-md rounded-2xl p-6 border border-slate-200/60 dark:border-zinc-700/60 shadow-sm hover:shadow-md transition-shadow flex flex-col gap-6">
+              <div>
+                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider mb-3 flex items-center gap-2">
+                  <Award size={16} className="text-amber-500" /> Assigned Roles
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {(me?.roles || []).length ? (
+                    (me?.roles || []).map((r) => (
+                      <span key={r} className="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-900/50 uppercase tracking-wide">
+                        {r}
+                      </span>
+                    ))
+                  ) : <span className="text-sm text-slate-400 italic">—</span>}
+                </div>
               </div>
-              <div className="kpiValue kpiValueMono mono">{me?.institutionId || '—'}</div>
+
+              <div>
+                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider mb-3 flex items-center gap-2">
+                  <Shield size={16} className="text-emerald-500" /> Active Permissions
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {(me?.permissions || []).length ? (
+                    (me?.permissions || []).map((p) => (
+                      <span key={p} className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/30">
+                        {p}
+                      </span>
+                    ))
+                  ) : <span className="text-sm text-slate-400 italic">—</span>}
+                </div>
+              </div>
             </div>
           </div>
-
-          <div className="divider" />
-
-          <div className="grid2">
-            <div className="toast">
-              <div style={{ fontSize: 12, opacity: 0.75 }}>Roles</div>
-              <div className="wrap" style={{ marginTop: 10 }}>
-                {(me?.roles || []).length ? (me?.roles || []).map((r) => <span key={r} className="chip">{r}</span>) : <span className="muted">—</span>}
-              </div>
-            </div>
-            <div className="toast">
-              <div style={{ fontSize: 12, opacity: 0.75 }}>Permissions</div>
-              <div className="wrap" style={{ marginTop: 10 }}>
-                {(me?.permissions || []).length ? (me?.permissions || []).map((p) => <span key={p} className="chip">{p}</span>) : <span className="muted">—</span>}
-              </div>
-            </div>
-          </div>
+          
         </div>
       </div>
     </motion.div>

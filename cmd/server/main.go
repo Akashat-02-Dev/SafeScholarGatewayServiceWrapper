@@ -136,7 +136,7 @@ func main() {
 		}
 	}
 
-	handler, err := gateway.NewRouter(gateway.RouterDeps{
+	handler, cleanup, err := gateway.NewRouter(gateway.RouterDeps{
 		Config:           cfg,
 		Logger:           logger,
 		RateLimiter:      limiter,
@@ -150,6 +150,7 @@ func main() {
 		ModerationClient: modClient,
 		AuditLogger:      auditLogger,
 		RedisClient:      rdb,
+		DBPool:           pool,
 		AIClient:         aiClient,
 	})
 	if err != nil {
@@ -177,6 +178,12 @@ func main() {
 
 	select {
 	case <-ctx.Done():
+		logger.Info("Shutting down Gateway Server gracefully...")
+
+		if cleanup != nil {
+			cleanup()
+		}
+
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 		_ = srv.Shutdown(shutdownCtx)

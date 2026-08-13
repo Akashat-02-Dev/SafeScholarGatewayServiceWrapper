@@ -32,11 +32,14 @@ class RAGPipeline:
         # 2. Generate embeddings in bulk
         vector_embeddings = await self.embeddings.aembed_documents(chunks)
         
+        import uuid
+        inst_uuid = uuid.UUID(institution_id) if isinstance(institution_id, str) else institution_id
+        
         # 3. Save to database
         db_chunks = []
         for i, chunk_text in enumerate(chunks):
             new_chunk = KnowledgeChunk(
-                institution_id=institution_id,
+                institution_id=inst_uuid,
                 document_name=document_name,
                 content=chunk_text,
                 embedding=vector_embeddings[i],
@@ -52,9 +55,12 @@ class RAGPipeline:
     async def retrieve_chunks(self, db: AsyncSession, institution_id: str, query: str, top_k: int = 3, document_names: list = None):
         """Embeds the search query and returns the matching KnowledgeChunk database objects."""
         query_vector = await self.embeddings.aembed_query(query)
+        import uuid
+        inst_uuid = uuid.UUID(institution_id) if isinstance(institution_id, str) else institution_id
+        
         stmt = (
             select(KnowledgeChunk)
-            .filter(KnowledgeChunk.institution_id == institution_id)
+            .filter(KnowledgeChunk.institution_id == inst_uuid)
         )
         if document_names:
             stmt = stmt.filter(KnowledgeChunk.document_name.in_(document_names))
@@ -140,12 +146,15 @@ class RAGPipeline:
         """Queries DISTINCT document_name and groups/counts chunks for the given institution_id. Falls back to mock documents if database table is missing."""
         try:
             from sqlalchemy import func
+            import uuid
+            inst_uuid = uuid.UUID(institution_id) if isinstance(institution_id, str) else institution_id
+            
             stmt = (
                 select(
                     KnowledgeChunk.document_name, 
                     func.count(KnowledgeChunk.id).label("chunk_count")
                 )
-                .where(KnowledgeChunk.institution_id == institution_id)
+                .where(KnowledgeChunk.institution_id == inst_uuid)
                 .group_by(KnowledgeChunk.document_name)
             )
             result = await db.execute(stmt)
@@ -158,6 +167,29 @@ class RAGPipeline:
                 {"document_name": "Middle_School_Science_Standards.pdf", "chunk_count": 86},
                 {"document_name": "School_Safety_Conduct_Guidelines.pdf", "chunk_count": 35}
             ]
+
+    async def execute_student_research(self, db: AsyncSession, institution_id: str, query: str, top_k: int = 3) -> str:
+        """Embeds the search query and returns the matching KnowledgeChunk database objects restricted to vetted documents."""
+        query_vector = await self.embeddings.aembed_query(query)
+        import uuid
+        inst_uuid = uuid.UUID(institution_id) if isinstance(institution_id, str) else institution_id
+        
+        stmt = (
+            select(KnowledgeChunk)
+            .filter(KnowledgeChunk.institution_id == inst_uuid)
+            .filter(KnowledgeChunk.is_vetted_for_students == True)
+        )
+        stmt = stmt.order_by(KnowledgeChunk.embedding.cosine_distance(query_vector)).limit(top_k)
+        result = await db.execute(stmt)
+        top_chunks = result.scalars().all()
+        
+        # Format the RAG context with explicitly requested "[Source: Doc, Chunk]" pattern
+        combined_context = ""
+        for i, chunk in enumerate(top_chunks):
+            chunk_index = chunk.metadata_json.get("chunk_index", i)
+            combined_context += f"[Source: {chunk.document_name}, Chunk {chunk_index}]\n{chunk.content}\n\n"
+        
+        return combined_context
 
 rag_service = RAGPipeline()
 

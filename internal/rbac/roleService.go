@@ -405,6 +405,9 @@ order by is_system_role desc, name asc`, actor.InstitutionID)
 }
 
 func (s *RoleService) canManageRoles(ctx context.Context, actor ActorContext) (bool, error) {
+	if s.policyEngine != nil && (s.policyEngine.Allowed(actor.Permissions, "MANAGE_LOCAL_ROLES") || s.policyEngine.Allowed(actor.Permissions, "MANAGE_ROLES")) {
+		return true, nil
+	}
 	if s.delegation == nil {
 		return true, nil
 	}
@@ -412,6 +415,9 @@ func (s *RoleService) canManageRoles(ctx context.Context, actor ActorContext) (b
 }
 
 func (s *RoleService) canManagePermissions(ctx context.Context, actor ActorContext) (bool, error) {
+	if s.policyEngine != nil && (s.policyEngine.Allowed(actor.Permissions, "MANAGE_LOCAL_ROLES") || s.policyEngine.Allowed(actor.Permissions, "MANAGE_ROLES")) {
+		return true, nil
+	}
 	if s.delegation == nil {
 		return true, nil
 	}
@@ -419,6 +425,9 @@ func (s *RoleService) canManagePermissions(ctx context.Context, actor ActorConte
 }
 
 func (s *RoleService) canManageUsers(ctx context.Context, actor ActorContext) (bool, error) {
+	if s.policyEngine != nil && (s.policyEngine.Allowed(actor.Permissions, "MANAGE_LOCAL_ROLES") || s.policyEngine.Allowed(actor.Permissions, "MANAGE_USERS")) {
+		return true, nil
+	}
 	if s.delegation == nil {
 		return true, nil
 	}
