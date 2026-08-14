@@ -3,9 +3,9 @@ server:
   host: 0.0.0.0
   port: 8080
   readHeaderTimeout: 5s
-  readTimeout: 15s
-  writeTimeout: 30s
-  idleTimeout: 60s
+  readTimeout: 180s
+  writeTimeout: 180s
+  idleTimeout: 120s
   maxRequestBodyBytes: 1048576
   tlsCertFile: ""
   tlsKeyFile: ""
@@ -33,7 +33,7 @@ jwt:
   audience: SafeScholarClients
   privateKeyPemFile: config/dev_jwt/private.pem
   publicKeyPemFile: config/dev_jwt/public.pem
-  accessTokenTtl: 15m
+  accessTokenTtl: 24h
   refreshTokenTtl: 720h
   serviceTokenTtl: 10m
   clockSkew: 1m

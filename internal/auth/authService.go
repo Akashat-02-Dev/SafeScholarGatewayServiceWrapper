@@ -1140,3 +1140,107 @@ func (s *AuthService) DeleteUser(ctx context.Context, actorUserID, actorInstitut
 
 	return nil
 }
+
+// ForgotPassword generates a secure token and stores it in Redis for password reset
+func (s *AuthService) ForgotPassword(ctx context.Context, email string) error {
+	if s.pool == nil || s.rdb == nil {
+		return errors.New("auth service not fully configured")
+	}
+
+	e := strings.ToLower(strings.TrimSpace(email))
+	if e == "" {
+		return errors.New("email is required")
+	}
+
+	// Look up user
+	var userID string
+	var status string
+	err := s.pool.QueryRow(ctx, `select user_id::text, status from users where lower(email)=$1 limit 1`, e).Scan(&userID, &status)
+	if err != nil {
+		// Do not leak if user exists or not, just return nil
+		return nil
+	}
+	if strings.ToLower(strings.TrimSpace(status)) != "active" {
+		return nil
+	}
+
+	// Generate secure token
+	token, err := newUUIDv4()
+	if err != nil {
+		return err
+	}
+
+	// Store token in Redis mapping to UserID for 15 minutes
+	redisKey := "pwd_reset_token:" + token
+	if err := s.rdb.Set(ctx, redisKey, userID, 15*time.Minute).Err(); err != nil {
+		return err
+	}
+
+	// Since this is a test environment, print to console instead of sending real email
+	fmt.Printf("\n=======================================================\n")
+	fmt.Printf("[SIMULATED EMAIL] Password Reset Request for: %s\n", e)
+	fmt.Printf("Link: http://localhost:5173/reset-password?token=%s\n", token)
+	fmt.Printf("=======================================================\n\n")
+
+	return nil
+}
+
+// ResetPassword validates the token and updates the user's password
+func (s *AuthService) ResetPassword(ctx context.Context, token string, newPassword string) error {
+	if s.pool == nil || s.rdb == nil {
+		return errors.New("auth service not fully configured")
+	}
+
+	t := strings.TrimSpace(token)
+	if t == "" {
+		return errors.New("invalid or expired token")
+	}
+
+	if err := s.passwordPolicy.Validate(newPassword); err != nil {
+		return err
+	}
+
+	redisKey := "pwd_reset_token:" + t
+	userID, err := s.rdb.Get(ctx, redisKey).Result()
+	if err != nil || userID == "" {
+		return errors.New("invalid or expired token")
+	}
+
+	// Hash the new password
+	hash, err := security.HashPassword(newPassword, security.DefaultArgon2idParams)
+	if err != nil {
+		return err
+	}
+
+	// Update user record
+	res, err := s.pool.Exec(ctx, `update users set password_hash=$1, updated_at=now() where user_id=nullif($2,'')::uuid`, hash, userID)
+	if err != nil {
+		return err
+	}
+	if res.RowsAffected() == 0 {
+		return errors.New("user not found")
+	}
+
+	// Invalidate all active sessions for the user to force re-login
+	if s.sessions != nil {
+		_ = s.sessions.RevokeAllUserSessions(ctx, userID)
+	}
+
+	// Delete the token
+	_ = s.rdb.Del(ctx, redisKey)
+
+	// Log audit event
+	if s.auditLogger != nil {
+		_ = s.auditLogger.Log(ctx, security.AuditEvent{
+			UserID:     userID,
+			Action:     "RESET_PASSWORD",
+			Resource:   "user",
+			ResourceID: userID,
+			Metadata: map[string]any{
+				"timestamp": time.Now().UTC(),
+			},
+		})
+	}
+
+	return nil
+}

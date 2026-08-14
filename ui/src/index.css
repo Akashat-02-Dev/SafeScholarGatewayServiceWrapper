@@ -24,14 +24,14 @@
   
   body {
     /* M3 Surface with a subtle gradient hint */
-    @apply bg-slate-50 text-slate-900 dark:bg-zinc-950 dark:text-zinc-100 antialiased;
+    @apply bg-slate-50 text-slate-900 dark:bg-zinc-950 dark:text-zinc-200 antialiased;
     background-image: radial-gradient(at 0% 0%, rgba(11, 87, 208, 0.04) 0px, transparent 50%), 
                       radial-gradient(at 100% 100%, rgba(15, 82, 35, 0.04) 0px, transparent 50%);
   }
 
   .dark body {
-    background-image: radial-gradient(at 0% 0%, rgba(11, 87, 208, 0.08) 0px, transparent 50%), 
-                      radial-gradient(at 100% 100%, rgba(15, 82, 35, 0.08) 0px, transparent 50%);
+    background-image: radial-gradient(at 0% 0%, rgba(37, 99, 235, 0.05) 0px, transparent 50%), 
+                      radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.03) 0px, transparent 50%);
   }
   
   #root {
@@ -45,17 +45,17 @@
     @apply w-full max-w-7xl mx-auto py-4 sm:py-6 animate-slide-up;
   }
   .pageTitle {
-    @apply text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight;
+    @apply text-2xl font-bold text-slate-800 dark:text-zinc-50 tracking-tight;
   }
   .pageSub {
-    @apply text-sm text-slate-500 dark:text-slate-400 mt-1;
+    @apply text-sm text-slate-500 dark:text-zinc-400 mt-1;
   }
   
   /* GLASSMORPHISM CARDS */
   .card {
     /* Safari fixes for backdrop filter clipping */
-    @apply relative overflow-hidden rounded-3xl bg-white/70 dark:bg-zinc-900/70 
-           backdrop-blur-xl border border-white/40 dark:border-white/10 
+    @apply relative overflow-hidden rounded-3xl bg-white/70 dark:bg-zinc-900/40 
+           backdrop-blur-xl border border-white/40 dark:border-white/[0.04] 
            shadow-glass dark:shadow-glass-dark transform-gpu transition-all duration-300;
   }
   .cardInner {
@@ -67,15 +67,15 @@
     @apply flex flex-wrap gap-4 mt-6;
   }
   .kpi {
-    @apply flex-1 min-w-[160px] p-4 rounded-2xl bg-white/50 dark:bg-zinc-800/50 
-           border border-white/20 dark:border-white/5 shadow-sm 
+    @apply flex-1 min-w-[160px] p-4 rounded-2xl bg-white/50 dark:bg-zinc-900/30 
+           border border-white/20 dark:border-white/[0.03] shadow-sm 
            hover:shadow-md transition-shadow duration-200;
   }
   .kpiLabel {
-    @apply text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400;
+    @apply text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-zinc-400;
   }
   .kpiValue {
-    @apply text-3xl font-bold mt-2 text-m3-primary dark:text-m3-primary-container tracking-tight;
+    @apply text-3xl font-bold mt-2 text-m3-primary dark:text-blue-300 tracking-tight;
   }
   .kpiValueMono {
     @apply font-mono text-xl;
@@ -94,14 +94,16 @@
 
   /* M3 PILLS & TOASTS */
   .toast {
-    @apply p-4 rounded-2xl bg-white/60 dark:bg-zinc-800/60 backdrop-blur-md 
+    @apply p-4 rounded-2xl bg-white/60 dark:bg-zinc-900/80 backdrop-blur-md 
            border border-white/40 dark:border-white/10 shadow-sm relative overflow-hidden;
   }
   .toastOk {
-    @apply bg-m3-tertiary-container text-m3-on-tertiary-container border-m3-tertiary-container/30;
+    @apply bg-m3-tertiary-container text-m3-on-tertiary-container border-m3-tertiary-container/30 
+           dark:bg-green-900/30 dark:text-green-300 dark:border-green-800/50;
   }
   .toastError {
-    @apply bg-m3-error-container text-m3-on-error-container border-m3-error-container/30;
+    @apply bg-m3-error-container text-m3-on-error-container border-m3-error-container/30
+           dark:bg-red-900/30 dark:text-red-300 dark:border-red-800/50;
   }
   
   .wrap {
@@ -109,7 +111,7 @@
   }
   .chip {
     @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-medium 
-           bg-slate-200/80 dark:bg-zinc-700/80 text-slate-700 dark:text-slate-300;
+           bg-slate-200/80 dark:bg-zinc-800 text-slate-700 dark:text-slate-300 dark:border dark:border-zinc-700;
   }
   .muted {
     @apply text-slate-400 dark:text-zinc-500 text-sm italic;
@@ -118,13 +120,15 @@
   /* BUTTONS */
   .btn {
     @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full font-medium transition-all duration-200 
-           focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-m3-primary;
+           focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-m3-primary dark:focus:ring-offset-zinc-950;
   }
   .btnPrimary {
-    @apply bg-m3-primary text-white hover:bg-blue-700 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none;
+    @apply bg-m3-primary text-white hover:bg-blue-700 hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 
+           disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none
+           dark:bg-blue-600 dark:hover:bg-blue-500;
   }
   .btnGhost {
-    @apply bg-transparent hover:bg-slate-200/50 dark:hover:bg-zinc-700/50 text-slate-700 dark:text-slate-300;
+    @apply bg-transparent hover:bg-slate-200/50 dark:hover:bg-zinc-800/80 text-slate-700 dark:text-slate-300;
   }
 
   /* FORMS & INPUTS */
@@ -138,9 +142,10 @@
     @apply text-sm font-bold text-slate-700 dark:text-slate-300 ml-1;
   }
   .input, .select {
-    @apply w-full bg-white/80 dark:bg-zinc-800/80 border-2 border-transparent focus:border-m3-primary 
-           transition-colors outline-none rounded-2xl px-4 py-3 text-slate-800 dark:text-slate-100 
-           placeholder-slate-400 shadow-sm appearance-none;
+    @apply w-full bg-white/80 dark:bg-zinc-900/60 border-2 border-transparent focus:border-m3-primary 
+           dark:focus:border-blue-500 transition-colors outline-none rounded-2xl px-4 py-3 
+           text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 
+           shadow-sm appearance-none dark:border-zinc-800;
   }
 }
 

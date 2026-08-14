@@ -1,3 +1,5 @@
+//go:build ignore
+
 package main
 
 import (
@@ -14,7 +16,7 @@ func main() {
 	cfg, _ := config.Load()
 
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     cfg.Redis.Address,
+		Addr:     cfg.Redis.Addr,
 		Password: cfg.Redis.Password,
 		DB:       cfg.Redis.DB,
 	})

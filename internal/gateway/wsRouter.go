@@ -154,28 +154,37 @@ func (ws *WSService) HandleStudentSession(w http.ResponseWriter, r *http.Request
 		}
 
 		toolID := "socratic_tutor"
-		if botType == "character" {
+		switch botType {
+		case "character":
 			toolID = "character_bot"
-		} else if botType == "custom" {
+		case "custom":
 			toolID = "custom_bot"
-		} else if botType == "research" {
+		case "research":
 			toolID = "research_assistant" // If needed later
 		}
 
 		// C. Prepare prompt payload for the AI Orchestrator
+		params := map[string]interface{}{
+			"user_prompt":   scrubbedPrompt,
+			"student_id":    studentID,
+			"session_id":    sessionID,
+			"bot_id":        botID,
+			"bot_type":      botType,
+			"grade_level":   "Middle School", // default/fallback
+			"subject_topic": "General Study",
+			"chat_history":  "",
+		}
+
+		if toolID == "character_bot" {
+			params["character_name"] = "Albert Einstein"
+			params["context"] = "the 20th century as a renowned theoretical physicist"
+		}
+
 		req := &contracts.AICompletionRequest{
 			ToolID:        toolID,
 			SessionID:     sessionID,
 			InstitutionID: institutionID,
-			Parameters: map[string]interface{}{
-				"user_prompt":   scrubbedPrompt,
-				"student_id":    studentID,
-				"session_id":    sessionID,
-				"bot_id":        botID,
-				"bot_type":      botType,
-				"grade_level":   "Middle School", // default/fallback
-				"subject_topic": "General Study",
-			},
+			Parameters:    params,
 		}
 
 		// Send to Orchestrator

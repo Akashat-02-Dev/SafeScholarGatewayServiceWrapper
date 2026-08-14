@@ -147,7 +147,7 @@ export function QuizMe() {
                   type="text" 
                   value={topic}
                   onChange={(e) => setTopic(e.target.value)}
-                  className="w-full bg-white/80 dark:bg-zinc-800/80 border-transparent focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all outline-none rounded-2xl px-5 py-3 text-slate-800 dark:text-slate-100 shadow-sm"
+                  className="w-full bg-white/80 dark:bg-zinc-900/60 dark:border-zinc-800 border-transparent focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all outline-none rounded-2xl px-5 py-3 text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 shadow-sm"
                   placeholder="e.g. Photosynthesis, World War II..."
                   required
                 />
@@ -158,7 +158,7 @@ export function QuizMe() {
                   <select 
                     value={gradeLevel}
                     onChange={(e) => setGradeLevel(e.target.value)}
-                    className="w-full bg-white/80 dark:bg-zinc-800/80 border-transparent focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all outline-none rounded-2xl px-4 py-3 text-slate-800 dark:text-slate-100 shadow-sm appearance-none"
+                    className="w-full bg-white/80 dark:bg-zinc-900/60 dark:border-zinc-800 border-transparent focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all outline-none rounded-2xl px-4 py-3 text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 shadow-sm appearance-none"
                   >
                     <option>Elementary</option>
                     <option>Middle School</option>
@@ -170,7 +170,7 @@ export function QuizMe() {
                   <select 
                     value={questionCount}
                     onChange={(e) => setQuestionCount(Number(e.target.value))}
-                    className="w-full bg-white/80 dark:bg-zinc-800/80 border-transparent focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all outline-none rounded-2xl px-4 py-3 text-slate-800 dark:text-slate-100 shadow-sm appearance-none"
+                    className="w-full bg-white/80 dark:bg-zinc-900/60 dark:border-zinc-800 border-transparent focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all outline-none rounded-2xl px-4 py-3 text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 shadow-sm appearance-none"
                   >
                     <option value={3}>3</option>
                     <option value={5}>5</option>
@@ -235,7 +235,7 @@ export function QuizMe() {
                       let baseClasses = "w-full px-6 py-4 text-left border rounded-2xl text-lg transition-all duration-200 outline-none ";
                       
                       if (!showExplanation) {
-                        baseClasses += "bg-white/80 dark:bg-zinc-800/80 border-white/50 dark:border-white/5 hover:bg-white dark:hover:bg-zinc-700 hover:shadow-md text-slate-700 dark:text-slate-200 cursor-pointer";
+                        baseClasses += "bg-white/80 dark:bg-zinc-900/60 border-white/50 dark:border-white/5 hover:bg-white dark:hover:bg-zinc-800 hover:shadow-md text-slate-700 dark:text-slate-200 cursor-pointer";
                       } else {
                         if (isCorrect) {
                           baseClasses += "bg-emerald-100/80 dark:bg-emerald-900/40 border-emerald-500 text-emerald-900 dark:text-emerald-100 shadow-sm";

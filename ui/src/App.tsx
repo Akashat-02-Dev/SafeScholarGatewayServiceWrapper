@@ -7,6 +7,7 @@ import { Sidebar } from './components/Sidebar'
 import { Footer } from './components/Footer'
 import { Dashboard } from './pages/Dashboard'
 import { LoginPage } from './pages/LoginPage'
+import { ResetPasswordPage } from './pages/ResetPasswordPage'
 import { ModerationPanel } from './pages/ModerationPanel'
 import { RoleManagement } from './pages/RoleManagement'
 import { UserManagement } from './pages/UserManagement'
@@ -22,6 +23,7 @@ import { InstitutionAdminDashboard } from './pages/admin/InstitutionAdminDashboa
 import { SuperAdminDashboard } from './pages/superadmin/SuperAdminDashboard'
 import { WritingStudio } from './pages/student/WritingStudio'
 import { StudentChatHub } from './pages/student/StudentChatHub'
+import { StudentJoinRoom } from './pages/student/StudentJoinRoom'
 import { QuizMe } from './pages/student/QuizMe'
 
 import { useLocation } from 'react-router-dom'
@@ -61,6 +63,7 @@ function App() {
       <AnimatePresence mode="wait">
         <Routes location={location} key={location.pathname}>
           <Route path="/login" element={<PageTransition><LoginPage /></PageTransition>} />
+          <Route path="/reset-password" element={<PageTransition><ResetPasswordPage /></PageTransition>} />
 
           <Route element={<AuthGuard />}>
             <Route
@@ -101,6 +104,16 @@ function App() {
                   <PageTransition>
                     <AuthedLayout>
                       <StudentChatHub mode="character" />
+                    </AuthedLayout>
+                  </PageTransition>
+                }
+              />
+              <Route
+                path="/student/join-room"
+                element={
+                  <PageTransition>
+                    <AuthedLayout>
+                      <StudentJoinRoom />
                     </AuthedLayout>
                   </PageTransition>
                 }

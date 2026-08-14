@@ -119,7 +119,7 @@ func main() {
 		}
 	}
 	aiHttpClient := *httpClient
-	aiHttpClient.Timeout = 45 * time.Second
+	aiHttpClient.Timeout = 180 * time.Second
 	aiClient := clients.NewAIOrchestratorClient(&aiHttpClient, aiBaseURL, auditLogger)
 	modBaseURL, err := registry.Resolve(ctx, "moderation")
 	if err != nil {

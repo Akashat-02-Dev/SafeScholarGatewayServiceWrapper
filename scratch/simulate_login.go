@@ -1,16 +1,19 @@
+//go:build ignore
+
 package main
 
 import (
 	"context"
 	"fmt"
+	"net"
 	"os"
 	"time"
 
 	"safescholar/gateway/config"
+	"safescholar/gateway/infrastructure/cache"
 	"safescholar/gateway/infrastructure/database"
 	"safescholar/gateway/internal/auth"
 	"safescholar/gateway/internal/security"
-	"safescholar/gateway/infrastructure/cache"
 )
 
 func main() {
@@ -39,13 +42,14 @@ func main() {
 	jwtManager, _ := security.NewJWTManager(cfg.JWT.Issuer, cfg.JWT.Audience, cfg.JWT.PrivateKeyPEMFile, cfg.JWT.PublicKeyPEMFile, cfg.JWT.ClockSkew)
 	tokenGen := auth.NewTokenGenerator(jwtManager, pool)
 	sessionManager := auth.NewSessionManager(rdb, pool)
-	authService := auth.NewAuthService(pool, tokenGen, sessionManager)
+	auditLogger := security.NewAuditLogger(cfg.Audit.Enabled, pool)
+	authService := auth.NewAuthService(pool, rdb, sessionManager, tokenGen, auditLogger)
 
-	res, err := authService.Login(ctx, "demo@student", "password123", "127.0.0.1", "test-agent")
+	res, err := authService.Login(ctx, "demo@student", "password123", net.ParseIP("127.0.0.1"), "test-agent", "corr-123", time.Hour, 24*time.Hour)
 	if err != nil {
 		fmt.Printf("Login: %v\n", err)
 		return
 	}
 	
-	fmt.Printf("TOKEN=%s\n", res.Tokens.AccessToken)
+	fmt.Printf("TOKEN=%s\n", res.AccessToken)
 }

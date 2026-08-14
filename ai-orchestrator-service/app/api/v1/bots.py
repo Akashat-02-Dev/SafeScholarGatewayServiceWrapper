@@ -1,6 +1,6 @@
 import logging
 import uuid
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from typing import List
@@ -43,7 +43,7 @@ async def create_bot(
 
 @router.get("/list", response_model=List[CustomBotResponse])
 async def list_bots(
-    institution_id: str,
+    institution_id: str = Header(alias="X-Institution-Id"),
     db: AsyncSession = Depends(get_db_session)
 ):
     """Lists custom bots configurations filtered strictly by the given institution_id."""

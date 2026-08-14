@@ -144,6 +144,12 @@ func (r *Router) serve(w http.ResponseWriter, req *http.Request) {
 	case route.PathPrefix == "/api/auth/login":
 		r.handleLogin(w, req)
 		return
+	case route.PathPrefix == "/api/auth/forgot-password":
+		r.handleForgotPassword(w, req)
+		return
+	case route.PathPrefix == "/api/auth/reset-password":
+		r.handleResetPassword(w, req)
+		return
 	case route.PathPrefix == "/api/auth/logout":
 		r.handleLogout(w, req)
 		return
@@ -233,17 +239,17 @@ func (r *Router) serve(w http.ResponseWriter, req *http.Request) {
 }
 
 // Phase 2: Strict IMS Global LTI 1.3 Endpoints
-func (r *Router) handleLTIInit(w http.ResponseWriter, req *http.Request) {
+func (r *Router) handleLTIInit(w http.ResponseWriter, _ *http.Request) {
 	// 1. OIDC Initiation
 	security.WriteJSONError(w, http.StatusNotImplemented, "LTI Init not fully implemented")
 }
 
-func (r *Router) handleLTILaunch(w http.ResponseWriter, req *http.Request) {
+func (r *Router) handleLTILaunch(w http.ResponseWriter, _ *http.Request) {
 	// 2. The secure redirect
 	security.WriteJSONError(w, http.StatusNotImplemented, "LTI Launch not fully implemented")
 }
 
-func (r *Router) handleJWKS(w http.ResponseWriter, req *http.Request) {
+func (r *Router) handleJWKS(w http.ResponseWriter, _ *http.Request) {
 	// 3. Public key exposure for LMS verification
 	writeJSON(w, http.StatusOK, map[string]any{"keys": []any{}})
 }
@@ -287,6 +293,55 @@ func (r *Router) handleLogin(w http.ResponseWriter, req *http.Request) {
 		"accessToken":      result.AccessToken,
 		"refreshToken":     result.RefreshToken,
 		"expiresInSeconds": int64(accessTTL.Seconds()),
+	})
+}
+
+type forgotPasswordRequest struct {
+	Email string `json:"email"`
+}
+
+func (r *Router) handleForgotPassword(w http.ResponseWriter, req *http.Request) {
+	if r.authSvc == nil {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		return
+	}
+	var fr forgotPasswordRequest
+	if err := json.NewDecoder(req.Body).Decode(&fr); err != nil {
+		security.WriteJSONError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	// Call ForgotPassword; it shouldn't reveal if user exists
+	_ = r.authSvc.ForgotPassword(req.Context(), fr.Email)
+	
+	// Always return 200 to prevent user enumeration
+	writeJSON(w, http.StatusOK, map[string]any{
+		"message": "If an account with that email exists, a password reset link has been generated.",
+	})
+}
+
+type resetPasswordRequest struct {
+	Token       string `json:"token"`
+	NewPassword string `json:"newPassword"`
+}
+
+func (r *Router) handleResetPassword(w http.ResponseWriter, req *http.Request) {
+	if r.authSvc == nil {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		return
+	}
+	var rr resetPasswordRequest
+	if err := json.NewDecoder(req.Body).Decode(&rr); err != nil {
+		security.WriteJSONError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	err := r.authSvc.ResetPassword(req.Context(), rr.Token, rr.NewPassword)
+	if err != nil {
+		security.WriteJSONError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	
+	writeJSON(w, http.StatusOK, map[string]any{
+		"message": "Password successfully reset.",
 	})
 }
 

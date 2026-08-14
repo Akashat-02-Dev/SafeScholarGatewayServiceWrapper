@@ -1,4 +1,4 @@
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException, Depends
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException, Depends, Header
 from pydantic import BaseModel
 from typing import Dict, Any
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -81,7 +81,7 @@ async def ingest_district_knowledge(
 
 @router.get("/rag/documents")
 async def list_district_documents(
-    institution_id: str,
+    institution_id: str = Header(alias="X-Institution-Id"),
     db: AsyncSession = Depends(get_db_session)
 ):
     """Lists distinct document names with chunk counts for the given institution_id."""
