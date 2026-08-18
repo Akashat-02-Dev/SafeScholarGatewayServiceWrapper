@@ -34,6 +34,13 @@ The database architecture enforces strict multi-tenant data isolation at the Pos
 * **Distributed Correlation Tracking**: Generates unique `X-Correlation-ID` and `X-SS-Correlation-ID` headers passed across every network hop from frontend client requests through gateway handlers to downstream microservices.
 * **Global Audit Engine** (`internal/security/auditLogger.go`): Writes structured audit records (`user_id`, `action`, `resource`, `resource_id`, `ip_address`, `metadata`, `timestamp`) to PostgreSQL for compliance tracking.
 
+### 7. Australian Data Sovereignty & ST4S Compliance
+* **Sovereign AI Routing**: Routes AI calls exclusively to Australian endpoints (e.g., `gpt-4o-australia` via Azure OpenAI) to satisfy Data Sovereignty laws.
+* **PII Scrubbing for Australia**: Intercepts Australian-specific Personally Identifiable Information (PII) such as Medicare numbers, Tax File Numbers (TFN), and local phone numbers, masking them prior to AI processing.
+* **Essential Eight MFA Verification**: Enforces Multi-Factor Authentication (MFA) checks for all Administrative and Educator access by inspecting identity token `amr` claims.
+* **NAT-Aware Rate Limiting**: Scopes volumetric API limits cryptographically by `InstitutionID` + `UserID` to prevent false-positive bans in single-egress school network environments.
+* **ASD ISM Compliance**: Enforces strict `Content-Security-Policy` and `Strict-Transport-Security` headers to meet Australian Signals Directorate guidelines.
+
 ---
 
 ## 🏛️ System Architecture
