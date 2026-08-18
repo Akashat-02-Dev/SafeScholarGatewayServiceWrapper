@@ -30,6 +30,7 @@ type TokenClaims struct {
 	Roles       []string `json:"roles"`
 	Permissions []string `json:"permissions"`
 	Institution string   `json:"institution"`
+	AMR         []string `json:"amr,omitempty"`
 	jwt.RegisteredClaims
 }
 

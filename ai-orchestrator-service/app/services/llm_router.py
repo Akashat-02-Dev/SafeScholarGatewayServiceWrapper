@@ -1,7 +1,7 @@
 import logging
 from typing import Optional
 from tenacity import retry, stop_after_attempt, wait_exponential
-from langchain_openai import ChatOpenAI
+from langchain_openai import AzureChatOpenAI
 from langchain_anthropic import ChatAnthropic
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import SystemMessage, HumanMessage
@@ -42,12 +42,11 @@ from app.services.prompt_templates import PROMPT_REGISTRY
 class LLMOrchestrator:
     def __init__(self):
         # Configure models with Enterprise Zero-Retention flags implicitly via secure API accounts
-        self.openai_engine = ChatOpenAI(
-            model="gpt-5.5-mini", 
-            api_key=settings.OPENAI_API_KEY, 
-            base_url="https://smart.ultimateai.org/v1",
-            temperature=0.2, 
-            timeout=settings.LLM_TIMEOUT_SECONDS,
+        self.openai_engine = AzureChatOpenAI(
+            azure_endpoint="https://<YOUR_RESOURCE_NAME>.openai.azure.com/",
+            azure_deployment="gpt-4o-australia", # Ensure deployment is in Australia East
+            openai_api_version="2024-02-15-preview",
+            temperature=0.7,
             model_kwargs={"response_format": {"type": "json_object"}}
         )
         self.anthropic_engine = ChatAnthropic(
@@ -168,6 +167,26 @@ class LLMOrchestrator:
                     logger.error(f"Student research RAG failed: {e}")
                     parameters["rag_context"] = ""
                 
+            if tool_id == "district_knowledge_bot":
+                user_query = parameters.get("user_prompt") or prompt_text
+                context = "NO_CONTEXT_FOUND"
+                if db is not None:
+                    try:
+                        context = await rag_service.retrieve_district_context(db, institution_id=inst_id, query=user_query)
+                    except Exception as e:
+                        logger.error(f"Error retrieving district context: {e}")
+                        context = "NO_CONTEXT_FOUND"
+
+                if context == "NO_CONTEXT_FOUND":
+                    logger.info(f"No context found for institution '{inst_id}'. Short-circuiting LLM execution to prevent hallucination.")
+                    return AICompletionResponse(
+                        response_text="This information is not covered in the current district policies. Please consult your administration.",
+                        model_used="none",
+                        tokens={"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+                    )
+
+                parameters["district_context"] = context
+
             try:
                 logger.info(f"Formatting messages for {tool_id} with parameters: {parameters}")
                 messages = prompt_template.format_messages(**parameters)
@@ -190,23 +209,24 @@ class LLMOrchestrator:
                 response = await self.google_engine.ainvoke(messages)
                 model_used = "gemini-3.5-flash"
                 
-            elif tool_id in ["lesson_planner", "leveler", "video_question_maker", "writing_feedback", "quiz_generator", "research_assistant"]:
-                logger.info("Routing to OpenAI GPT-5.5 Mini (Ultimate AI)")
-                response = await self.openai_engine.ainvoke(messages)
+            elif tool_id in ["lesson_planner", "leveler", "video_question_maker", "writing_feedback", "quiz_generator", "research_assistant", "report_card_generator", "ismg_rubric_generator", "district_knowledge_bot"]:
+                logger.info("Routing to OpenAI GPT-5.5 Mini (Ultimate AI) with temperature=0.0")
+                response = await self.openai_engine.ainvoke(messages, temperature=0.0)
                 model_used = "gpt-5.5-mini"
                 
             else:
                 raise ValueError(f"Unknown tool_id: {tool_id}")
 
+
             raw_text = _extract_response_text(response.content)
             
-            if tool_id in ["lesson_planner", "video_question_maker", "iep_generator", "writing_feedback", "quiz_generator"]:
+            if tool_id in ["lesson_planner", "video_question_maker", "iep_generator", "writing_feedback", "quiz_generator", "report_card_generator", "ismg_rubric_generator"]:
                 import re
                 match = re.search(r'\[[\s\S]*\]|\{[\s\S]*\}', raw_text)
                 if match:
                     raw_text = match.group(0)
                 
-                from app.models.schemas import LessonPlanSchema, VideoQuestionSchema, IEPRubricSchema, WritingFeedbackSchema, QuizGeneratorSchema
+                from app.models.schemas import LessonPlanSchema, VideoQuestionSchema, IEPRubricSchema, WritingFeedbackSchema, QuizGeneratorSchema, ReportCardSchema, ISMGRubricSchema
                 from pydantic import TypeAdapter
                 from typing import List
                 if tool_id == "lesson_planner":
@@ -219,6 +239,10 @@ class LLMOrchestrator:
                     WritingFeedbackSchema.model_validate_json(raw_text)
                 elif tool_id == "quiz_generator":
                     QuizGeneratorSchema.model_validate_json(raw_text)
+                elif tool_id == "report_card_generator":
+                    ReportCardSchema.model_validate_json(raw_text)
+                elif tool_id == "ismg_rubric_generator":
+                    ISMGRubricSchema.model_validate_json(raw_text)
                 
             if tool_id == "leveler":
                 import json
@@ -269,6 +293,10 @@ class LLMOrchestrator:
                     fallback_text = '{"feedback_points": [{"category": "Grammar", "comment": "Good job."}]}'
                 elif tool_id == "quiz_generator":
                     fallback_text = '{"title": "Mock Quiz", "questions": [{"question": "Mock Q", "options": ["1", "2"], "answer": "1", "explanation": "Mock expl"}]}'
+                elif tool_id == "report_card_generator":
+                    fallback_text = '{"student_name": "Mock Student", "grade_assigned": "B", "report_comment": "Mock pastoral comment."}'
+                elif tool_id == "ismg_rubric_generator":
+                    fallback_text = '{"assessment_title": "Mock", "instrument_type": "IA1", "ismg_criteria": [{"criterion_name": "Knowledge", "performance_levels": [{"mark_range": "1", "description": "Mock description"}]}]}'
                 elif tool_id == "leveler":
                     fallback_text = '{"leveled_text": "This is a simplified mock text."}'
                 else:

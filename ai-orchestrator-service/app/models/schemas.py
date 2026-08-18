@@ -61,6 +61,7 @@ class IEPCriteriaSchema(BaseModel):
 
 class IEPRubricSchema(BaseModel):
     title: str
+    nccd_level_of_adjustment: str
     criteria: List[IEPCriteriaSchema]
 
 class FeedbackPoint(BaseModel):
@@ -79,3 +80,21 @@ class QuizQuestionSchema(BaseModel):
 class QuizGeneratorSchema(BaseModel):
     title: str
     questions: List[QuizQuestionSchema]
+
+class ReportCardSchema(BaseModel):
+    student_name: str
+    grade_assigned: str
+    report_comment: str
+
+class ISMGPerformanceLevelSchema(BaseModel):
+    mark_range: str
+    description: str
+
+class ISMGCriterionSchema(BaseModel):
+    criterion_name: str
+    performance_levels: List[ISMGPerformanceLevelSchema]
+
+class ISMGRubricSchema(BaseModel):
+    assessment_title: str
+    instrument_type: str
+    ismg_criteria: List[ISMGCriterionSchema]

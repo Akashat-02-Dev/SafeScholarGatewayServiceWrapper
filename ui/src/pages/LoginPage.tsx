@@ -41,7 +41,7 @@ export function LoginPage() {
         const res = await apiFetch('/api/auth/forgot-password', {
           method: 'POST',
           body: { email }
-        })
+        }) as { message?: string }
         setOk(res.message || 'If an account exists, a reset link has been generated.')
         setIsForgotPassword(false)
       } else if (isRegister) {

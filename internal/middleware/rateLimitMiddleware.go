@@ -47,7 +47,7 @@ func RateLimitMiddleware(limiter *security.TokenBucketLimiter, validator *auth.T
 func rateLimitKey(r *http.Request, validator *auth.TokenValidator) string {
 	uc := UserContextFromContext(r.Context())
 	if uc.IsAuthenticated && uc.UserID != "" {
-		return uc.UserID
+		return "rate_limit:user:" + uc.InstitutionID + ":" + uc.UserID
 	}
 
 	if validator != nil {
@@ -55,16 +55,16 @@ func rateLimitKey(r *http.Request, validator *auth.TokenValidator) string {
 		if err == nil && tokenPresent {
 			claims, _, err := validator.ValidateAccessToken(r.Context(), tokenString)
 			if err == nil && strings.TrimSpace(claims.Subject) != "" {
-				return strings.TrimSpace(claims.Subject)
+				return "rate_limit:user:" + strings.TrimSpace(claims.Institution) + ":" + strings.TrimSpace(claims.Subject)
 			}
 		}
 	}
 
 	ip := ClientIP(r)
 	if ip == nil {
-		return "ip:unknown"
+		return "rate_limit:ip:unknown"
 	}
-	return "ip:" + ip.String()
+	return "rate_limit:ip:" + ip.String()
 }
 
 func tryBearerTokenForRateLimit(r *http.Request) (string, bool, error) {
@@ -157,7 +157,7 @@ func retryAfterSeconds(now time.Time, resetAtUnixMs int64) int64 {
 		return 0
 	}
 	resetAt := time.Unix(resetAtUnixMs, 0)
-	d := time.Until(resetAt)
+	d := resetAt.Sub(now)
 	if d <= 0 {
 		return 0
 	}

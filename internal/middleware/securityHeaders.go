@@ -63,25 +63,19 @@ func RequireTLS(require bool) func(r *http.Request) error {
 }
 
 func SecurityHeadersMiddleware(cfg config.SecurityConfig) Middleware {
-	csp := strings.TrimSpace(cfg.ContentSecurityPolicy)
-	hsts := cfg.StrictTransportMaxAge
-	if hsts <= 0 {
-		hsts = 31536000
-	}
+	csp := "default-src 'self'; connect-src 'self' wss: https:; frame-ancestors 'self' https://*.instructure.com https://*.schoology.com;"
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("X-Content-Type-Options", "nosniff")
-			w.Header().Set("X-Frame-Options", "DENY")
+			// Removed X-Frame-Options: DENY to allow LMS iframe embedding
 			w.Header().Set("Referrer-Policy", "no-referrer")
 			w.Header().Set("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
 			w.Header().Set("Cross-Origin-Opener-Policy", "same-origin")
 			w.Header().Set("Cross-Origin-Resource-Policy", "same-site")
 			w.Header().Set("Cross-Origin-Embedder-Policy", "credentialless")
-			if csp != "" {
-				w.Header().Set("Content-Security-Policy", csp)
-			}
+			w.Header().Set("Content-Security-Policy", csp)
 			if isHTTPS(r) {
-				w.Header().Set("Strict-Transport-Security", "max-age="+intToString(hsts)+"; includeSubDomains; preload")
+				w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload")
 			}
 			next.ServeHTTP(w, r)
 		})

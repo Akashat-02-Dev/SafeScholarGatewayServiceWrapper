@@ -90,6 +90,35 @@ class RAGPipeline:
         combined_context = "\n\n---\n\n".join([chunk.content for chunk in top_chunks])
         return combined_context
 
+    async def retrieve_district_context(self, db: AsyncSession, institution_id: str, query: str, top_k: int = 4) -> str:
+        """Retrieves context strictly bounded by the mathematical institution_id."""
+        import uuid
+        try:
+            inst_uuid = uuid.UUID(institution_id) if isinstance(institution_id, str) else institution_id
+        except Exception:
+            inst_uuid = institution_id
+
+        try:
+            query_embedding = await self.embeddings.aembed_query(query)
+            # Mathematical Pre-Filtering: Impossible to fetch cross-tenant data
+            stmt = (
+                select(KnowledgeChunk)
+                .filter(KnowledgeChunk.institution_id == inst_uuid)
+                .order_by(KnowledgeChunk.embedding.cosine_distance(query_embedding))
+                .limit(top_k)
+            )
+            result = await db.execute(stmt)
+            results = result.scalars().all()
+        except Exception as e:
+            logger.warning(f"Vector search unavailable for institution {institution_id}: {e}")
+            results = []
+
+        if not results:
+            return "NO_CONTEXT_FOUND"
+
+        return "\n\n---\n\n".join([f"Source: {doc.document_name}\n{doc.content}" for doc in results])
+
+
     async def enforce_citations(self, response_text: str, retrieved_chunks: list) -> tuple:
         """Splits response into sentences, runs cosine similarity against chunks, and appends citations."""
         import re

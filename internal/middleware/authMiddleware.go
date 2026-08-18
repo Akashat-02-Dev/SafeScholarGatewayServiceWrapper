@@ -24,6 +24,7 @@ type UserContext struct {
 	InstitutionID   string
 	Roles           []string
 	Permissions     []string
+	AMR             []string
 	IsSysAdmin      bool
 	IsAuthenticated bool
 }
@@ -99,6 +100,22 @@ func AuthMiddleware(validator *auth.TokenValidator) Middleware {
 				return
 			}
 
+			// Essential Eight: MFA Verification
+			isAdminOrEducator := hasPerm(claims.Roles, "ADMIN") || hasPerm(claims.Roles, "EDUCATOR") || hasPerm(claims.Permissions, "ADMIN") || hasPerm(claims.Permissions, "EDUCATOR")
+			if isAdminOrEducator {
+				hasMFA := false
+				for _, amr := range claims.AMR {
+					if strings.EqualFold(amr, "mfa") {
+						hasMFA = true
+						break
+					}
+				}
+				if !hasMFA {
+					http.Error(w, "MFA required for Admin/Educator access", http.StatusForbidden)
+					return
+				}
+			}
+
 			uc := UserContext{
 				UserID:          claims.Subject,
 				SessionID:       claims.SessionID,
@@ -106,6 +123,7 @@ func AuthMiddleware(validator *auth.TokenValidator) Middleware {
 				InstitutionID:   claims.Institution,
 				Roles:           claims.Roles,
 				Permissions:     claims.Permissions,
+				AMR:             claims.AMR,
 				IsSysAdmin:      hasPerm(claims.Permissions, "SUPER_ADMIN"),
 				IsAuthenticated: true,
 			}

@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { 
-  Shield, Building2, Users, Activity, CheckCircle2, 
+  Shield, Building2, Activity, CheckCircle2, 
   Cpu, HardDrive, AlertCircle, RefreshCw 
 } from 'lucide-react'
 import { useAuth } from '../../services/authService'
 import { apiFetch } from '../../services/apiClient'
+
 
 interface TelemetryRow {
   institutionId: string
@@ -54,7 +55,8 @@ export function SuperAdminDashboard() {
   // UI status
   const [err, setErr] = useState<string | null>(null)
   const [ok, setOk] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [, setIsLoading] = useState(true)
+
 
   async function loadTelemetry() {
     if (!accessToken) return

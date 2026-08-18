@@ -56,6 +56,10 @@ export class WSTutorService {
     this.onStateChange(newState);
   }
 
+  public getState(): ConnectionState {
+    return this.state;
+  }
+
   public connect(): void {
     if (this.socket) {
       this.disconnect();

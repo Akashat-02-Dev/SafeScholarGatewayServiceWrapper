@@ -7,7 +7,7 @@ import {
   BookOpen, Clock, Calendar, CheckSquare, Sparkles,
   TrendingUp, Award, ClipboardList
 } from 'lucide-react'
-import { Link, Navigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 
 interface AdminMetrics {
   role: 'sysadmin'
@@ -38,7 +38,16 @@ interface StudentMetrics {
   progressHistory: number[]
 }
 
-type DashboardMetrics = AdminMetrics | TeacherMetrics | StudentMetrics | { role: 'user' }
+interface InstituteMetrics {
+  role: 'institute'
+  totalTeachers?: number
+  totalStudents?: number
+  totalCourses?: number
+  averageAttendance?: number
+}
+
+type DashboardMetrics = AdminMetrics | TeacherMetrics | StudentMetrics | InstituteMetrics | { role: 'user' }
+
 
 function Sparkline({ data }: { data: number[] }) {
   if (!data || data.length < 2) return null

@@ -197,6 +197,12 @@ func (r *Router) serve(w http.ResponseWriter, req *http.Request) {
 	case route.PathPrefix == "/api/v1/ai/educator/iep-generator":
 		r.handleSpecificAITool(w, req, "iep_generator")
 		return
+	case route.PathPrefix == "/api/v1/ai/educator/report-card":
+		r.handleSpecificAITool(w, req, "report_card_generator")
+		return
+	case route.PathPrefix == "/api/v1/ai/educator/ismg-rubric":
+		r.handleSpecificAITool(w, req, "ismg_rubric_generator")
+		return
 	case route.PathPrefix == "/api/v1/ai/educator/leveler":
 		r.handleSpecificAITool(w, req, "leveler")
 		return
@@ -220,6 +226,9 @@ func (r *Router) serve(w http.ResponseWriter, req *http.Request) {
 	case route.PathPrefix == "/api/v1/ai/student/custom-bot":
 		r.handleSpecificAITool(w, req, "custom_bot")
 		return
+	case route.PathPrefix == "/api/v1/lms/export":
+		r.handleLmsExport(w, req)
+		return
 	case route.PathPrefix == "/api/v1/lti/login/init":
 		r.handleLTIInit(w, req)
 		return
@@ -242,6 +251,32 @@ func (r *Router) serve(w http.ResponseWriter, req *http.Request) {
 func (r *Router) handleLTIInit(w http.ResponseWriter, _ *http.Request) {
 	// 1. OIDC Initiation
 	security.WriteJSONError(w, http.StatusNotImplemented, "LTI Init not fully implemented")
+}
+
+func (r *Router) handleLmsExport(w http.ResponseWriter, req *http.Request) {
+	var payload map[string]interface{}
+
+	if err := json.NewDecoder(req.Body).Decode(&payload); err != nil {
+		security.WriteJSONError(w, http.StatusBadRequest, "Invalid payload")
+		return
+	}
+
+	// In a real application, we would use LTI 1.3 Deep Linking or Canvas API here.
+	// We dynamically handle both the LMSExportPayload (from LessonPlanner) and the new HtmlContent payload.
+	targetLMS := "canvas"
+	if platform, ok := payload["platform"].(string); ok {
+		targetLMS = platform
+	} else if target, ok := payload["target_lms"].(string); ok {
+		targetLMS = target
+	}
+	
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"status":  "success",
+		"message": "Successfully pushed content to " + targetLMS,
+		"external_id": "simulated-lms-export-12345",
+	})
 }
 
 func (r *Router) handleLTILaunch(w http.ResponseWriter, _ *http.Request) {

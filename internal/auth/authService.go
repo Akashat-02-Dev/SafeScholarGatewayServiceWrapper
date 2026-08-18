@@ -715,9 +715,10 @@ func (s *AuthService) ApproveUser(ctx context.Context, userID, status, roleID st
 
 	// Also update approval requests table
 	reqStatus := "APPROVED"
-	if st == "rejected" {
+	switch st {
+	case "rejected":
 		reqStatus = "REJECTED"
-	} else if st == "isolated" {
+	case "isolated":
 		reqStatus = "ISOLATED"
 	}
 	_, _ = tx.Exec(ctx, `

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -14,6 +15,19 @@ import (
 	"github.com/redis/go-redis/v9"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+var (
+	medicareRegex    = regexp.MustCompile(`\b(?:\d[ ]?){10}\b`)
+	tfnRegex         = regexp.MustCompile(`\b(?:\d[ ]?){9}\b`)
+	aussiePhoneRegex = regexp.MustCompile(`\b(?:\+61|0)[2-478](?:[ ]?\d){8}\b`)
+)
+
+func maskAussiePII(text string) string {
+	text = medicareRegex.ReplaceAllString(text, "[REDACTED]")
+	text = tfnRegex.ReplaceAllString(text, "[REDACTED]")
+	text = aussiePhoneRegex.ReplaceAllString(text, "[REDACTED]")
+	return text
+}
 
 type ContentModerator interface {
 	CheckContent(ctx context.Context, req *contracts.ModerationCheckRequest) (*contracts.ModerationCheckResponse, error)
@@ -71,6 +85,9 @@ func AIModerationMiddleware(modClient ContentModerator, logger *security.AuditLo
 					http.Error(w, "prompt parameter must be string", http.StatusBadRequest)
 					return
 				}
+
+				// Apply Australian PII Scrubbing
+				promptStr = maskAussiePII(promptStr)
 
 				// Phase 1: Dynamic Keyword Filtering with Redis Cache
 				cacheKey := "mod_rules:" + instID

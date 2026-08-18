@@ -16,6 +16,8 @@ import LessonPlanner from './pages/ai/LessonPlanner'
 import TextLeveler from './pages/ai/TextLeveler'
 import VideoAssessor from './pages/ai/VideoAssessor'
 import IepGenerator from './pages/ai/IepGenerator'
+import ReportCardGeneratorPage from './pages/educator/ReportCardGeneratorPage'
+import ISMGRubricGeneratorPage from './pages/educator/ISMGRubricGeneratorPage'
 import CustomBotStudio from './pages/educator/CustomBotStudio'
 import StudentOversightDashboard from './pages/educator/StudentOversightDashboard'
 import { RAGIngestionPanel } from './pages/admin/RAGIngestionPanel'
@@ -157,6 +159,26 @@ function App() {
                   <PageTransition>
                     <AuthedLayout>
                       <StudentOversightDashboard />
+                    </AuthedLayout>
+                  </PageTransition>
+                }
+              />
+              <Route
+                path="/ai/report-card-gen"
+                element={
+                  <PageTransition>
+                    <AuthedLayout>
+                      <ReportCardGeneratorPage />
+                    </AuthedLayout>
+                  </PageTransition>
+                }
+              />
+              <Route
+                path="/ai/ismg-rubric-gen"
+                element={
+                  <PageTransition>
+                    <AuthedLayout>
+                      <ISMGRubricGeneratorPage />
                     </AuthedLayout>
                   </PageTransition>
                 }

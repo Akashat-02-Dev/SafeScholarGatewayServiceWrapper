@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { 
   Building2, Users, CheckCircle2, ShieldAlert, Sparkles, 
-  Trash2, UserCheck, UserX, ToggleLeft, ToggleRight 
+  UserCheck, UserX, ToggleLeft, ToggleRight 
 } from 'lucide-react'
 import { useAuth } from '../../services/authService'
 import { 
@@ -33,7 +33,8 @@ export function InstitutionAdminDashboard() {
   // UI state
   const [err, setErr] = useState<string | null>(null)
   const [ok, setOk] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const [, setIsLoading] = useState(true)
+
 
   async function loadData() {
     if (!accessToken) return

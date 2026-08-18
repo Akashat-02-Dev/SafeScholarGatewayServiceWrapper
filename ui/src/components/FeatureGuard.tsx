@@ -1,5 +1,5 @@
-import React from 'react';
 import { useAuth } from '../services/authService';
+import type { MeResponse } from '../services/authService';
 
 interface FeatureGuardProps {
     featureName: string;
@@ -10,8 +10,8 @@ interface FeatureGuardProps {
 export const FeatureGuard: React.FC<FeatureGuardProps> = ({ featureName, children, fallback = null }) => {
     // Phase 2: Check tenant_features in global state
     // For now we mock the state checking logic. In reality this reads from Redux or AuthContext.
-    const { user } = useAuth();
-    const tenantFeatures: string[] = user?.tenantFeatures || [];
+    const { me } = useAuth();
+    const tenantFeatures: string[] = (me as (MeResponse & { tenantFeatures?: string[] }) | null)?.tenantFeatures || [];
 
     const isFeatureEnabled = tenantFeatures.includes(featureName);
 

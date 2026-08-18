@@ -12,10 +12,12 @@ router = APIRouter()
 orchestrator = LLMOrchestrator()
 
 # --- Contracts matching the Go Gateway ---
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException, Depends, Header, Request
+
 class AICompletionRequest(BaseModel):
-    tool_id: str
-    institution_id: str
-    parameters: Dict[str, Any]
+    tool_id: str | None = None
+    institution_id: str | None = None
+    parameters: Dict[str, Any] = {}
     session_id: str | None = None
 
 class DocumentIngestRequest(BaseModel):
@@ -28,49 +30,82 @@ class DocumentIngestRequest(BaseModel):
 @router.post("/ai/educator/leveler")
 @router.post("/ai/educator/video-question-maker")
 @router.post("/ai/educator/iep-generator")
+@router.post("/ai/educator/report-card")
+@router.post("/ai/educator/ismg-rubric")
+@router.post("/ai/educator/district-knowledge-bot")
 async def orchestrate_ai_task(
     request: AICompletionRequest,
-    db: AsyncSession = Depends(get_db_session)
+    raw_req: Request,
+    db: AsyncSession = Depends(get_db_session),
+    x_institution_id: str | None = Header(None, alias="X-Institution-Id")
 ):
     """Synchronous REST Endpoint for Tier 1 Educator Tools"""
+    path = raw_req.url.path
+    tool_id = request.tool_id
+    if not tool_id:
+        if path.endswith("/report-card"):
+            tool_id = "report_card_generator"
+        elif path.endswith("/ismg-rubric"):
+            tool_id = "ismg_rubric_generator"
+        elif path.endswith("/district-knowledge-bot"):
+            tool_id = "district_knowledge_bot"
+        elif path.endswith("/lesson-planner"):
+            tool_id = "lesson_planner"
+        elif path.endswith("/leveler"):
+            tool_id = "leveler"
+        elif path.endswith("/video-question-maker"):
+            tool_id = "video_question_maker"
+        elif path.endswith("/iep-generator"):
+            tool_id = "iep_generator"
+        else:
+            tool_id = "lesson_planner"
+
+    # ZERO-TRUST TENANT ENFORCEMENT: Header set by Gateway JWT parser takes absolute precedence
+    institution_id = x_institution_id if (x_institution_id and x_institution_id.strip()) else (request.institution_id or "default")
+    request.institution_id = institution_id
+
     
     # 1. Check Semantic Cache
-    cached_response = await SemanticCache.get_cached_response(request.tool_id, request.parameters)
+    cached_response = await SemanticCache.get_cached_response(tool_id, request.parameters)
     if cached_response:
         cached_response["metadata"] = {"cache_hit": "true"}
         return cached_response
 
     # 2. Inject institution_id into parameters so LLM Router can construct query
-    request.parameters["institution_id"] = request.institution_id
+    request.parameters["institution_id"] = institution_id
 
     # 3. Execute Prompt via Router (providing db for RAG retrieval)
     try:
-        response = await orchestrator.execute_tool(request.tool_id, request.parameters, db=db)
+        response = await orchestrator.execute_tool(tool_id, request.parameters, db=db)
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Upstream AI Providers Unavailable: {str(e)}")
 
     # 4. Format & Cache Response
     response_dict = response.model_dump()
-    await SemanticCache.set_cached_response(request.tool_id, request.parameters, response_dict)
+    await SemanticCache.set_cached_response(tool_id, request.parameters, response_dict)
     
     return response_dict
+
 
 @router.post("/rag/ingest")
 async def ingest_district_knowledge(
     request: DocumentIngestRequest, 
-    db: AsyncSession = Depends(get_db_session)
+    db: AsyncSession = Depends(get_db_session),
+    x_institution_id: str | None = Header(None, alias="X-Institution-Id")
 ):
     """
     Tier 3 Administrative Endpoint: 
     Ingests local district standards into the Vector DB.
     """
+    inst_id = x_institution_id if (x_institution_id and x_institution_id.strip()) else request.institution_id
     try:
         chunk_count = await rag_service.ingest_document(
             db=db,
-            institution_id=request.institution_id,
+            institution_id=inst_id,
             document_name=request.document_name,
             raw_text=request.raw_text
         )
+
         return {
             "status": "success", 
             "message": "Document ingested successfully.",

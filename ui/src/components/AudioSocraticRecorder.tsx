@@ -71,8 +71,6 @@ export function AudioSocraticRecorder({ onTranscript, aiResponseText }: AudioSoc
 
   const simulateMockTranscription = async () => {
     setIsTranscribing(true)
-    const token = getTokens()
-    // const token = token ? token.accessToken : null
     
     // Create a tiny mock audio blob to satisfy FormData upload
     const dummyBlob = new Blob([new Uint8Array(1000)], { type: 'audio/wav' })
@@ -81,8 +79,9 @@ export function AudioSocraticRecorder({ onTranscript, aiResponseText }: AudioSoc
 
   const sendAudioBlobForTranscription = async (blob: Blob) => {
     setIsTranscribing(true)
-    const token = getTokens()
-    // const token = token ? token.accessToken : null
+    const tokens = getTokens()
+    const token = tokens?.accessToken
+
 
     try {
       const formData = new FormData()

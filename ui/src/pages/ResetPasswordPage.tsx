@@ -1,4 +1,5 @@
-import { FormEvent, useState } from 'react'
+import { useState } from 'react'
+import type { FormEvent } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Shield, LockKeyhole, AlertTriangle, KeyRound, ArrowRight, CheckCircle2 } from 'lucide-react'
@@ -49,7 +50,7 @@ export function ResetPasswordPage() {
       const res = await apiFetch('/api/auth/reset-password', {
         method: 'POST',
         body: { token, newPassword: password }
-      })
+      }) as { message?: string }
       setOk(res.message || 'Password successfully reset.')
       // Redirect to login after a short delay
       setTimeout(() => navigate('/login'), 2500)
