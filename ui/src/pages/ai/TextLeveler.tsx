@@ -10,7 +10,7 @@ export default function TextLeveler() {
 
   // Input states
   const [inputText, setInputText] = useState('')
-  const [targetGrade, setTargetGrade] = useState(5) // default to Grade 5
+  const [targetGrade, setTargetGrade] = useState(3) // default to Year 3
   
   // UI states
   const [isLoading, setIsLoading] = useState(false)
@@ -37,7 +37,7 @@ export default function TextLeveler() {
         institution_id: institutionId,
         parameters: {
           user_prompt: inputText,
-          target_grade: `Grade ${targetGrade}`
+          target_grade: targetGrade === 0 ? 'Prep' : `Year ${targetGrade}`
         }
       }
       
@@ -131,24 +131,24 @@ export default function TextLeveler() {
 
                 <div className="field" style={{ background: 'rgba(0,0,0,0.02)', padding: 12, borderRadius: 8, border: '1px solid var(--border)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div className="label" style={{ margin: 0 }}>Target Grade level: <strong>Grade {targetGrade}</strong></div>
+                    <div className="label" style={{ margin: 0 }}>Target Grade level: <strong>{targetGrade === 0 ? 'Prep' : `Year ${targetGrade}`}</strong></div>
                     <span className="chip" style={{ fontSize: 9 }}>
-                      {targetGrade <= 5 ? 'Elementary' : targetGrade <= 8 ? 'Middle School' : 'High School'}
+                      Australian Curriculum
                     </span>
                   </div>
                   <input
                     type="range"
-                    min="1"
-                    max="12"
+                    min="0"
+                    max="5"
                     value={targetGrade}
                     onChange={(e) => setTargetGrade(Number(e.target.value))}
                     disabled={isLoading}
                     style={{ width: '100%', marginTop: 8, accentColor: 'var(--c-navy)' }}
                   />
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--muted)', marginTop: 4 }}>
-                    <span>Grade 1</span>
-                    <span>Grade 6</span>
-                    <span>Grade 12</span>
+                    <span>Prep</span>
+                    <span>Year 3</span>
+                    <span>Year 5</span>
                   </div>
                 </div>
 

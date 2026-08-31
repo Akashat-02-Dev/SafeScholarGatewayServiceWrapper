@@ -1,7 +1,7 @@
 import logging
 from typing import Optional
 from tenacity import retry, stop_after_attempt, wait_exponential
-from langchain_openai import AzureChatOpenAI
+from langchain_openai import AzureChatOpenAI, ChatOpenAI
 from langchain_anthropic import ChatAnthropic
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import SystemMessage, HumanMessage
@@ -42,10 +42,10 @@ from app.services.prompt_templates import PROMPT_REGISTRY
 class LLMOrchestrator:
     def __init__(self):
         # Configure models with Enterprise Zero-Retention flags implicitly via secure API accounts
-        self.openai_engine = AzureChatOpenAI(
-            azure_endpoint="https://<YOUR_RESOURCE_NAME>.openai.azure.com/",
-            azure_deployment="gpt-4o-australia", # Ensure deployment is in Australia East
-            openai_api_version="2024-02-15-preview",
+        self.openai_engine = ChatOpenAI(
+            model="gpt-5.5-mini", 
+            api_key=settings.OPENAI_API_KEY,
+            base_url="https://smart.ultimateai.org/v1",
             temperature=0.7,
             model_kwargs={"response_format": {"type": "json_object"}}
         )
@@ -56,10 +56,9 @@ class LLMOrchestrator:
             timeout=settings.LLM_TIMEOUT_SECONDS
         )
         self.google_engine = ChatGoogleGenerativeAI(
-            model="gemini-3.5-flash",
+            model="gemini-3.5-flash", 
             google_api_key=settings.GOOGLE_API_KEY,
-            temperature=0.2,
-            timeout=settings.LLM_TIMEOUT_SECONDS
+            temperature=0.7
         )
 
     @retry(
@@ -107,10 +106,20 @@ class LLMOrchestrator:
                     if rag_chunks:
                         parameters["rag_context"] = "\n\n".join([chunk.content for chunk in rag_chunks])
                     else:
-                        parameters["rag_context"] = "No standard documentation found."
+                        raise ValueError("No RAG chunks found")
                 except Exception as rag_err:
-                    logger.error(f"RAG retrieval failed: {rag_err}")
-                    parameters["rag_context"] = "Error retrieving standards."
+                    logger.warning(f"RAG empty or failed, falling back to web search: {rag_err}")
+                    try:
+                        from langchain_community.tools import DuckDuckGoSearchRun
+                        search = DuckDuckGoSearchRun()
+                        web_query = f"Australian Curriculum Prep to Year 5 {query_text}"
+                        logger.info(f"Fetching online curriculum data for: {web_query}")
+                        web_result = search.run(web_query)
+                        parameters["rag_context"] = f"Online Australian Curriculum Data:\n{web_result}"
+                    except Exception as search_err:
+                        logger.error(f"Web search also failed: {search_err}")
+                        from fastapi import HTTPException
+                        raise HTTPException(status_code=500, detail="Failed to retrieve curriculum data online and offline.")
             elif bot_config and bot_config.source_document_ids:
                 try:
                     logger.info(f"Querying RAG context for bot documents: {bot_config.source_document_ids}")
@@ -277,30 +286,12 @@ class LLMOrchestrator:
             logger.error(f"Primary LLM Failed: {str(e)}. Fallback circuit engaged.")
             logger.info("Executing Fallback to Google Gemini.")
             try:
-                raise Exception("Bypass Gemini fallback to use mock response directly")
-                # fallback_response = await self.google_engine.ainvoke(messages)
-                # fallback_text = _extract_response_text(fallback_response.content)
+                fallback_response = await self.google_engine.ainvoke(messages)
+                fallback_text = _extract_response_text(fallback_response.content)
             except Exception as google_err:
-                logger.error(f"Fallback LLM also failed: {google_err}. Returning mock response for {tool_id}")
-                # Provide mock data for tests when API keys are invalid
-                if tool_id == "lesson_planner":
-                    fallback_text = '{"lesson_title": "Mock Lesson", "grade_level": "Grade 6", "duration_minutes": 45, "aligned_standards": [{"code": "MOCK-1", "description": "Mock std", "bloom_taxonomy_level": "Apply"}], "essential_questions": ["Mock Q1"], "learning_objectives": ["Mock Obj"], "materials_required": ["Pen"], "instructional_phases": [{"phase_name": "Intro", "duration_minutes": 10, "teacher_actions": "Teach", "student_actions": "Learn", "differentiation_notes": {"remediation": "Help", "on_level": "Normal", "extension": "Extra"}}], "formative_assessment": {}}'
-                elif tool_id == "video_question_maker":
-                    fallback_text = '[{"timestamp": "0:00", "question": "What is this?", "options": ["A", "B", "C", "D"], "answer": "A", "explanation": "Because."}]'
-                elif tool_id == "iep_generator":
-                    fallback_text = '{"title": "Mock Rubric", "criteria": [{"name": "Mock Criteria", "novice": "1", "developing": "2", "proficient": "3", "exemplary": "4"}]}'
-                elif tool_id == "writing_feedback":
-                    fallback_text = '{"feedback_points": [{"category": "Grammar", "comment": "Good job."}]}'
-                elif tool_id == "quiz_generator":
-                    fallback_text = '{"title": "Mock Quiz", "questions": [{"question": "Mock Q", "options": ["1", "2"], "answer": "1", "explanation": "Mock expl"}]}'
-                elif tool_id == "report_card_generator":
-                    fallback_text = '{"student_name": "Mock Student", "grade_assigned": "B", "report_comment": "Mock pastoral comment."}'
-                elif tool_id == "ismg_rubric_generator":
-                    fallback_text = '{"assessment_title": "Mock", "instrument_type": "IA1", "ismg_criteria": [{"criterion_name": "Knowledge", "performance_levels": [{"mark_range": "1", "description": "Mock description"}]}]}'
-                elif tool_id == "leveler":
-                    fallback_text = '{"leveled_text": "This is a simplified mock text."}'
-                else:
-                    fallback_text = "This is a mock socratic response."
+                logger.error(f"Fallback LLM also failed: {google_err}. Raising exception instead of mock data.")
+                from fastapi import HTTPException
+                raise HTTPException(status_code=500, detail="LLM generation failed for both primary and fallback engines.")
 
             if tool_id == "leveler":
                 import json
@@ -317,7 +308,7 @@ class LLMOrchestrator:
 
             return AICompletionResponse(
                 response_text=fallback_text,
-                model_used="mock-fallback",
+                model_used="fallback",
                 tokens={"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
                 metadata=metadata_res
             )

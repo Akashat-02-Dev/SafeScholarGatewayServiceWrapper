@@ -26,13 +26,13 @@ func main() {
 	}
 	defer pool.Close()
 
-	hash, err := security.HashPassword("password123", security.DefaultArgon2idParams)
+	hash, err := security.HashPassword("Password123!", security.DefaultArgon2idParams)
 	if err != nil {
 		fmt.Printf("Hash: %v\n", err)
 		return
 	}
 	
-	_, err = pool.Exec(ctx, "UPDATE users SET password_hash = $1 WHERE email = 'demo@student'", hash)
+	_, err = pool.Exec(ctx, "UPDATE users SET password_hash = $1 WHERE email = 'demo@localhost'", hash)
 	if err != nil {
 		fmt.Printf("Update: %v\n", err)
 		return

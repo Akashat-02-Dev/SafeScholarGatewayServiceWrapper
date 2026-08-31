@@ -11,7 +11,7 @@ export default function LessonPlanner() {
 
   // Input states
   const [topic, setTopic] = useState('')
-  const [gradeLevel, setGradeLevel] = useState('Grade 6')
+  const [gradeLevel, setGradeLevel] = useState('Year 3')
   const [standardCode, setStandardCode] = useState('')
 
   // UI state
@@ -135,7 +135,7 @@ export default function LessonPlanner() {
                     onChange={(e) => setGradeLevel(e.target.value)}
                     disabled={isLoading}
                   >
-                    {['Kindergarten', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'].map(g => (
+                    {['Prep', 'Year 1', 'Year 2', 'Year 3', 'Year 4', 'Year 5'].map(g => (
                       <option key={g} value={g}>{g}</option>
                     ))}
                   </select>

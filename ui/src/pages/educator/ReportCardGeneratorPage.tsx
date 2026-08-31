@@ -107,7 +107,7 @@ export default function ReportCardGeneratorPage() {
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
                 className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
-                placeholder="e.g. Year 10 Mathematics"
+                placeholder="e.g. Year 3 Mathematics"
               />
             </div>
 

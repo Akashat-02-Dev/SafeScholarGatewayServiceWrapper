@@ -74,15 +74,8 @@ class RAGPipeline:
             result = await db.execute(stmt)
             return result.scalars().all()
         except Exception as e:
-            logger.warning(f"Failed to retrieve knowledge chunks (pgvector missing?): {e}. Returning mock chunk.")
-            mock_chunk = KnowledgeChunk(
-                institution_id=inst_uuid,
-                document_name="Mock_Curriculum.pdf",
-                content="This is a mock context because the vector database is unavailable. It covers standard curriculum topics.",
-                embedding=[0.0] * 1536,
-                metadata_json={"page_number": 1}
-            )
-            return [mock_chunk]
+            logger.warning(f"Failed to retrieve knowledge chunks (pgvector missing?): {e}.")
+            return []
 
     async def retrieve_context(self, db: AsyncSession, institution_id: str, query: str, top_k: int = 3) -> str:
         """Embeds the user query and performs a similarity search restricted by institution."""
@@ -206,12 +199,8 @@ class RAGPipeline:
             rows = result.all()
             return [{"document_name": row[0], "chunk_count": row[1]} for row in rows]
         except Exception as e:
-            logger.warning(f"Failed to query knowledge_chunks table (probably missing pgvector): {e}. Returning mock fallback documents.")
-            return [
-                {"document_name": "K12_Algebra_Curriculum.pdf", "chunk_count": 142},
-                {"document_name": "Middle_School_Science_Standards.pdf", "chunk_count": 86},
-                {"document_name": "School_Safety_Conduct_Guidelines.pdf", "chunk_count": 35}
-            ]
+            logger.warning(f"Failed to query knowledge_chunks table (probably missing pgvector): {e}.")
+            return []
 
     async def execute_student_research(self, db: AsyncSession, institution_id: str, query: str, top_k: int = 3) -> str:
         """Embeds the search query and returns the matching KnowledgeChunk database objects restricted to vetted documents."""
@@ -229,15 +218,8 @@ class RAGPipeline:
             result = await db.execute(stmt)
             top_chunks = result.scalars().all()
         except Exception as e:
-            logger.warning(f"Failed to execute student research (pgvector missing?): {e}. Returning mock chunk.")
-            mock_chunk = KnowledgeChunk(
-                institution_id=inst_uuid,
-                document_name="Mock_Student_Resource.pdf",
-                content="This is a mock student-safe context because the vector database is unavailable.",
-                embedding=[0.0] * 1536,
-                metadata_json={"page_number": 1, "chunk_index": 0}
-            )
-            top_chunks = [mock_chunk]
+            logger.warning(f"Failed to execute student research (pgvector missing?): {e}.")
+            top_chunks = []
         
         # Format the RAG context with explicitly requested "[Source: Doc, Chunk]" pattern
         combined_context = ""

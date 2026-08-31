@@ -13,7 +13,7 @@ export const LessonPlannerPage: React.FC = () => {
   
   // Form State
   const [topic, setTopic] = useState('');
-  const [gradeLevel, setGradeLevel] = useState('5th Grade');
+  const [gradeLevel, setGradeLevel] = useState('Year 3');
   const [standardCode, setStandardCode] = useState('');
   
   // Execution State
@@ -145,11 +145,12 @@ export const LessonPlannerPage: React.FC = () => {
                     onChange={(e) => setGradeLevel(e.target.value)}
                     className="select"
                   >
-                    <option value="Elementary (3rd Grade)">Elementary (3rd Grade)</option>
-                    <option value="5th Grade">5th Grade</option>
-                    <option value="Middle School (7th Grade)">Middle School (7th Grade)</option>
-                    <option value="High School (Biology)">High School (Biology)</option>
-                    <option value="Advanced AP / College">Advanced AP / College</option>
+                    <option value="Prep">Prep</option>
+                    <option value="Year 1">Year 1</option>
+                    <option value="Year 2">Year 2</option>
+                    <option value="Year 3">Year 3</option>
+                    <option value="Year 4">Year 4</option>
+                    <option value="Year 5">Year 5</option>
                   </select>
                 </div>
 

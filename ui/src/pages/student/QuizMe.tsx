@@ -24,7 +24,7 @@ const flipVariants = {
 
 export function QuizMe() {
   const [topic, setTopic] = useState('');
-  const [gradeLevel, setGradeLevel] = useState('Middle School');
+  const [gradeLevel, setGradeLevel] = useState('Year 3');
   const [questionCount, setQuestionCount] = useState(5);
   
   const [quizState, setQuizState] = useState<QuizState>('idle');
@@ -160,9 +160,12 @@ export function QuizMe() {
                     onChange={(e) => setGradeLevel(e.target.value)}
                     className="w-full bg-white/80 dark:bg-zinc-900/60 dark:border-zinc-800 border-transparent focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all outline-none rounded-2xl px-4 py-3 text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 shadow-sm appearance-none"
                   >
-                    <option>Elementary</option>
-                    <option>Middle School</option>
-                    <option>High School</option>
+                    <option>Prep</option>
+                    <option>Year 1</option>
+                    <option>Year 2</option>
+                    <option>Year 3</option>
+                    <option>Year 4</option>
+                    <option>Year 5</option>
                   </select>
                 </div>
                 <div className="flex flex-col gap-2 flex-1">

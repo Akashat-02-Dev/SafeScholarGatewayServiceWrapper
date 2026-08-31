@@ -4,19 +4,12 @@ import { aiService } from '../../services/aiService';
 import { Sparkles, Loader2, AlertCircle, FileText, Settings, RefreshCw } from 'lucide-react';
 
 const GRADE_LEVELS = [
-  'Grade 1 (Lexile 190L-530L)',
-  'Grade 2 (Lexile 420L-650L)',
-  'Grade 3 (Lexile 520L-820L)',
-  'Grade 4 (Lexile 740L-940L)',
-  'Grade 5 (Lexile 830L-1010L)',
-  'Grade 6 (Lexile 925L-1070L)',
-  'Grade 7 (Lexile 970L-1120L)',
-  'Grade 8 (Lexile 1010L-1185L)',
-  'Grade 9 (Lexile 1050L-1260L)',
-  'Grade 10 (Lexile 1080L-1335L)',
-  'Grade 11 (Lexile 1185L-1385L)',
-  'Grade 12 (Lexile 1215L-1440L)',
-  'AP / College Prep (Lexile 1400L+)'
+  'Prep (Lexile BR-190L)',
+  'Year 1 (Lexile 190L-530L)',
+  'Year 2 (Lexile 420L-650L)',
+  'Year 3 (Lexile 520L-820L)',
+  'Year 4 (Lexile 740L-940L)',
+  'Year 5 (Lexile 830L-1010L)'
 ];
 
 export const TextLevelerPage: React.FC = () => {
@@ -25,7 +18,7 @@ export const TextLevelerPage: React.FC = () => {
   // Controls state
   const [sourceText, setSourceText] = useState('');
   const [urlInput, setUrlInput] = useState('');
-  const [gradeIndex, setGradeIndex] = useState(4); // Default to Grade 5
+  const [gradeIndex, setGradeIndex] = useState(3); // Default to Year 3
   
   // Execution state
   const [isLeveling, setIsLeveling] = useState(false);
