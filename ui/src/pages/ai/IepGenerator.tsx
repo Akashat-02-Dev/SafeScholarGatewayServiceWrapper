@@ -39,7 +39,7 @@ export default function IepGenerator() {
         tool_id: 'iep_generator' as const,
         institution_id: institutionId,
         parameters: {
-          user_prompt: topic
+          user_prompt: topic + ' (Must rigorously follow Australian Curriculum standards from Prep to Year 5)'
         }
       }
       

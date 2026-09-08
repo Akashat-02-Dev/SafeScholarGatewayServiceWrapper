@@ -38,7 +38,7 @@ export default function LessonPlanner() {
         institutionId,
         topic,
         gradeLevel,
-        standardCode
+        (standardCode || 'GEN-K12') + ' (Australian Curriculum Prep to Year 5)'
       )
       setLessonPlan(data)
       setOk('Lesson plan generated successfully using standards grounding.')
@@ -144,7 +144,7 @@ export default function LessonPlanner() {
                   <div className="label">Standards Code</div>
                   <input
                     className="input"
-                    placeholder="e.g. MS-LS1-1, CCSS.Math.6.EE..."
+                    placeholder="e.g. AC9E3LA01 (Australian Curriculum)..."
                     value={standardCode}
                     onChange={(e) => setStandardCode(e.target.value)}
                     disabled={isLoading}

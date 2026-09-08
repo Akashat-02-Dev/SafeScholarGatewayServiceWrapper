@@ -60,12 +60,12 @@ export const LessonPlannerPage: React.FC = () => {
         institutionId,
         topic,
         gradeLevel,
-        standardCode || 'GEN-K12'
+        (standardCode || 'GEN-K12') + ' (Australian Curriculum Prep to Year 5)'
       );
       setLessonPlan(plan);
       setStep('output');
-    } catch (err: any) {
-      setError(err?.message || 'Failed to generate standards-aligned lesson plan. Please check safety guidelines.');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to generate standards-aligned lesson plan. Please check safety guidelines.');
       setStep('input');
     } finally {
       clearInterval(interval);
@@ -99,8 +99,8 @@ export const LessonPlannerPage: React.FC = () => {
         }
       });
       setExportSuccess(`Successfully exported to Canvas LMS! Assignment ID: ${res.external_id}`);
-    } catch (err: any) {
-      setError(err?.message || 'Failed to export to LMS external endpoint.');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to export to LMS external endpoint.');
     } finally {
       setIsExporting(false);
     }
@@ -160,7 +160,7 @@ export const LessonPlannerPage: React.FC = () => {
                     type="text" 
                     value={standardCode}
                     onChange={(e) => setStandardCode(e.target.value)}
-                    placeholder="e.g., NGSS.MS-LS1-1, CCSS.ELA-LITERACY.RL.5.1"
+                    placeholder="e.g., AC9E3LA01 (Australian Curriculum)"
                     className="input"
                   />
                 </div>

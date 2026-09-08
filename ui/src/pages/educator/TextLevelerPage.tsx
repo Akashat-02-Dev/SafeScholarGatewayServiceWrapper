@@ -41,17 +41,17 @@ export const TextLevelerPage: React.FC = () => {
         tool_id: 'leveler' as const,
         institution_id: institutionId,
         parameters: {
-          user_prompt: `Please simplify and level the following text to fit ${targetGrade}. Highlight key academic vocabulary terms in bold or format them cleanly.`,
+          user_prompt: `Please simplify and level the following text to fit ${targetGrade} (Australian Curriculum). Highlight key academic vocabulary terms in bold or format them cleanly.`,
           source_text: sourceText,
           source_url: urlInput,
-          target_level: targetGrade
+          target_level: targetGrade + ' (Australian Curriculum)'
         }
       };
 
-      const res = await aiService.executeTool<any, string>('leveler', payload);
+      const res = await aiService.executeTool<typeof payload.parameters, string>('leveler', payload);
       setLeveledText(res.response_text);
-    } catch (err: any) {
-      setError(err?.message || 'Failed to level target text. Please verify safety guardrail compliance.');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to level target text. Please verify safety guardrail compliance.');
     } finally {
       setIsLeveling(false);
     }

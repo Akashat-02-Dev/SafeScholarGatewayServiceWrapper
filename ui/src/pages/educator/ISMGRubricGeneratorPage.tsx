@@ -3,13 +3,29 @@ import { LayoutList, AlertCircle, FileText, CheckCircle2 } from 'lucide-react';
 import { LMSExportButton } from '../../components/LMSExportButton';
 import { useAuth } from '../../services/authService';
 
+interface PerformanceLevel {
+  mark_range: string;
+  description: string;
+}
+
+interface ISMGProperty {
+  criterion_name: string;
+  performance_levels: PerformanceLevel[];
+}
+
+interface ISMGRubricResult {
+  assessment_title: string;
+  instrument_type: string;
+  ismg_criteria: ISMGProperty[];
+}
+
 export default function ISMGRubricGeneratorPage() {
   const { tokens, me } = useAuth();
   const [subject, setSubject] = useState('');
-  const [instrumentType, setInstrumentType] = useState('IA1');
+  const [instrumentType, setInstrumentType] = useState('Formative');
   const [details, setDetails] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<ISMGRubricResult | null>(null);
   const [error, setError] = useState('');
 
   const handleGenerate = async (e: React.FormEvent) => {
@@ -36,7 +52,7 @@ export default function ISMGRubricGeneratorPage() {
           parameters: {
             subject: subject,
             instrument_type: instrumentType,
-            user_prompt: details
+            user_prompt: details + ' (Aligned to Australian Curriculum from Prep to Year 5)'
           }
         })
       });
@@ -49,8 +65,8 @@ export default function ISMGRubricGeneratorPage() {
       const data = await response.json();
       const parsedContent = typeof data.response_text === 'string' ? JSON.parse(data.response_text) : data.response_text;
       setResult(parsedContent);
-    } catch (err: any) {
-      setError(err.message || 'An error occurred during generation.');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An error occurred during generation.');
     } finally {
       setIsGenerating(false);
     }
@@ -60,7 +76,7 @@ export default function ISMGRubricGeneratorPage() {
   const generateHtml = () => {
     if (!result) return "";
     let criteriaHtml = "";
-    result.ismg_criteria.forEach((c: any) => {
+    result.ismg_criteria.forEach((c: ISMGProperty) => {
       criteriaHtml += `
         <h3 style="color: #0f172a; margin-top: 20px;">${c.criterion_name}</h3>
         <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
@@ -72,7 +88,7 @@ export default function ISMGRubricGeneratorPage() {
           </thead>
           <tbody>
       `;
-      c.performance_levels.forEach((pl: any) => {
+      c.performance_levels.forEach((pl: PerformanceLevel) => {
         criteriaHtml += `
             <tr>
               <td style="border: 1px solid #cbd5e1; padding: 10px; width: 120px;"><strong>${pl.mark_range}</strong></td>
@@ -101,10 +117,10 @@ export default function ISMGRubricGeneratorPage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-slate-900 flex items-center gap-3">
           <LayoutList className="w-8 h-8 text-indigo-500" />
-          QCAA ISMG Rubric Generator
+          Australian Curriculum Rubric Generator
         </h1>
         <p className="text-slate-600 mt-2 text-lg">
-          Generate strict Instrument-Specific Marking Guides aligned with cognitive verbs.
+          Generate strict grading rubrics aligned with Australian Curriculum Prep to Year 5 cognitive verbs.
         </p>
       </div>
 
@@ -119,7 +135,7 @@ export default function ISMGRubricGeneratorPage() {
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
                 className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-                placeholder="e.g. Senior Biology"
+                placeholder="e.g. Science"
               />
             </div>
 
@@ -130,9 +146,9 @@ export default function ISMGRubricGeneratorPage() {
                 onChange={(e) => setInstrumentType(e.target.value)}
                 className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
               >
-                <option value="IA1">IA1 (Data Test)</option>
-                <option value="IA2">IA2 (Student Experiment)</option>
-                <option value="IA3">IA3 (Research Investigation)</option>
+                <option value="Formative">Formative Assessment</option>
+                <option value="Summative">Summative Assessment</option>
+                <option value="Diagnostic">Diagnostic Assessment</option>
               </select>
             </div>
 
@@ -185,7 +201,7 @@ export default function ISMGRubricGeneratorPage() {
               <div className="mb-6 pb-6 border-b border-slate-100">
                 <div className="flex items-center gap-3 text-emerald-600 mb-4">
                   <CheckCircle2 className="w-6 h-6" />
-                  <span className="font-semibold text-lg">QCAA ISMG Generation Complete</span>
+                  <span className="font-semibold text-lg">Rubric Generation Complete</span>
                 </div>
                 
                 <h2 className="text-2xl font-bold text-slate-900">{result.assessment_title}</h2>
@@ -195,7 +211,7 @@ export default function ISMGRubricGeneratorPage() {
               </div>
 
               <div className="space-y-8 flex-1">
-                {result.ismg_criteria.map((criterion: any, idx: number) => (
+                {result.ismg_criteria.map((criterion: ISMGProperty, idx: number) => (
                   <div key={idx} className="bg-slate-50 p-6 rounded-xl border border-slate-200">
                     <h3 className="text-xl font-semibold text-slate-900 mb-4 flex items-center gap-2">
                       <span className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-sm font-bold">
@@ -213,7 +229,7 @@ export default function ISMGRubricGeneratorPage() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-200">
-                          {criterion.performance_levels.map((level: any, lIdx: number) => (
+                          {criterion.performance_levels.map((level: PerformanceLevel, lIdx: number) => (
                             <tr key={lIdx} className="hover:bg-slate-50/50 transition-colors">
                               <td className="py-3 px-4 font-bold text-slate-900 border-r border-slate-200 align-top">
                                 {level.mark_range}

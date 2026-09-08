@@ -37,7 +37,7 @@ export default function TextLeveler() {
         institution_id: institutionId,
         parameters: {
           user_prompt: inputText,
-          target_grade: targetGrade === 0 ? 'Prep' : `Year ${targetGrade}`
+          target_grade: (targetGrade === 0 ? 'Prep' : `Year ${targetGrade}`) + ' (Australian Curriculum)'
         }
       }
       

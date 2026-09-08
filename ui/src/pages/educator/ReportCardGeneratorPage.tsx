@@ -3,6 +3,12 @@ import { BookOpen, AlertCircle, FileText } from 'lucide-react';
 import { LMSExportButton } from '../../components/LMSExportButton';
 import { useAuth } from '../../services/authService';
 
+interface ReportCardResult {
+  student_name: string;
+  grade_assigned: string;
+  report_comment: string;
+}
+
 export default function ReportCardGeneratorPage() {
   const { tokens, me } = useAuth();
   const [studentName, setStudentName] = useState('');
@@ -10,7 +16,7 @@ export default function ReportCardGeneratorPage() {
   const [grade, setGrade] = useState('C');
   const [notes, setNotes] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<ReportCardResult | null>(null);
   const [error, setError] = useState('');
 
   const handleGenerate = async (e: React.FormEvent) => {
@@ -38,7 +44,7 @@ export default function ReportCardGeneratorPage() {
             student_name: studentName,
             subject: subject,
             grade_assigned: grade,
-            user_prompt: notes
+            user_prompt: notes + ' (Aligned to Australian Curriculum from Prep to Year 5)'
           }
         })
       });
@@ -51,8 +57,8 @@ export default function ReportCardGeneratorPage() {
       const data = await response.json();
       const parsedContent = typeof data.response_text === 'string' ? JSON.parse(data.response_text) : data.response_text;
       setResult(parsedContent);
-    } catch (err: any) {
-      setError(err.message || 'An error occurred during generation.');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'An error occurred during generation.');
     } finally {
       setIsGenerating(false);
     }
@@ -80,7 +86,7 @@ export default function ReportCardGeneratorPage() {
           Australian Report Card Generator
         </h1>
         <p className="text-slate-600 mt-2 text-lg">
-          Generate QCAA A-E graded pastoral report card comments.
+          Generate Australian Curriculum A-E graded pastoral report card comments for Prep to Year 5.
         </p>
       </div>
 
@@ -193,7 +199,7 @@ export default function ReportCardGeneratorPage() {
                 </div>
               </div>
               
-              <LMSExportButton contentHtml={generateHtml()} courseId="QCAA-Course" />
+              <LMSExportButton contentHtml={generateHtml()} courseId="Australian-Curriculum-Course" />
             </div>
           )}
         </div>

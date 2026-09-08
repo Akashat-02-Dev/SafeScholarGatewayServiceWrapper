@@ -62,7 +62,7 @@ export function QuizMe() {
           'Content-Type': 'application/json',
           ...(tokens?.access ? { 'Authorization': `Bearer ${tokens.access}` } : {})
         },
-        body: JSON.stringify({ parameters: { topic, grade_level: gradeLevel, question_count: questionCount } })
+        body: JSON.stringify({ parameters: { topic, grade_level: gradeLevel + ' (Australian Curriculum)', question_count: questionCount } })
       });
 
       if (!res.ok) {
@@ -70,7 +70,9 @@ export function QuizMe() {
         try {
           const errJson = await res.json();
           errStr = errJson.message || errJson.error || errStr;
-        } catch {}
+        } catch {
+          // ignore parsing error
+        }
         throw new Error(errStr);
       }
 
@@ -92,7 +94,7 @@ export function QuizMe() {
     if (showExplanation || !quizData) return;
     
     const currentQ = quizData.questions[currentQuestionIndex];
-    const clean = (s: any) => String(s || '').replace(/^([A-Za-z0-9]+[\.\)])?\s*/i, '').trim().toLowerCase();
+    const clean = (s: unknown) => String(s || '').replace(/^([A-Za-z0-9]+[.)])?\s*/i, '').trim().toLowerCase();
     const isCorrect = clean(option) === clean(currentQ.answer);
     
     if (isCorrect) setScore(prev => prev + 1);
@@ -230,7 +232,7 @@ export function QuizMe() {
                   
                   <div className="flex flex-col gap-4">
                     {quizData.questions[currentQuestionIndex].options.map((option, idx) => {
-                      const clean = (s: any) => String(s || '').replace(/^([A-Za-z0-9]+[\.\)])?\s*/i, '').trim().toLowerCase();
+                      const clean = (s: unknown) => String(s || '').replace(/^([A-Za-z0-9]+[.)])?\s*/i, '').trim().toLowerCase();
                       const isSelected = showExplanation && userAnswers[currentQuestionIndex]?.selected === option;
                       const actualAnswer = quizData.questions[currentQuestionIndex].answer;
                       const isCorrect = showExplanation && (clean(option) === clean(actualAnswer));
