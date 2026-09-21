@@ -1,0 +1,22 @@
+# Version control
+.git
+.gitignore
+
+# IDE & OS
+.vscode
+.idea
+.DS_Store
+
+# Environment and sensitive keys
+.env
+.env.*
+*.env
+
+# Python virtual environment and bytecode cache
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/

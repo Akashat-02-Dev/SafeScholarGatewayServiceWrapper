@@ -1,0 +1,34 @@
+# Multi-stage Dockerfile for SafeScholar Go API Gateway
+FROM golang:1.23-alpine AS builder
+
+WORKDIR /app
+
+RUN apk add --no-cache git ca-certificates tzdata
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /safescholar-gateway ./cmd/server
+
+FROM alpine:3.20
+
+WORKDIR /app
+
+RUN apk add --no-cache ca-certificates tzdata wget \
+    && addgroup -S safescholar && adduser -S safescholar -G safescholar
+
+COPY --from=builder /safescholar-gateway /app/safescholar-gateway
+COPY --from=builder /app/config /app/config
+
+RUN mkdir -p /app/config/jwt && chown -R safescholar:safescholar /app
+
+USER safescholar
+
+EXPOSE 8080 8443
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:8080/healthz || exit 1
+
+ENTRYPOINT ["/app/safescholar-gateway"]

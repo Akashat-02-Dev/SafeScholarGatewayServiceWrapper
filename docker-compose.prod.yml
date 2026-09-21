@@ -1,0 +1,117 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: safescholar-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: safescholar
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-safescholar_secure_password}
+      POSTGRES_DB: safescholar
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U safescholar -d safescholar"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: safescholar-redis
+    restart: always
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  ai-orchestrator:
+    build:
+      context: ./ai-orchestrator-service
+      dockerfile: Dockerfile
+    container_name: safescholar-ai-orchestrator
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://safescholar:${DB_PASSWORD:-safescholar_secure_password}@postgres:5432/safescholar
+      REDIS_URL: redis://redis:6379/0
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-placeholder}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-placeholder}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-placeholder}
+      LLM_TIMEOUT_SECONDS: 30
+      MAX_RETRIES: 2
+    ports:
+      - "8000:8000"
+
+  lms-integration:
+    build:
+      context: ./lms-integration-service
+      dockerfile: Dockerfile
+    container_name: safescholar-lms-integration
+    restart: always
+    environment:
+      CANVAS_BASE_URL: ${CANVAS_BASE_URL:-https://canvas.instructure.com/api/v1}
+      CANVAS_CLIENT_ID: ${CANVAS_CLIENT_ID:-}
+      CANVAS_CLIENT_SECRET: ${CANVAS_CLIENT_SECRET:-}
+      GOOGLE_CLASSROOM_API_URL: ${GOOGLE_CLASSROOM_API_URL:-https://classroom.googleapis.com/v1}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      HTTP_TIMEOUT: 15
+    ports:
+      - "8001:8001"
+
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.gateway
+    container_name: safescholar-gateway
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      ai-orchestrator:
+        condition: service_started
+      lms-integration:
+        condition: service_started
+    volumes:
+      - ./config/config.prod.docker.yaml:/app/config/config.prod.yaml:ro
+      - ./jwt_keys:/app/config/jwt:ro
+    environment:
+      APP_ENV: prod
+      CONFIG_PATH: /app/config/config.prod.yaml
+      ALLOW_INSECURE_HTTP: "1"
+      ALLOW_INSECURE_REDIS: "1"
+      SYS_ADMIN_EMAIL: ${SYS_ADMIN_EMAIL:-admin@safescholar.io}
+      SYS_ADMIN_PASSWORD: ${SYS_ADMIN_PASSWORD:-ChangeMeAdminPass123!}
+      SYS_ADMIN_FIRST_NAME: ${SYS_ADMIN_FIRST_NAME:-Super}
+      SYS_ADMIN_LAST_NAME: ${SYS_ADMIN_LAST_NAME:-Admin}
+    ports:
+      - "8080:8080"
+
+  ui:
+    build:
+      context: ./ui
+      dockerfile: Dockerfile
+    container_name: safescholar-ui
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - gateway
+
+volumes:
+  postgres_data:
+  redis_data:

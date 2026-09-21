@@ -1,0 +1,45 @@
+# Version control
+.git
+.gitignore
+
+# IDE & OS
+.vscode
+.idea
+.DS_Store
+Thumbs.db
+
+# Executables and binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+*.rdb
+bin/
+dist/
+scratch/
+SafeScholarGatewayServiceWrapper.docx
+
+# Python
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+ai-orchestrator-service/venv/
+lms-integration-service/venv/
+
+# Environment files and credentials
+.env
+.env.*
+*.env
+jwt_keys/
+
+# UI and sub-services not needed for gateway Go build
+ui/
+ai-orchestrator-service/
+lms-integration-service/

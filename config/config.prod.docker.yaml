@@ -1,0 +1,97 @@
+env: prod
+server:
+  host: 0.0.0.0
+  port: 8080
+  readHeaderTimeout: 5s
+  readTimeout: 180s
+  writeTimeout: 180s
+  idleTimeout: 120s
+  maxRequestBodyBytes: 1048576
+  tlsCertFile: ""
+  tlsKeyFile: ""
+  trustedProxyCidrs: []
+  allowedHostnames: []
+  externalBaseUrl: http://localhost:8080
+postgres:
+  connString: postgres://safescholar:safescholar_secure_password@postgres:5432/safescholar?sslmode=disable
+  appName: SafeScholarGatewayServiceWrapper
+  maxConns: 50
+  minConns: 5
+  healthCheckPeriod: 30s
+redis:
+  addr: redis:6379
+  username: ""
+  password: ""
+  db: 0
+  useTls: false
+  dialTimeout: 3s
+  readTimeout: 2s
+  writeTimeout: 2s
+jwt:
+  issuer: SafeScholarGateway
+  audience: SafeScholarClients
+  privateKeyPemFile: /app/config/jwt/private.pem
+  publicKeyPemFile: /app/config/jwt/public.pem
+  accessTokenTtl: 24h
+  refreshTokenTtl: 720h
+  serviceTokenTtl: 10m
+  clockSkew: 1m
+oauth:
+  stateCookieName: ss_oauth_state
+  stateTtl: 10m
+  google:
+    enabled: false
+    clientId: ""
+    clientSecret: ""
+    redirectUrl: ""
+    scopes: ["openid","email","profile"]
+    tenant: ""
+  microsoft:
+    enabled: false
+    clientId: ""
+    clientSecret: ""
+    redirectUrl: ""
+    scopes: ["openid","email","profile"]
+    tenant: common
+  apple:
+    enabled: false
+    clientId: ""
+    clientSecret: ""
+    redirectUrl: ""
+    scopes: ["openid","email","name"]
+    tenant: ""
+mtls:
+  enabled: false
+  clientCertFile: ""
+  clientKeyFile: ""
+  caCertFile: ""
+  minVersion: 772
+  serverName: ""
+cors:
+  allowedOrigins: ["*"]
+  allowedMethods: ["GET","POST","PUT","PATCH","DELETE","OPTIONS"]
+  allowedHeaders: ["Authorization","Content-Type","X-Request-Id","X-Correlation-ID","X-SS-Correlation-ID"]
+  allowCredentials: true
+  maxAgeSeconds: 600
+rateLimit:
+  enabled: true
+  capacity: 120
+  refillRate: 120
+  refillPeriod: 1m
+  prefix: "ratelimit:"
+serviceRegistry:
+  static:
+    ai-orchestrator: http://ai-orchestrator:8000
+    lms-integration: http://lms-integration:8001
+security:
+  requireTlsInDev: false
+  allowedClockSkew: 1m
+  strictTransportMaxAge: 31536000
+  contentSecurityPolicy: "default-src 'self' 'unsafe-inline' data:; connect-src *;"
+audit:
+  enabled: true
+bootstrap:
+  sysAdminEmailEnv: SYS_ADMIN_EMAIL
+  sysAdminPasswordEnv: SYS_ADMIN_PASSWORD
+  sysAdminFirstNameEnv: SYS_ADMIN_FIRST_NAME
+  sysAdminLastNameEnv: SYS_ADMIN_LAST_NAME

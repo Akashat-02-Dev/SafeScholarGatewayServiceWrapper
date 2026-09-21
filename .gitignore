@@ -17,10 +17,13 @@ node_modules/
 .env.local
 .env.*.local
 
-# Python cache
+# Python cache & virtual environments
 __pycache__/
 *.pyc
 *.pyo
+venv/
+.venv/
+
 
 # IDE & OS files
 .vscode/
