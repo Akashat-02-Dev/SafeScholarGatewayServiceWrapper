@@ -26,21 +26,46 @@ export function Dashboard() {
     );
   }
 
+  function renderSuperAdminQuickBar(portalName: string) {
+    if (!isSuperAdmin) return null;
+    return (
+      <div className="mb-5 p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/10 border border-amber-300 dark:border-amber-700/60 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-600 text-white shadow-sm shrink-0">
+            <Shield size={18} />
+          </div>
+          <div>
+            <div className="text-xs font-bold text-amber-950 dark:text-amber-200 flex items-center gap-2">
+              Super Admin Controls
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-200/60 dark:bg-amber-900/40 text-amber-900 dark:text-amber-300">
+                {portalName}
+              </span>
+            </div>
+            <div className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">
+              Multi-tenant institute onboarding, teacher/student quotas, and real-time AI token usage.
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+          <Link
+            to="/superadmin"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white text-xs font-bold shadow-sm hover:shadow-md transition-all whitespace-nowrap"
+          >
+            <Shield size={13} /> Open Super Admin Hub
+          </Link>
+          <RoleFilterBar compact />
+        </div>
+      </div>
+    );
+  }
+
   // ----------------------------------------------------
   // 🍎 TEACHER VIEW (If effective role is teacher)
   // ----------------------------------------------------
   if (effectiveRole === 'teacher') {
     return (
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }} className="page">
-        {/* Super admin toggle header */}
-        {isSuperAdmin && (
-          <div className="mb-4 flex justify-between items-center bg-blue-50/70 dark:bg-blue-950/30 p-3 rounded-2xl border border-blue-200 dark:border-blue-900">
-            <span className="text-xs font-bold text-blue-900 dark:text-blue-300">
-              Super Admin Filter Active: Showing Teacher Portal
-            </span>
-            <RoleFilterBar compact />
-          </div>
-        )}
+        {renderSuperAdminQuickBar('Teacher View')}
 
         <div className="card shadow-lg border border-slate-200/60 dark:border-white/10 bg-white/70 dark:bg-zinc-900/70 backdrop-blur-3xl rounded-3xl p-5 sm:p-7">
           <div className="flex items-center gap-3.5 mb-6">
@@ -117,14 +142,7 @@ export function Dashboard() {
   if (effectiveRole === 'student') {
     return (
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }} className="page">
-        {isSuperAdmin && (
-          <div className="mb-4 flex justify-between items-center bg-emerald-50/70 dark:bg-emerald-950/30 p-3 rounded-2xl border border-emerald-200 dark:border-emerald-900">
-            <span className="text-xs font-bold text-emerald-900 dark:text-emerald-300">
-              Super Admin Filter Active: Showing Student Portal
-            </span>
-            <RoleFilterBar compact />
-          </div>
-        )}
+        {renderSuperAdminQuickBar('Student Hub')}
 
         <div className="card shadow-lg border border-slate-200/60 dark:border-white/10 bg-white/70 dark:bg-zinc-900/70 backdrop-blur-3xl rounded-3xl p-5 sm:p-7">
           <div className="flex items-center gap-3.5 mb-6">
@@ -193,14 +211,7 @@ export function Dashboard() {
   if (effectiveRole === 'institute') {
     return (
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }} className="page">
-        {isSuperAdmin && (
-          <div className="mb-4 flex justify-between items-center bg-purple-50/70 dark:bg-purple-950/30 p-3 rounded-2xl border border-purple-200 dark:border-purple-900">
-            <span className="text-xs font-bold text-purple-900 dark:text-purple-300">
-              Super Admin Filter Active: Showing Institute Management
-            </span>
-            <RoleFilterBar compact />
-          </div>
-        )}
+        {renderSuperAdminQuickBar('Institute Management')}
 
         <div className="card shadow-lg border border-slate-200/60 dark:border-white/10 bg-white/70 dark:bg-zinc-900/70 backdrop-blur-3xl rounded-3xl p-5 sm:p-7">
           <div className="flex items-center gap-3.5 mb-6">

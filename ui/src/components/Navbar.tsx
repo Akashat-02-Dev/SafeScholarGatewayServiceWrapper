@@ -27,11 +27,11 @@ export function Navbar() {
         {isSuperAdmin && (
           <Link
             to="/superadmin"
-            className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-600 text-white text-xs font-bold shadow-sm hover:shadow-md hover:scale-105 transition-all"
-            title="Open Super Admin Hub: Onboarding, Quotas & AI Telemetry"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-600 text-white text-xs font-bold shadow-sm hover:shadow-md hover:scale-105 transition-all shrink-0"
+            title="Open Super Admin Hub: Onboard Institutes, Manage Quotas & AI Usage"
           >
             <Shield size={14} />
-            <span>Super Admin</span>
+            <span className="hidden sm:inline">Super Admin</span>
           </Link>
         )}
 

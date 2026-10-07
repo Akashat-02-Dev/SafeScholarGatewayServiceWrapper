@@ -20,8 +20,15 @@ const RoleFilterContext = createContext<RoleFilterContextValue>({
 const STORAGE_KEY = 'safescholar_superadmin_role_filter';
 
 export const RoleFilterProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { me, hasRole } = useAuth();
-  const isSuperAdmin = Boolean(me?.isSysAdmin || hasRole('sysadmin'));
+  const { me, hasRole, hasPermission } = useAuth();
+  const isSuperAdmin = Boolean(
+    me?.isSysAdmin || 
+    hasRole('sysadmin') || 
+    hasRole('superadmin') || 
+    hasRole('super_admin') || 
+    hasPermission('SUPER_ADMIN') ||
+    me?.email?.toLowerCase() === 'admin@safescholar.com'
+  );
 
   const [roleFilter, setRoleFilterState] = useState<RoleFilterType>(() => {
     const saved = sessionStorage.getItem(STORAGE_KEY) as RoleFilterType | null;
