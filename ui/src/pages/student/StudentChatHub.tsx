@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, useIsPresent } from 'framer-motion';
 import { Send, Bot, User, Search, AlertTriangle } from 'lucide-react';
 import { WSTutorService, type ConnectionState } from '../../services/wsTutorService';
-import { CitationRenderer } from './CitationRenderer';
+import { CitationRenderer } from '../../components/CitationRenderer';
 
 interface Message {
   id: string;
