@@ -4,6 +4,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -160,13 +161,62 @@ func Load() (Config, error) {
 		return Config{}, fmt.Errorf("read config: %w", err)
 	}
 
+	expanded := os.ExpandEnv(string(b))
+
 	var cfg Config
-	if err := yaml.Unmarshal(b, &cfg); err != nil {
+	if err := yaml.Unmarshal([]byte(expanded), &cfg); err != nil {
 		return Config{}, fmt.Errorf("parse config yaml: %w", err)
 	}
 
 	if cfg.Env == "" {
 		cfg.Env = EnvDev
+	}
+
+	// Environment variable overrides for container/cloud deployment
+	if v := strings.TrimSpace(os.Getenv("POSTGRES_CONN_STRING")); v != "" {
+		cfg.Postgres.ConnString = v
+	} else if host := strings.TrimSpace(os.Getenv("POSTGRES_HOST")); host != "" {
+		user := strings.TrimSpace(os.Getenv("POSTGRES_USER"))
+		pass := strings.TrimSpace(os.Getenv("POSTGRES_PASSWORD"))
+		port := strings.TrimSpace(os.Getenv("POSTGRES_PORT"))
+		if port == "" {
+			port = "5432"
+		}
+		db := strings.TrimSpace(os.Getenv("POSTGRES_DB"))
+		if db == "" {
+			db = "safescholar"
+		}
+		sslmode := strings.TrimSpace(os.Getenv("POSTGRES_SSLMODE"))
+		if sslmode == "" {
+			if cfg.Env == EnvProd {
+				sslmode = "require"
+			} else {
+				sslmode = "disable"
+			}
+		}
+		cfg.Postgres.ConnString = fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
+			url.QueryEscape(user), url.QueryEscape(pass), host, port, db, sslmode)
+	}
+	if v := strings.TrimSpace(os.Getenv("REDIS_ADDR")); v != "" {
+		cfg.Redis.Addr = v
+	}
+	if v := strings.TrimSpace(os.Getenv("REDIS_PASSWORD")); v != "" {
+		cfg.Redis.Password = v
+	}
+	if v := strings.TrimSpace(os.Getenv("AI_ORCHESTRATOR_URL")); v != "" {
+		if cfg.ServiceRegistry.Static == nil {
+			cfg.ServiceRegistry.Static = make(map[string]string)
+		}
+		cfg.ServiceRegistry.Static["ai-orchestrator"] = v
+	}
+	if v := strings.TrimSpace(os.Getenv("LMS_INTEGRATION_URL")); v != "" {
+		if cfg.ServiceRegistry.Static == nil {
+			cfg.ServiceRegistry.Static = make(map[string]string)
+		}
+		cfg.ServiceRegistry.Static["lms-integration"] = v
+	}
+	if v := strings.TrimSpace(os.Getenv("EXTERNAL_BASE_URL")); v != "" {
+		cfg.Server.ExternalBaseURL = v
 	}
 
 	if err := cfg.validate(); err != nil {

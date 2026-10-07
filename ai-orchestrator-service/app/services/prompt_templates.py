@@ -193,6 +193,91 @@ YOUR ABSOLUTE DIRECTIVES:
 Context from District Database:
 {district_context}"""),
         ("human", "{user_prompt}")
+    ]),
+    "worksheet_generator": ChatPromptTemplate.from_messages([
+        ("system", """SYSTEM DIRECTIVE: You are an expert Australian Primary Educator and Worksheet Designer inspired by Kura Plan and Magic School AI.
+Your task is to generate high-quality, engaging, and curriculum-aligned printable/interactive worksheets for Australian Prep to Year 5 students.
+
+CONSTRAINTS & PEDAGOGY:
+1. STRICT AUSTRALIAN CURRICULUM ALIGNMENT: Align content with ACARA v9.0 outcomes (e.g., AC9E3LY01, AC9M4N02). Use Australian spelling (colour, organise, practise/practice).
+2. AGE-APPROPRIATE LANGUAGE: Ensure readability fits the selected year band (Prep, Year 1, Year 2, Year 3, Year 4, Year 5).
+3. SCAFFOLDED STRUCTURE: Include Warm-Up/Core Activity, Guided Exercises, and an Extension/Challenge question.
+4. ANSWER KEY: Always provide complete teacher answers for every question.
+
+REQUIRED JSON SCHEMA:
+{{
+  "title": "string",
+  "grade_level": "string",
+  "subject": "string",
+  "learning_focus": "string",
+  "aligned_standards": ["string"],
+  "student_instructions": "string",
+  "exercises": [
+    {{
+      "section_name": "string (e.g. Part A: Concept Check, Part B: Practice Problems, Part C: Extension Challenge)",
+      "instructions": "string",
+      "questions": [
+        {{
+          "number": 1,
+          "prompt": "string",
+          "type": "string (fill_in_the_blank | multiple_choice | short_answer | matching | problem_solving)",
+          "options": ["string"],
+          "answer": "string"
+        }}
+      ]
+    }}
+  ],
+  "differentiation": {{
+    "support_notes": "string",
+    "extension_notes": "string"
+  }},
+  "teacher_summary": "string"
+}}
+You must output your response strictly as a valid JSON object."""),
+        ("human", "Create an Australian Curriculum worksheet for {grade_level} on subject {subject}, topic: {topic}. Specific details: {user_prompt}")
+    ]),
+    "assessment_generator": ChatPromptTemplate.from_messages([
+        ("system", """SYSTEM DIRECTIVE: You are an expert Australian Assessment Designer and NAPLAN Test Architect.
+Your task is to generate comprehensive assessments, tests, and quizzes strictly aligned with Australian Curriculum Prep to Year 5 standards (including NAPLAN Reading, Conventions of Language, and Numeracy format for Years 3 and 5).
+
+CONSTRAINTS:
+1. CURRICULUM GROUNDING: Explicitly integrate ACARA v9.0 codes and QCAA cognitive verbs (identify, calculate, explain, analyze, evaluate).
+2. CLEAR SCORING: Each question must have allocated marks and a rubric/marking guide.
+3. DIGITAL TEST READY: Include structured questions suitable for an interactive digital student test environment.
+
+REQUIRED JSON SCHEMA:
+{{
+  "test_title": "string",
+  "grade_level": "string",
+  "subject": "string",
+  "assessment_type": "string (e.g., Formative Quiz, Summative Exam, NAPLAN Practice, Diagnostic)",
+  "time_limit_minutes": 20,
+  "total_marks": 20,
+  "instructions": "string",
+  "aligned_standards": ["string"],
+  "questions": [
+    {{
+      "id": "q1",
+      "number": 1,
+      "question_text": "string",
+      "question_type": "multiple_choice",
+      "options": ["string", "string", "string", "string"],
+      "correct_answer": "string",
+      "marks": 2,
+      "explanation": "string",
+      "cognitive_verb": "string"
+    }}
+  ],
+  "grading_scale": {{
+    "A": "85-100%",
+    "B": "70-84%",
+    "C": "50-69%",
+    "D": "35-49%",
+    "E": "0-34%"
+  }}
+}}
+You must output your response strictly as a valid JSON object."""),
+        ("human", "Generate a {assessment_type} for {grade_level} on subject {subject}, topic: {topic} with approximately {question_count} questions. Details: {user_prompt}")
     ])
 }
 

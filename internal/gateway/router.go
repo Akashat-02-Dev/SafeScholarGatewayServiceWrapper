@@ -19,6 +19,7 @@ import (
 	"safescholar/gateway/internal/oauth"
 	"safescholar/gateway/internal/rbac"
 	"safescholar/gateway/internal/security"
+	"safescholar/gateway/internal/trial"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
@@ -44,6 +45,7 @@ type Router struct {
 	aiClient    clients.AIOrchestratorClient
 	redisClient *redis.Client
 	dbPool      *pgxpool.Pool
+	trialSvc    *trial.TrialService
 }
 
 type RouterDeps struct {
@@ -62,6 +64,7 @@ type RouterDeps struct {
 	RedisClient      *redis.Client
 	DBPool           *pgxpool.Pool
 	AIClient         clients.AIOrchestratorClient
+	TrialService     *trial.TrialService
 }
 
 func NewRouter(deps RouterDeps) (http.Handler, func(), error) {
@@ -90,6 +93,7 @@ func NewRouter(deps RouterDeps) (http.Handler, func(), error) {
 		aiClient:    deps.AIClient,
 		redisClient: deps.RedisClient,
 		dbPool:      deps.DBPool,
+		trialSvc:    deps.TrialService,
 	}
 
 	base := http.HandlerFunc(r.serve)
@@ -203,8 +207,17 @@ func (r *Router) serve(w http.ResponseWriter, req *http.Request) {
 	case route.PathPrefix == "/api/v1/ai/educator/ismg-rubric":
 		r.handleSpecificAITool(w, req, "ismg_rubric_generator")
 		return
-	case route.PathPrefix == "/api/v1/ai/educator/leveler":
+	case route.PathPrefix == "/api/v1/ai/educator/worksheet-generator":
+		r.handleSpecificAITool(w, req, "worksheet_generator")
+		return
+	case route.PathPrefix == "/api/v1/ai/educator/assessment-generator":
+		r.handleSpecificAITool(w, req, "assessment_generator")
+		return
+	case route.PathPrefix == "/api/v1/ai/educator/leveler" || route.PathPrefix == "/api/v1/ai/educator/text-leveler" || route.PathPrefix == "/api/v1/ai/student/text-leveler":
 		r.handleSpecificAITool(w, req, "leveler")
+		return
+	case route.PathPrefix == "/api/v1/ai/educator/report-card" || route.PathPrefix == "/api/v1/ai/admin/report-card-generator":
+		r.handleSpecificAITool(w, req, "report_card_generator")
 		return
 	case route.PathPrefix == "/api/v1/ai/student/writing-feedback":
 		handler := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
@@ -217,8 +230,11 @@ func (r *Router) serve(w http.ResponseWriter, req *http.Request) {
 			handler.ServeHTTP(w, req)
 		}
 		return
-	case route.PathPrefix == "/api/v1/ai/student/quiz-generator":
+	case route.PathPrefix == "/api/v1/ai/student/quiz-generator" || route.PathPrefix == "/api/v1/ai/student/quiz-me":
 		r.handleSpecificAITool(w, req, "quiz_generator")
+		return
+	case route.PathPrefix == "/api/v1/ai/student/socratic-tutor":
+		r.handleSpecificAITool(w, req, "socratic_tutor")
 		return
 	case route.PathPrefix == "/api/v1/ai/student/character-bot":
 		r.handleSpecificAITool(w, req, "character_bot")
@@ -317,7 +333,7 @@ func (r *Router) handleLogin(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	ip := middleware.ClientIP(req)
-	accessTTL := 15 * time.Minute
+	accessTTL := 24 * time.Hour
 	refreshTTL := 30 * 24 * time.Hour
 	result, err := r.authSvc.Login(req.Context(), lr.Email, lr.Password, ip, req.UserAgent(), middleware.CorrelationIDFromContext(req.Context()), accessTTL, refreshTTL)
 	if err != nil {
@@ -625,6 +641,27 @@ func (r *Router) handleAdmin(w http.ResponseWriter, req *http.Request, prefix st
 			r.authSvc.InvalidatePermissionCache(req.Context(), ar.UserID)
 		}
 		w.WriteHeader(http.StatusNoContent)
+	case "/api/v1/admin/trials":
+		if req.Method != http.MethodGet {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		r.handleListTrials(w, req)
+		return
+	case "/api/v1/admin/trials/onboard":
+		if req.Method != http.MethodPost {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		r.handleOnboardTrial(w, req)
+		return
+	case "/api/v1/admin/trials/toggle":
+		if req.Method != http.MethodPost {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		r.handleToggleTrial(w, req)
+		return
 	default:
 		w.WriteHeader(http.StatusNotFound)
 	}
@@ -788,6 +825,12 @@ func (r *Router) handleApproveUser(w http.ResponseWriter, req *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+	if r.trialSvc != nil && ar.Status == "active" {
+		if err := r.validateUserApprovalAgainstTrial(req.Context(), ar.UserID, ar.RoleID); err != nil {
+			security.WriteJSONError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+	}
 	err := r.authSvc.ApproveUser(req.Context(), ar.UserID, ar.Status, ar.RoleID)
 	if err != nil {
 		msg := strings.ToLower(strings.TrimSpace(err.Error()))
@@ -942,4 +985,88 @@ func (r *Router) handleSpecificAITool(w http.ResponseWriter, req *http.Request, 
 	}
 
 	writeJSON(w, http.StatusOK, resp)
+}
+
+func (r *Router) handleListTrials(w http.ResponseWriter, req *http.Request) {
+	if r.trialSvc == nil {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		return
+	}
+	uc := middleware.UserContextFromContext(req.Context())
+	if !uc.IsSysAdmin {
+		security.WriteJSONError(w, http.StatusForbidden, "super admin access required")
+		return
+	}
+	trials, err := r.trialSvc.ListTrialInstitutes(req.Context(), uc.IsSysAdmin)
+	if err != nil {
+		security.WriteJSONError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"trials": trials})
+}
+
+func (r *Router) handleOnboardTrial(w http.ResponseWriter, req *http.Request) {
+	if r.trialSvc == nil {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		return
+	}
+	uc := middleware.UserContextFromContext(req.Context())
+	if !uc.IsSysAdmin {
+		security.WriteJSONError(w, http.StatusForbidden, "super admin access required")
+		return
+	}
+	var otr trial.OnboardTrialRequest
+	if err := json.NewDecoder(req.Body).Decode(&otr); err != nil {
+		security.WriteJSONError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	inst, err := r.trialSvc.OnboardTrialInstitute(req.Context(), uc.IsSysAdmin, otr)
+	if err != nil {
+		security.WriteJSONError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusCreated, inst)
+}
+
+func (r *Router) handleToggleTrial(w http.ResponseWriter, req *http.Request) {
+	if r.trialSvc == nil {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		return
+	}
+	uc := middleware.UserContextFromContext(req.Context())
+	if !uc.IsSysAdmin {
+		security.WriteJSONError(w, http.StatusForbidden, "super admin access required")
+		return
+	}
+	var ttr trial.ToggleTrialRequest
+	if err := json.NewDecoder(req.Body).Decode(&ttr); err != nil {
+		security.WriteJSONError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if err := r.trialSvc.ToggleTrial(req.Context(), uc.IsSysAdmin, ttr); err != nil {
+		security.WriteJSONError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"success": true})
+}
+
+func (r *Router) validateUserApprovalAgainstTrial(ctx context.Context, userID, roleID string) error {
+	if r.dbPool == nil || r.trialSvc == nil {
+		return nil
+	}
+	var instID string
+	err := r.dbPool.QueryRow(ctx, `select coalesce(institution_id::text,'') from users where user_id=nullif($1,'')::uuid`, userID).Scan(&instID)
+	if err != nil || instID == "" {
+		return nil
+	}
+
+	roleName := "teacher"
+	if roleID != "" {
+		var name string
+		_ = r.dbPool.QueryRow(ctx, `select lower(name) from roles where role_id=nullif($1,'')::uuid`, roleID).Scan(&name)
+		if name != "" {
+			roleName = name
+		}
+	}
+	return r.trialSvc.ValidateTrialQuota(ctx, instID, roleName)
 }

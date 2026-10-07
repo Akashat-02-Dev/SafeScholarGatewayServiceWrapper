@@ -12,21 +12,27 @@ import { ModerationPanel } from './pages/ModerationPanel'
 import { RoleManagement } from './pages/RoleManagement'
 import { UserManagement } from './pages/UserManagement'
 import { SocraticTutorPage } from './pages/SocraticTutorPage'
-import LessonPlanner from './pages/ai/LessonPlanner'
+import { LessonPlannerPage } from './pages/educator/LessonPlannerPage'
 import TextLeveler from './pages/ai/TextLeveler'
 import VideoAssessor from './pages/ai/VideoAssessor'
 import IepGenerator from './pages/ai/IepGenerator'
 import ReportCardGeneratorPage from './pages/educator/ReportCardGeneratorPage'
-import ISMGRubricGeneratorPage from './pages/educator/ISMGRubricGeneratorPage'
+import { RubricGeneratorPage } from './pages/educator/RubricGeneratorPage'
+import { WorksheetGeneratorPage } from './pages/educator/WorksheetGeneratorPage'
+import { AssessmentGeneratorPage } from './pages/educator/AssessmentGeneratorPage'
 import CustomBotStudio from './pages/educator/CustomBotStudio'
 import StudentOversightDashboard from './pages/educator/StudentOversightDashboard'
 import { RAGIngestionPanel } from './pages/admin/RAGIngestionPanel'
 import { InstitutionAdminDashboard } from './pages/admin/InstitutionAdminDashboard'
 import { SuperAdminDashboard } from './pages/superadmin/SuperAdminDashboard'
+import { TeacherManagementPage } from './pages/admin/TeacherManagementPage'
+import { StudentManagementPage } from './pages/admin/StudentManagementPage'
 import { WritingStudio } from './pages/student/WritingStudio'
 import { StudentChatHub } from './pages/student/StudentChatHub'
 import { StudentJoinRoom } from './pages/student/StudentJoinRoom'
 import { QuizMe } from './pages/student/QuizMe'
+import { StudentTextLevelerPage } from './pages/student/StudentTextLevelerPage'
+import { StudentTestEnvironmentPage } from './pages/student/StudentTestEnvironmentPage'
 
 import { useLocation } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -79,7 +85,11 @@ function App() {
               }
             />
 
-            <Route element={<RoleGuard requiredPermissions={['EXECUTE_AI_TUTOR']} />}>
+            {/* ========================================================= */}
+            {/* 🎒 2. STUDENT FEATURES (Exact 5 segregrated modules)     */}
+            {/* ========================================================= */}
+            <Route element={<RoleGuard requiredPermissions={['EXECUTE_AI_TUTOR', 'SUPER_ADMIN']} />}>
+              {/* (a) Socratic Sandbox AI Chat */}
               <Route
                 path="/socratic-tutor"
                 element={
@@ -90,6 +100,29 @@ function App() {
                   </PageTransition>
                 }
               />
+              {/* (b) Text Leveler (Student reading simplifier) */}
+              <Route
+                path="/student/text-leveler"
+                element={
+                  <PageTransition>
+                    <AuthedLayout>
+                      <StudentTextLevelerPage />
+                    </AuthedLayout>
+                  </PageTransition>
+                }
+              />
+              {/* (c) AI Quiz Me */}
+              <Route
+                path="/student/quiz-me"
+                element={
+                  <PageTransition>
+                    <AuthedLayout>
+                      <QuizMe />
+                    </AuthedLayout>
+                  </PageTransition>
+                }
+              />
+              {/* (d) Writing Studio */}
               <Route
                 path="/student/writing-studio"
                 element={
@@ -100,6 +133,19 @@ function App() {
                   </PageTransition>
                 }
               />
+              {/* (e) Test Environment to give the tests */}
+              <Route
+                path="/student/test-environment"
+                element={
+                  <PageTransition>
+                    <AuthedLayout>
+                      <StudentTestEnvironmentPage />
+                    </AuthedLayout>
+                  </PageTransition>
+                }
+              />
+
+              {/* Student auxiliary rooms */}
               <Route
                 path="/student/chat-hub"
                 element={
@@ -120,25 +166,87 @@ function App() {
                   </PageTransition>
                 }
               />
+            </Route>
+
+            {/* ========================================================= */}
+            {/* 🍎 1. TEACHER FEATURES (Exact 6 segregated modules)      */}
+            {/* ========================================================= */}
+            <Route element={<RoleGuard requiredPermissions={['GENERATE_LESSON_PLAN', 'USE_TEXT_LEVELER', 'SUPER_ADMIN']} />}>
+              {/* (a) Lesson Planner */}
               <Route
-                path="/student/quiz-me"
+                path="/educator/lesson-planner"
                 element={
                   <PageTransition>
                     <AuthedLayout>
-                      <QuizMe />
+                      <LessonPlannerPage />
                     </AuthedLayout>
                   </PageTransition>
                 }
               />
-            </Route>
-
-            <Route element={<RoleGuard requiredPermissions={['GENERATE_LESSON_PLAN']} />}>
               <Route
                 path="/ai/lesson-planner"
                 element={
                   <PageTransition>
                     <AuthedLayout>
-                      <LessonPlanner />
+                      <LessonPlannerPage />
+                    </AuthedLayout>
+                  </PageTransition>
+                }
+              />
+
+              {/* (b) Rubric Generator */}
+              <Route
+                path="/educator/rubric-generator"
+                element={
+                  <PageTransition>
+                    <AuthedLayout>
+                      <RubricGeneratorPage />
+                    </AuthedLayout>
+                  </PageTransition>
+                }
+              />
+              <Route
+                path="/ai/ismg-rubric-gen"
+                element={
+                  <PageTransition>
+                    <AuthedLayout>
+                      <RubricGeneratorPage />
+                    </AuthedLayout>
+                  </PageTransition>
+                }
+              />
+
+              {/* (c) Worksheet Generator */}
+              <Route
+                path="/educator/worksheet-generator"
+                element={
+                  <PageTransition>
+                    <AuthedLayout>
+                      <WorksheetGeneratorPage />
+                    </AuthedLayout>
+                  </PageTransition>
+                }
+              />
+
+              {/* (d) Assessment/Test/Quiz Generator */}
+              <Route
+                path="/educator/assessment-generator"
+                element={
+                  <PageTransition>
+                    <AuthedLayout>
+                      <AssessmentGeneratorPage />
+                    </AuthedLayout>
+                  </PageTransition>
+                }
+              />
+
+              {/* (e) Custom Chat Bot */}
+              <Route
+                path="/educator/custom-bots"
+                element={
+                  <PageTransition>
+                    <AuthedLayout>
+                      <CustomBotStudio />
                     </AuthedLayout>
                   </PageTransition>
                 }
@@ -153,6 +261,30 @@ function App() {
                   </PageTransition>
                 }
               />
+
+              {/* (f) Text Leveler */}
+              <Route
+                path="/educator/leveler"
+                element={
+                  <PageTransition>
+                    <AuthedLayout>
+                      <TextLeveler />
+                    </AuthedLayout>
+                  </PageTransition>
+                }
+              />
+              <Route
+                path="/ai/leveler"
+                element={
+                  <PageTransition>
+                    <AuthedLayout>
+                      <TextLeveler />
+                    </AuthedLayout>
+                  </PageTransition>
+                }
+              />
+
+              {/* Auxiliary educator tools */}
               <Route
                 path="/ai/student-oversight"
                 element={
@@ -174,32 +306,6 @@ function App() {
                 }
               />
               <Route
-                path="/ai/ismg-rubric-gen"
-                element={
-                  <PageTransition>
-                    <AuthedLayout>
-                      <ISMGRubricGeneratorPage />
-                    </AuthedLayout>
-                  </PageTransition>
-                }
-              />
-            </Route>
-
-            <Route element={<RoleGuard requiredPermissions={['USE_TEXT_LEVELER']} />}>
-              <Route
-                path="/ai/leveler"
-                element={
-                  <PageTransition>
-                    <AuthedLayout>
-                      <TextLeveler />
-                    </AuthedLayout>
-                  </PageTransition>
-                }
-              />
-            </Route>
-
-            <Route element={<RoleGuard requiredPermissions={['USE_VIDEO_ASSESSOR']} />}>
-              <Route
                 path="/ai/video-assessor"
                 element={
                   <PageTransition>
@@ -209,9 +315,6 @@ function App() {
                   </PageTransition>
                 }
               />
-            </Route>
-
-            <Route element={<RoleGuard requiredPermissions={['GENERATE_IEP_RUBRIC']} />}>
               <Route
                 path="/ai/iep-generator"
                 element={
@@ -224,20 +327,69 @@ function App() {
               />
             </Route>
 
-            <Route element={<RoleGuard requiredPermissions={['MANAGE_GLOBAL_TENANTS']} />}>
+            {/* ========================================================= */}
+            {/* 🏛️ 3. INSTITUTE MANAGEMENT (Exact 4 segregated modules)   */}
+            {/* ========================================================= */}
+            <Route element={<RoleGuard requiredPermissions={['MANAGE_LOCAL_ROLES', 'MANAGE_USERS', 'MANAGE_DISTRICT_AI_KNOWLEDGE', 'SUPER_ADMIN']} />}>
+              {/* (a) RAG Ingestion and Update */}
               <Route
-                path="/superadmin/dashboard"
+                path="/admin/rag-ingestion"
                 element={
                   <PageTransition>
                     <AuthedLayout>
-                      <SuperAdminDashboard />
+                      <RAGIngestionPanel />
                     </AuthedLayout>
                   </PageTransition>
                 }
               />
-            </Route>
+              <Route
+                path="/rag-ingestion"
+                element={
+                  <PageTransition>
+                    <AuthedLayout>
+                      <RAGIngestionPanel />
+                    </AuthedLayout>
+                  </PageTransition>
+                }
+              />
 
-            <Route element={<RoleGuard requiredPermissions={['MANAGE_LOCAL_ROLES']} />}>
+              {/* (b) Teacher Management */}
+              <Route
+                path="/admin/teachers"
+                element={
+                  <PageTransition>
+                    <AuthedLayout>
+                      <TeacherManagementPage />
+                    </AuthedLayout>
+                  </PageTransition>
+                }
+              />
+
+              {/* (c) Student Management */}
+              <Route
+                path="/admin/students"
+                element={
+                  <PageTransition>
+                    <AuthedLayout>
+                      <StudentManagementPage />
+                    </AuthedLayout>
+                  </PageTransition>
+                }
+              />
+
+              {/* (d) Report Card Generator */}
+              <Route
+                path="/admin/report-card"
+                element={
+                  <PageTransition>
+                    <AuthedLayout>
+                      <ReportCardGeneratorPage />
+                    </AuthedLayout>
+                  </PageTransition>
+                }
+              />
+
+              {/* Administrative Dashboards */}
               <Route
                 path="/admin/dashboard"
                 element={
@@ -248,15 +400,12 @@ function App() {
                   </PageTransition>
                 }
               />
-            </Route>
-
-            <Route element={<RoleGuard requiredPermissions={['MANAGE_DISTRICT_AI_KNOWLEDGE']} />}>
               <Route
-                path="/rag-ingestion"
+                path="/superadmin/dashboard"
                 element={
                   <PageTransition>
                     <AuthedLayout>
-                      <RAGIngestionPanel />
+                      <SuperAdminDashboard />
                     </AuthedLayout>
                   </PageTransition>
                 }

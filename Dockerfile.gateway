@@ -16,19 +16,16 @@ FROM alpine:3.20
 
 WORKDIR /app
 
-RUN apk add --no-cache ca-certificates tzdata wget \
+RUN apk add --no-cache ca-certificates tzdata curl \
     && addgroup -S safescholar && adduser -S safescholar -G safescholar
 
 COPY --from=builder /safescholar-gateway /app/safescholar-gateway
 COPY --from=builder /app/config /app/config
 
-RUN mkdir -p /app/config/jwt && chown -R safescholar:safescholar /app
+RUN mkdir -p /app/config/jwt && cp -f /app/config/dev_jwt/*.pem /app/config/jwt/ && chown -R safescholar:safescholar /app
 
 USER safescholar
 
 EXPOSE 8080 8443
-
-HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://127.0.0.1:8080/healthz || exit 1
 
 ENTRYPOINT ["/app/safescholar-gateway"]

@@ -26,13 +26,32 @@ class DocumentIngestRequest(BaseModel):
     raw_text: str
 
 @router.post("/orchestrate")
+# Educator endpoints
 @router.post("/ai/educator/lesson-planner")
 @router.post("/ai/educator/leveler")
+@router.post("/ai/educator/text-leveler")
 @router.post("/ai/educator/video-question-maker")
 @router.post("/ai/educator/iep-generator")
 @router.post("/ai/educator/report-card")
 @router.post("/ai/educator/ismg-rubric")
+@router.post("/ai/educator/worksheet-generator")
+@router.post("/ai/educator/assessment-generator")
 @router.post("/ai/educator/district-knowledge-bot")
+@router.post("/ai/educator/custom-bot")
+
+# Student endpoints
+@router.post("/ai/student/writing-feedback")
+@router.post("/ai/student/quiz-generator")
+@router.post("/ai/student/quiz-me")
+@router.post("/ai/student/character-bot")
+@router.post("/ai/student/custom-bot")
+@router.post("/ai/student/text-leveler")
+@router.post("/ai/student/leveler")
+@router.post("/ai/student/socratic-tutor")
+
+# Admin endpoints
+@router.post("/ai/admin/report-card-generator")
+@router.post("/ai/admin/report-card")
 async def orchestrate_ai_task(
     request: AICompletionRequest,
     raw_req: Request,
@@ -43,7 +62,7 @@ async def orchestrate_ai_task(
     path = raw_req.url.path
     tool_id = request.tool_id
     if not tool_id:
-        if path.endswith("/report-card"):
+        if path.endswith("/report-card") or path.endswith("/report-card-generator"):
             tool_id = "report_card_generator"
         elif path.endswith("/ismg-rubric"):
             tool_id = "ismg_rubric_generator"
@@ -51,12 +70,26 @@ async def orchestrate_ai_task(
             tool_id = "district_knowledge_bot"
         elif path.endswith("/lesson-planner"):
             tool_id = "lesson_planner"
-        elif path.endswith("/leveler"):
+        elif path.endswith("/leveler") or path.endswith("/text-leveler"):
             tool_id = "leveler"
         elif path.endswith("/video-question-maker"):
             tool_id = "video_question_maker"
         elif path.endswith("/iep-generator"):
             tool_id = "iep_generator"
+        elif path.endswith("/worksheet-generator"):
+            tool_id = "worksheet_generator"
+        elif path.endswith("/assessment-generator"):
+            tool_id = "assessment_generator"
+        elif path.endswith("/writing-feedback"):
+            tool_id = "writing_feedback"
+        elif path.endswith("/quiz-generator") or path.endswith("/quiz-me"):
+            tool_id = "quiz_generator"
+        elif path.endswith("/character-bot"):
+            tool_id = "character_bot"
+        elif path.endswith("/custom-bot"):
+            tool_id = "custom_bot"
+        elif path.endswith("/socratic-tutor") or path.endswith("/tutor"):
+            tool_id = "socratic_tutor"
         else:
             tool_id = "lesson_planner"
 

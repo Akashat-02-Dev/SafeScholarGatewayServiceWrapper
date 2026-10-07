@@ -53,6 +53,11 @@ export function QuizMe() {
     setQuizState('loading');
     setError(null);
     const tokens = getTokens();
+    if (!tokens?.access) {
+      setError('Please log in to your account to generate quizzes.');
+      setQuizState('idle');
+      return;
+    }
 
     try {
       const host = import.meta.env.VITE_GATEWAY_HOST || window.location.host;
@@ -60,7 +65,7 @@ export function QuizMe() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(tokens?.access ? { 'Authorization': `Bearer ${tokens.access}` } : {})
+          'Authorization': `Bearer ${tokens.access}`
         },
         body: JSON.stringify({ parameters: { topic, grade_level: gradeLevel + ' (Australian Curriculum)', question_count: questionCount } })
       });

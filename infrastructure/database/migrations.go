@@ -733,5 +733,32 @@ end
 $$;
 `,
 		},
+		{
+			Name: "006_trial_onboarding_governance",
+			SQL: `
+do $$
+begin
+  if not exists(select 1 from information_schema.columns where table_name='institutions' and column_name='is_trial') then
+    alter table institutions add column is_trial boolean not null default false;
+  end if;
+  if not exists(select 1 from information_schema.columns where table_name='institutions' and column_name='trial_starts_at') then
+    alter table institutions add column trial_starts_at timestamptz;
+  end if;
+  if not exists(select 1 from information_schema.columns where table_name='institutions' and column_name='trial_ends_at') then
+    alter table institutions add column trial_ends_at timestamptz;
+  end if;
+  if not exists(select 1 from information_schema.columns where table_name='institutions' and column_name='max_teachers') then
+    alter table institutions add column max_teachers integer not null default 10;
+  end if;
+  if not exists(select 1 from information_schema.columns where table_name='institutions' and column_name='max_students') then
+    alter table institutions add column max_students integer not null default 100;
+  end if;
+  if not exists(select 1 from information_schema.columns where table_name='institutions' and column_name='trial_status') then
+    alter table institutions add column trial_status varchar(50) not null default 'none';
+  end if;
+end
+$$;
+`,
+		},
 	}
 }

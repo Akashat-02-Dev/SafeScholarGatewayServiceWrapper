@@ -96,5 +96,126 @@ export const aiService = {
         accessToken: token
       }
     );
+  },
+
+  /**
+   * Generates Australian Curriculum Prep to Year 5 Worksheets (Kura Plan / Magic School style)
+   */
+  async generateWorksheet(
+    institutionId: string,
+    gradeLevel: string,
+    subject: string,
+    topic: string,
+    userPrompt: string
+  ): Promise<any> {
+    const req: AICompletionRequest = {
+      tool_id: 'worksheet_generator',
+      institution_id: institutionId,
+      parameters: {
+        grade_level: gradeLevel,
+        subject,
+        topic,
+        user_prompt: userPrompt
+      }
+    };
+    const res = await this.executeTool('worksheet-generator', req);
+    const parsed = typeof res.response_text === 'string' ? JSON.parse(res.response_text) : res.response_text;
+    return parsed;
+  },
+
+  /**
+   * Generates Australian Assessments, Tests & Quizzes (NAPLAN & Curriculum Aligned)
+   */
+  async generateAssessment(
+    institutionId: string,
+    gradeLevel: string,
+    subject: string,
+    assessmentType: string,
+    questionCount: number,
+    topic: string,
+    userPrompt: string
+  ): Promise<any> {
+    const req: AICompletionRequest = {
+      tool_id: 'assessment_generator',
+      institution_id: institutionId,
+      parameters: {
+        grade_level: gradeLevel,
+        subject,
+        assessment_type: assessmentType,
+        question_count: String(questionCount),
+        topic,
+        user_prompt: userPrompt
+      }
+    };
+    const res = await this.executeTool('assessment-generator', req);
+    const parsed = typeof res.response_text === 'string' ? JSON.parse(res.response_text) : res.response_text;
+    return parsed;
+  },
+
+  /**
+   * Generates Australian ISMG & Standards Rubrics
+   */
+  async generateRubric(
+    institutionId: string,
+    subject: string,
+    instrumentType: string,
+    userPrompt: string
+  ): Promise<any> {
+    const req: AICompletionRequest = {
+      tool_id: 'ismg_rubric_generator',
+      institution_id: institutionId,
+      parameters: {
+        subject,
+        instrument_type: instrumentType,
+        user_prompt: userPrompt
+      }
+    };
+    const res = await this.executeTool('ismg-rubric', req);
+    const parsed = typeof res.response_text === 'string' ? JSON.parse(res.response_text) : res.response_text;
+    return parsed;
+  },
+
+  /**
+   * Adapts text complexity to Australian grade bands (Prep to Year 5)
+   */
+  async levelText(
+    institutionId: string,
+    targetGrade: string,
+    userPrompt: string
+  ): Promise<string> {
+    const req: AICompletionRequest = {
+      tool_id: 'leveler',
+      institution_id: institutionId,
+      parameters: {
+        target_grade: targetGrade,
+        user_prompt: userPrompt
+      }
+    };
+    const res = await this.executeTool('leveler', req);
+    return typeof res.response_text === 'string' ? res.response_text : JSON.stringify(res.response_text);
+  },
+
+  /**
+   * Executes student endpoints
+   */
+  async executeStudentTool<TParams, TReturn>(
+    endpoint: string,
+    toolId: string,
+    institutionId: string,
+    parameters: TParams
+  ): Promise<AICompletionResponse<TReturn>> {
+    const token = getAccessToken();
+    return apiFetch<AICompletionResponse<TReturn>>(
+      `/api/v1/ai/student/${endpoint}`,
+      {
+        method: 'POST',
+        body: {
+          tool_id: toolId,
+          institution_id: institutionId,
+          parameters
+        },
+        accessToken: token
+      }
+    );
   }
 };

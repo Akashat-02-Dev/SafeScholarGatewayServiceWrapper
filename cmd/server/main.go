@@ -34,6 +34,7 @@ import (
 	"safescholar/gateway/internal/oauth"
 	"safescholar/gateway/internal/rbac"
 	"safescholar/gateway/internal/security"
+	"safescholar/gateway/internal/trial"
 )
 
 func main() {
@@ -152,6 +153,7 @@ func main() {
 		RedisClient:      rdb,
 		DBPool:           pool,
 		AIClient:         aiClient,
+		TrialService:     trial.NewTrialService(pool, auditLogger),
 	})
 	if err != nil {
 		fatal(err)
@@ -226,7 +228,7 @@ func validateStartupSecurity(cfg config.Config) error {
 		}
 	}
 
-	if cfg.Env == config.EnvProd {
+	if cfg.Env == config.EnvProd && !boolFromEnv("ALLOW_INSECURE_DB_SSL") {
 		u, err := url.Parse(strings.TrimSpace(cfg.Postgres.ConnString))
 		if err == nil {
 			sslmode := strings.ToLower(strings.TrimSpace(u.Query().Get("sslmode")))
@@ -243,7 +245,8 @@ func validateStartupSecurity(cfg config.Config) error {
 }
 
 func ensureDevCryptoMaterial(cfg config.Config) error {
-	if cfg.Env != config.EnvDev {
+	autoGenJWT := boolFromEnv("AUTO_GENERATE_JWT_KEYS")
+	if cfg.Env != config.EnvDev && !autoGenJWT {
 		return nil
 	}
 
@@ -251,6 +254,8 @@ func ensureDevCryptoMaterial(cfg config.Config) error {
 		privMissing := !fileExists(cfg.JWT.PrivateKeyPEMFile)
 		pubMissing := !fileExists(cfg.JWT.PublicKeyPEMFile)
 		if privMissing || pubMissing {
+			_ = os.MkdirAll(filepath.Dir(cfg.JWT.PrivateKeyPEMFile), 0o700)
+			_ = os.MkdirAll(filepath.Dir(cfg.JWT.PublicKeyPEMFile), 0o700)
 			if err := generateJWTKeypair(cfg.JWT.PrivateKeyPEMFile, cfg.JWT.PublicKeyPEMFile); err != nil {
 				return err
 			}

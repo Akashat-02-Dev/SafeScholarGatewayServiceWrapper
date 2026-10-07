@@ -165,6 +165,7 @@ limit 1`, e).Scan(&userID, &institutionID, &passwordHash, &firstName, &lastName,
 	session := Session{
 		SessionID: sessionID,
 		UserID:    userID,
+		InstitutionID: institutionID,
 		IPAddress: ip.String(),
 		UserAgent: userAgent,
 		CreatedAt: time.Now().UTC(),

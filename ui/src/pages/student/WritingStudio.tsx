@@ -48,6 +48,11 @@ export function WritingStudio() {
     setError(null);
 
     const tokens = getTokens();
+    if (!tokens?.access) {
+      setError('Please log in to your account to use Writing Studio.');
+      setIsAnalyzing(false);
+      return;
+    }
 
     try {
       const host = import.meta.env.VITE_GATEWAY_HOST || window.location.host;
@@ -55,7 +60,7 @@ export function WritingStudio() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(tokens?.access ? { 'Authorization': `Bearer ${tokens.access}` } : {})
+          'Authorization': `Bearer ${tokens.access}`
         },
         body: JSON.stringify({ parameters: { draft_text: draft } })
       });

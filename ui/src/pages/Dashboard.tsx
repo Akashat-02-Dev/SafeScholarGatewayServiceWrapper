@@ -1,555 +1,472 @@
-import { useEffect, useState } from 'react'
-import { useAuth } from '../services/authService'
-import { apiFetch } from '../services/apiClient'
-import { motion } from 'framer-motion'
+import { useEffect, useState } from 'react';
+import { useRoleFilter } from '../services/roleFilterContext';
+import { motion } from 'framer-motion';
 import { 
-  Shield, Building2, KeyRound, Users, GraduationCap, 
-  BookOpen, Clock, Calendar, CheckSquare, Sparkles,
-  TrendingUp, Award, ClipboardList
-} from 'lucide-react'
-import { Link } from 'react-router-dom'
-
-interface AdminMetrics {
-  role: 'sysadmin'
-  activeUsers: number
-  totalInstitutions: number
-  totalTeachers: number
-  totalStudents: number
-}
-
-interface TeacherMetrics {
-  role: 'teacher'
-  totalStudents: number
-  averageAttendance: number
-  submittedAssignments: number
-  pendingAssignments: number
-  academicProgress: number
-  progressHistory: number[]
-}
-
-interface StudentMetrics {
-  role: 'student'
-  gpa: number
-  attendance: number
-  completedAssignments: number
-  totalAssignments: number
-  pendingAssignments: number
-  academicProgress: number
-  progressHistory: number[]
-}
-
-interface InstituteMetrics {
-  role: 'institute'
-  totalTeachers?: number
-  totalStudents?: number
-  totalCourses?: number
-  averageAttendance?: number
-}
-
-type DashboardMetrics = AdminMetrics | TeacherMetrics | StudentMetrics | InstituteMetrics | { role: 'user' }
-
-
-function Sparkline({ data }: { data: number[] }) {
-  if (!data || data.length < 2) return null
-  const max = Math.max(...data, 100)
-  const min = Math.min(...data, 0)
-  const range = max - min || 1
-  const width = 140
-  const height = 40
-  
-  const points = data.map((val, index) => {
-    const x = (index / (data.length - 1)) * width
-    const y = height - ((val - min) / range) * height
-    return `${x},${y}`
-  }).join(' ')
-
-  return (
-    <svg width={width} height={height} style={{ overflow: 'visible' }}>
-      <polyline
-        fill="none"
-        stroke="var(--c-navy)"
-        strokeWidth="2.5"
-        points={points}
-      />
-      {data.map((val, index) => {
-        const x = (index / (data.length - 1)) * width
-        const y = height - ((val - min) / range) * height
-        return (
-          <circle
-            key={index}
-            cx={x}
-            cy={y}
-            r="3.5"
-            fill="var(--c-navy)"
-          />
-        )
-      })}
-    </svg>
-  )
-}
+  Shield, Building2, GraduationCap, 
+  BookOpen, CheckSquare, Sparkles,
+  ClipboardList, Backpack, FileSpreadsheet,
+  Scissors, PenTool, Lightbulb, Database
+} from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { RoleFilterBar } from '../components/RoleFilterBar';
 
 export function Dashboard() {
-  const { me, tokens } = useAuth()
-  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null)
-  const [loading, setLoading] = useState(true)
+  const { isSuperAdmin, effectiveRole } = useRoleFilter();
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!tokens?.accessToken) return
-    void (async () => {
-      try {
-        const res = await apiFetch<DashboardMetrics>('/api/v1/dashboard/metrics', {
-          method: 'GET',
-          accessToken: tokens.accessToken
-        })
-        setMetrics(res)
-      } catch {
-        setMetrics({ role: 'user' })
-      } finally {
-        setLoading(false)
-      }
-    })()
-  }, [tokens?.accessToken])
+    setLoading(false);
+  }, []);
 
   if (loading) {
     return (
       <div className="page" style={{ display: 'flex', justifyContent: 'center', padding: 80 }}>
         <div style={{ fontWeight: '600', color: 'var(--muted)' }}>Loading workspace dashboard...</div>
       </div>
-    )
+    );
   }
 
   // ----------------------------------------------------
-  // 🛡️ 1. SUPER ADMIN VIEW
+  // 🍎 TEACHER VIEW (If effective role is teacher)
   // ----------------------------------------------------
-  if (metrics?.role === 'sysadmin') {
-    const admin = metrics as AdminMetrics
+  if (effectiveRole === 'teacher') {
     return (
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }} className="page">
-        <div className="card">
-          <div className="cardInner">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div className="brandMark" style={{ width: 44, height: 44 }}>
-                <Shield size={22} />
-              </div>
-              <div>
-                <h2 className="pageTitle" style={{ margin: 0 }}>Super Admin Console</h2>
-                <div className="pageSub">System-wide resource tracking, active nodes, and district metrics.</div>
-              </div>
-            </div>
-
-            <div className="divider" />
-
-            {/* KPI metrics row */}
-            <div className="kpiRow" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
-              <div className="kpi">
-                <div className="kpiLabel" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <Users size={16} /> Active Accounts
-                </div>
-                <div className="kpiValue">{admin.activeUsers}</div>
-              </div>
-              <div className="kpi">
-                <div className="kpiLabel" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <Building2 size={16} /> Institutions
-                </div>
-                <div className="kpiValue">{admin.totalInstitutions}</div>
-              </div>
-              <div className="kpi">
-                <div className="kpiLabel" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <GraduationCap size={16} /> Active Teachers
-                </div>
-                <div className="kpiValue">{admin.totalTeachers}</div>
-              </div>
-              <div className="kpi">
-                <div className="kpiLabel" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <Users size={16} /> Enrolled Students
-                </div>
-                <div className="kpiValue">{admin.totalStudents}</div>
-              </div>
-            </div>
-
-            <div className="divider" />
-
-            {/* Admin actions grid */}
-            <h3 style={{ color: 'var(--c-navy)', fontSize: 15, margin: '0 0 12px 0' }}>Administrative Shortcuts</h3>
-            <div className="grid2">
-              <Link to="/user-management" style={{ textDecoration: 'none' }}>
-                <div className="toast" style={{ cursor: 'pointer', transition: 'all 0.15s ease' }}>
-                  <div style={{ fontWeight: '600', color: 'var(--c-navy)', fontSize: 14 }}>User Approval Vetting</div>
-                  <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>Approve pending educator signups and map initial roles.</div>
-                </div>
-              </Link>
-              <Link to="/role-management" style={{ textDecoration: 'none' }}>
-                <div className="toast" style={{ cursor: 'pointer', transition: 'all 0.15s ease' }}>
-                  <div style={{ fontWeight: '600', color: 'var(--c-navy)', fontSize: 14 }}>RBAC Role Mapping</div>
-                  <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>Assign modular permissions to system-wide custom roles.</div>
-                </div>
-              </Link>
-            </div>
+        {/* Super admin toggle header */}
+        {isSuperAdmin && (
+          <div className="mb-4 flex justify-between items-center bg-blue-50/70 dark:bg-blue-950/30 p-3 rounded-2xl border border-blue-200 dark:border-blue-900">
+            <span className="text-xs font-bold text-blue-900 dark:text-blue-300">
+              Super Admin Filter Active: Showing Teacher Portal
+            </span>
+            <RoleFilterBar compact />
           </div>
-        </div>
-      </motion.div>
-    )
-  }
+        )}
 
-  // ----------------------------------------------------
-  // 🏫 2. INSTITUTE ADMIN VIEW
-  // ----------------------------------------------------
-  if (metrics?.role === 'institute') {
-    const inst = metrics as any
-    return (
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }} className="page">
-        <div className="card shadow-lg border border-slate-200/50 dark:border-white/10 bg-white/70 dark:bg-zinc-900/70 backdrop-blur-3xl rounded-3xl overflow-hidden">
-          <div className="cardInner p-4 sm:p-6 md:p-8">
-            <div className="flex items-start justify-between border-b border-slate-200 dark:border-zinc-800 pb-6 mb-6">
-              <div className="flex items-center gap-4">
-                <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-cyan-500 to-blue-600 text-white shadow-lg">
-                  <Building2 size={28} />
-                </div>
-                <div>
-                  <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">District Metrics Dashboard</h2>
-                  <div className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-1">Holistic view of {me?.institutionId}'s district-wide adoption.</div>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-              <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 p-6 shadow-sm">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="text-slate-600 dark:text-slate-300 font-semibold text-sm flex items-center gap-2">
-                    <GraduationCap size={18} className="text-blue-500" /> Total Teachers
-                  </div>
-                </div>
-                <div className="text-3xl font-black text-slate-800 dark:text-white tracking-tight">{inst.totalTeachers}</div>
-                <div className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-2">Active Educators</div>
-              </div>
-
-              <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 p-6 shadow-sm">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="text-slate-600 dark:text-slate-300 font-semibold text-sm flex items-center gap-2">
-                    <Users size={18} className="text-emerald-500" /> Total Students
-                  </div>
-                </div>
-                <div className="text-3xl font-black text-slate-800 dark:text-white tracking-tight">{inst.totalStudents}</div>
-                <div className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-2">Enrolled Learners</div>
-              </div>
-
-              <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 p-6 shadow-sm">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="text-slate-600 dark:text-slate-300 font-semibold text-sm flex items-center gap-2">
-                    <Sparkles size={18} className="text-indigo-500" /> AI Requests
-                  </div>
-                </div>
-                <div className="text-3xl font-black text-slate-800 dark:text-white tracking-tight">{inst.totalRequests || 0}</div>
-                <div className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-2">In this billing cycle</div>
-              </div>
-
-              <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 p-6 shadow-sm">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="text-slate-600 dark:text-slate-300 font-semibold text-sm flex items-center gap-2">
-                    <Clock size={18} className="text-amber-500" /> Pending Users
-                  </div>
-                </div>
-                <div className="text-3xl font-black text-amber-600 tracking-tight">{inst.pendingUsers}</div>
-                <div className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-2">Awaiting your approval</div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="bg-white/60 dark:bg-zinc-800/60 backdrop-blur-md rounded-2xl p-6 border border-slate-200/60 dark:border-zinc-700/60">
-                <div className="flex justify-between items-center mb-6">
-                  <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-2">
-                    <TrendingUp size={16} className="text-blue-500" /> AI Adoption Trend
-                  </h3>
-                </div>
-                <div className="flex justify-center items-center h-40">
-                  <Sparkline data={inst.progressHistory || [10, 20, 15, 30, 40, 50, 60]} />
-                </div>
-              </div>
-
-              <div className="bg-white/60 dark:bg-zinc-800/60 backdrop-blur-md rounded-2xl p-6 border border-slate-200/60 dark:border-zinc-700/60 flex flex-col gap-4">
-                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider mb-2 flex items-center gap-2">
-                  <Shield size={16} className="text-emerald-500" /> Quick Actions
-                </h3>
-                <Link to="/admin/dashboard" className="flex items-center gap-3 p-4 rounded-xl bg-slate-50 dark:bg-zinc-900/50 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors border border-slate-200 dark:border-zinc-700/80 group">
-                  <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400">
-                    <CheckSquare size={18} />
-                  </div>
-                  <div>
-                    <div className="font-semibold text-slate-800 dark:text-slate-200">Review Pending Users</div>
-                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Approve or reject waiting candidates</div>
-                  </div>
-                </Link>
-                <Link to="/admin/dashboard" className="flex items-center gap-3 p-4 rounded-xl bg-slate-50 dark:bg-zinc-900/50 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors border border-slate-200 dark:border-zinc-700/80 group">
-                  <div className="p-2 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400">
-                    <Users size={18} />
-                  </div>
-                  <div>
-                    <div className="font-semibold text-slate-800 dark:text-slate-200">Manage Role Matrix</div>
-                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Delegate AI tools to your local staff</div>
-                  </div>
-                </Link>
-              </div>
-            </div>
-
-          </div>
-        </div>
-      </motion.div>
-    )
-  }
-
-  // ----------------------------------------------------
-  // 🍎 3. TEACHER VIEW
-  // ----------------------------------------------------
-  if (metrics?.role === 'teacher') {
-    const teacher = metrics as TeacherMetrics
-    return (
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }} className="page">
-        <div className="card">
-          <div className="cardInner">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div className="brandMark" style={{ width: 44, height: 44 }}>
-                <GraduationCap size={22} />
-              </div>
-              <div>
-                <h2 className="pageTitle" style={{ margin: 0 }}>Educator Workspace</h2>
-                <div className="pageSub">Welcome back, {me?.firstName || 'Teacher'}. Classroom compliance and academic metrics.</div>
-              </div>
-            </div>
-
-            <div className="divider" />
-
-            {/* KPI Cards Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16 }}>
-              <div className="kpi">
-                <div className="kpiLabel" style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                  <Users size={14} /> Enrolled Students
-                </div>
-                <div className="kpiValue">{teacher.totalStudents}</div>
-              </div>
-              <div className="kpi">
-                <div className="kpiLabel" style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                  <Clock size={14} /> Avg Attendance
-                </div>
-                <div className="kpiValue">{teacher.averageAttendance}%</div>
-              </div>
-              <div className="kpi">
-                <div className="kpiLabel" style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                  <CheckSquare size={14} /> Submissions
-                </div>
-                <div className="kpiValue">{teacher.submittedAssignments}</div>
-              </div>
-              <div className="kpi">
-                <div className="kpiLabel" style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                  <ClipboardList size={14} /> Pending Tasks
-                </div>
-                <div className="kpiValue" style={{ color: '#d97706' }}>{teacher.pendingAssignments}</div>
-              </div>
-            </div>
-
-            <div className="divider" />
-
-            {/* Academic progress / chart */}
-            <div className="grid2" style={{ alignItems: 'stretch' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, border: '1px solid var(--border)', padding: 16, borderRadius: 'var(--radius-md)', background: 'rgba(255,255,255,0.4)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: 13, fontWeight: '700', color: 'var(--c-navy)' }}>Class Progress Trend</span>
-                  <span className="chip" style={{ fontSize: 10, display: 'flex', gap: 4, alignItems: 'center' }}>
-                    <TrendingUp size={12} />
-                    Current GPA: {teacher.academicProgress}%
-                  </span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'center', padding: '16px 0' }}>
-                  <Sparkline data={teacher.progressHistory} />
-                </div>
-              </div>
-
-              {/* Roster overview */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, border: '1px solid var(--border)', padding: 16, borderRadius: 'var(--radius-md)', background: 'rgba(255,255,255,0.4)' }}>
-                <span style={{ fontSize: 13, fontWeight: '700', color: 'var(--c-navy)' }}>Quick Shortcuts</span>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 12, marginTop: 4 }}>
-                  <Link to="/ai/lesson-planner" style={{ color: 'var(--c-navy)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <BookOpen size={14} /> Launch Standards Lesson Planner
-                  </Link>
-                  <Link to="/ai/leveler" style={{ color: 'var(--c-navy)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, marginTop: 4 }}>
-                    <ClipboardList size={14} /> Differentiate Text Complexity
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </motion.div>
-    )
-  }
-
-  // ----------------------------------------------------
-  // 🎓 3. STUDENT VIEW
-  // ----------------------------------------------------
-  if (metrics?.role === 'student') {
-    const student = metrics as StudentMetrics
-    return (
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }} className="page">
-        <div className="card">
-          <div className="cardInner">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div className="brandMark" style={{ width: 44, height: 44 }}>
-                <Award size={22} />
-              </div>
-              <div>
-                <h2 className="pageTitle" style={{ margin: 0 }}>Student Dashboard</h2>
-                <div className="pageSub">Welcome, {me?.firstName || 'Student'}. View your school progress.</div>
-              </div>
-            </div>
-
-            <div className="divider" />
-
-            {/* Student KPIs */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16 }}>
-              <div className="kpi">
-                <div className="kpiLabel" style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                  <Award size={14} /> Academic GPA
-                </div>
-                <div className="kpiValue">{student.gpa}%</div>
-              </div>
-              <div className="kpi">
-                <div className="kpiLabel" style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                  <Calendar size={14} /> Attendance
-                </div>
-                <div className="kpiValue">{student.attendance}%</div>
-              </div>
-              <div className="kpi">
-                <div className="kpiLabel" style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                  <CheckSquare size={14} /> Assignments Completed
-                </div>
-                <div className="kpiValue">{student.completedAssignments} / {student.totalAssignments}</div>
-              </div>
-              <div className="kpi">
-                <div className="kpiLabel" style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                  <Clock size={14} /> Pending Tasks
-                </div>
-                <div className="kpiValue" style={{ color: '#dc2626' }}>{student.pendingAssignments}</div>
-              </div>
-            </div>
-
-            <div className="divider" />
-
-            {/* Custom progress bars & sparklines */}
-            <div className="grid2" style={{ alignItems: 'stretch' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, border: '1px solid var(--border)', padding: 16, borderRadius: 'var(--radius-md)', background: 'rgba(255,255,255,0.4)' }}>
-                <span style={{ fontSize: 13, fontWeight: '700', color: 'var(--c-navy)' }}>Assignment Progress Bar</span>
-                <div style={{ marginTop: 8 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--muted)', marginBottom: 4 }}>
-                    <span>Completion Status</span>
-                    <span>{Math.round((student.completedAssignments / student.totalAssignments) * 100)}%</span>
-                  </div>
-                  <div style={{ width: '100%', height: '8px', background: 'var(--border)', borderRadius: '4px', overflow: 'hidden' }}>
-                    <div style={{ width: `${(student.completedAssignments / student.totalAssignments) * 100}%`, height: '100%', background: '#16a34a' }} />
-                  </div>
-                </div>
-                <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
-                  You have <strong>{student.pendingAssignments}</strong> assignments remaining. Complete them to maintain your high GPA!
-                </div>
-              </div>
-
-              {/* Sparkline & Sandbox access */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, border: '1px solid var(--border)', padding: 16, borderRadius: 'var(--radius-md)', background: 'rgba(255,255,255,0.4)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: 13, fontWeight: '700', color: 'var(--c-navy)' }}>Personal Score Trend</span>
-                  <Sparkline data={student.progressHistory} />
-                </div>
-                <div style={{ borderTop: '1px solid var(--border)', paddingTop: 10, marginTop: 4 }}>
-                  <Link to="/socratic-tutor" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 8, color: 'var(--c-navy)', fontWeight: 600, fontSize: 12 }}>
-                    <Sparkles size={14} />
-                    Need help? Work with Socratic Tutor
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </motion.div>
-    )
-  }
-
-  // ----------------------------------------------------
-  // 👤 4. DEFAULT USER VIEW (Security & Profile Dashboard)
-  // ----------------------------------------------------
-  return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }} className="page">
-      <div className="card shadow-lg border border-slate-200/50 dark:border-white/10 bg-white/70 dark:bg-zinc-900/70 backdrop-blur-3xl rounded-3xl overflow-hidden">
-        <div className="cardInner p-4 sm:p-6 md:p-8 relative overflow-hidden">
-          {/* Ambient background blur */}
-          <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 dark:bg-blue-500/20 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none"></div>
-
-          {/* Header */}
-          <div className="flex items-center gap-5 border-b border-slate-200 dark:border-zinc-800 pb-6 mb-8 relative z-10">
-            <div className="flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-500/20">
-              <Shield size={32} />
+        <div className="card shadow-lg border border-slate-200/60 dark:border-white/10 bg-white/70 dark:bg-zinc-900/70 backdrop-blur-3xl rounded-3xl p-5 sm:p-7">
+          <div className="flex items-center gap-3.5 mb-6">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-md">
+              <GraduationCap size={24} />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">Personal Workspace</h2>
-              <div className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-1">Logged in under: <span className="text-slate-700 dark:text-slate-300">{me?.email}</span></div>
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">Educator Workspace</h2>
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Australian Curriculum Prep to Year 5 Lesson Architecture & Assessment</p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
-            {/* Identity Card */}
-            <div className="bg-white/60 dark:bg-zinc-800/60 backdrop-blur-md rounded-2xl p-6 border border-slate-200/60 dark:border-zinc-700/60 shadow-sm hover:shadow-md transition-shadow">
-              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider mb-6 flex items-center gap-2">
-                <KeyRound size={16} className="text-indigo-500" /> Identity Overview
-              </h3>
-              
-              <div className="space-y-5">
-                <div>
-                  <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Email Address</div>
-                  <div className="font-medium text-slate-800 dark:text-slate-200">{me?.email || '—'}</div>
+          {/* Quick Tools Grid - EXACT 6 TEACHER TOOLS */}
+          <div className="mb-8">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">Teacher AI Tools</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+              <Link to="/educator/lesson-planner" className="p-4 rounded-2xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800/80 hover:shadow-md hover:border-blue-400 transition-all group">
+                <div className="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-2.5">
+                  <BookOpen size={18} />
                 </div>
-                
-                <div>
-                  <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">Institution GUID</div>
-                  <div className="font-mono text-sm px-3 py-1.5 bg-slate-100 dark:bg-zinc-900 rounded-lg text-slate-700 dark:text-slate-300 inline-block border border-slate-200 dark:border-zinc-700">
-                    {me?.institutionId || '—'}
-                  </div>
-                </div>
-              </div>
-            </div>
+                <div className="font-bold text-sm text-slate-900 dark:text-white group-hover:text-blue-600">Lesson Planner</div>
+                <div className="text-xs text-slate-500 mt-1">ACARA v9.0 outcomes, tiered differentiation & cognitive verbs.</div>
+              </Link>
 
-            {/* Access Rights */}
-            <div className="bg-white/60 dark:bg-zinc-800/60 backdrop-blur-md rounded-2xl p-6 border border-slate-200/60 dark:border-zinc-700/60 shadow-sm hover:shadow-md transition-shadow flex flex-col gap-6">
-              <div>
-                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider mb-3 flex items-center gap-2">
-                  <Award size={16} className="text-amber-500" /> Assigned Roles
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  {(me?.roles || []).length ? (
-                    (me?.roles || []).map((r) => (
-                      <span key={r} className="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-900/50 uppercase tracking-wide">
-                        {r}
-                      </span>
-                    ))
-                  ) : <span className="text-sm text-slate-400 italic">—</span>}
+              <Link to="/educator/rubric-generator" className="p-4 rounded-2xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800/80 hover:shadow-md hover:border-teal-400 transition-all group">
+                <div className="w-9 h-9 rounded-xl bg-teal-100 dark:bg-teal-900/40 text-teal-600 dark:text-teal-400 flex items-center justify-center mb-2.5">
+                  <ClipboardList size={18} />
                 </div>
-              </div>
+                <div className="font-bold text-sm text-slate-900 dark:text-white group-hover:text-teal-600">Rubric Generator</div>
+                <div className="text-xs text-slate-500 mt-1">QCAA ISMG marking criteria with 4-tier standards matrix.</div>
+              </Link>
 
-              <div>
-                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider mb-3 flex items-center gap-2">
-                  <Shield size={16} className="text-emerald-500" /> Active Permissions
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  {(me?.permissions || []).length ? (
-                    (me?.permissions || []).map((p) => (
-                      <span key={p} className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/30">
-                        {p}
-                      </span>
-                    ))
-                  ) : <span className="text-sm text-slate-400 italic">—</span>}
+              <Link to="/educator/worksheet-generator" className="p-4 rounded-2xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800/80 hover:shadow-md hover:border-orange-400 transition-all group">
+                <div className="w-9 h-9 rounded-xl bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-400 flex items-center justify-center mb-2.5">
+                  <FileSpreadsheet size={18} />
                 </div>
-              </div>
+                <div className="font-bold text-sm text-slate-900 dark:text-white group-hover:text-orange-600">Worksheet Generator</div>
+                <div className="text-xs text-slate-500 mt-1">Kura Plan style printable student activities with answer keys.</div>
+              </Link>
+
+              <Link to="/educator/assessment-generator" className="p-4 rounded-2xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800/80 hover:shadow-md hover:border-indigo-400 transition-all group">
+                <div className="w-9 h-9 rounded-xl bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mb-2.5">
+                  <CheckSquare size={18} />
+                </div>
+                <div className="font-bold text-sm text-slate-900 dark:text-white group-hover:text-indigo-600">Assessment & Quiz Generator</div>
+                <div className="text-xs text-slate-500 mt-1">Formative checkpoints & NAPLAN practice tests with digital grading.</div>
+              </Link>
+
+              <Link to="/educator/custom-bots" className="p-4 rounded-2xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800/80 hover:shadow-md hover:border-purple-400 transition-all group">
+                <div className="w-9 h-9 rounded-xl bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400 flex items-center justify-center mb-2.5">
+                  <Sparkles size={18} />
+                </div>
+                <div className="font-bold text-sm text-slate-900 dark:text-white group-hover:text-purple-600">Custom Chat Bot</div>
+                <div className="text-xs text-slate-500 mt-1">Build specialized Socratic tutors grounded in your classroom docs.</div>
+              </Link>
+
+              <Link to="/educator/leveler" className="p-4 rounded-2xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800/80 hover:shadow-md hover:border-cyan-400 transition-all group">
+                <div className="w-9 h-9 rounded-xl bg-cyan-100 dark:bg-cyan-900/40 text-cyan-600 dark:text-cyan-400 flex items-center justify-center mb-2.5">
+                  <Scissors size={18} />
+                </div>
+                <div className="font-bold text-sm text-slate-900 dark:text-white group-hover:text-cyan-600">Text Leveler</div>
+                <div className="text-xs text-slate-500 mt-1">Differentiate passages across Prep to Year 5 Lexile complexity.</div>
+              </Link>
             </div>
           </div>
-          
+        </div>
+      </motion.div>
+    );
+  }
+
+  // ----------------------------------------------------
+  // 🎒 STUDENT VIEW (If effective role is student)
+  // ----------------------------------------------------
+  if (effectiveRole === 'student') {
+    return (
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }} className="page">
+        {isSuperAdmin && (
+          <div className="mb-4 flex justify-between items-center bg-emerald-50/70 dark:bg-emerald-950/30 p-3 rounded-2xl border border-emerald-200 dark:border-emerald-900">
+            <span className="text-xs font-bold text-emerald-900 dark:text-emerald-300">
+              Super Admin Filter Active: Showing Student Portal
+            </span>
+            <RoleFilterBar compact />
+          </div>
+        )}
+
+        <div className="card shadow-lg border border-slate-200/60 dark:border-white/10 bg-white/70 dark:bg-zinc-900/70 backdrop-blur-3xl rounded-3xl p-5 sm:p-7">
+          <div className="flex items-center gap-3.5 mb-6">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-600 text-white flex items-center justify-center shadow-md">
+              <Backpack size={24} />
+            </div>
+            <div>
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">Student Learning Hub</h2>
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Interactive Socratic Tutor, Reading Support & Test Environment</p>
+            </div>
+          </div>
+
+          {/* Quick Tools Grid - EXACT 5 STUDENT TOOLS */}
+          <div>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">Student Learning Tools</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+              <Link to="/socratic-tutor" className="p-4 rounded-2xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800/80 hover:shadow-md hover:border-blue-400 transition-all group">
+                <div className="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-2.5">
+                  <Sparkles size={18} />
+                </div>
+                <div className="font-bold text-sm text-slate-900 dark:text-white group-hover:text-blue-600">Socratic Sandbox AI Chat</div>
+                <div className="text-xs text-slate-500 mt-1">Real-time Socratic guiding tutor. Ask questions and discover answers.</div>
+              </Link>
+
+              <Link to="/student/text-leveler" className="p-4 rounded-2xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800/80 hover:shadow-md hover:border-cyan-400 transition-all group">
+                <div className="w-9 h-9 rounded-xl bg-cyan-100 dark:bg-cyan-900/40 text-cyan-600 dark:text-cyan-400 flex items-center justify-center mb-2.5">
+                  <Scissors size={18} />
+                </div>
+                <div className="font-bold text-sm text-slate-900 dark:text-white group-hover:text-cyan-600">Reading Leveler</div>
+                <div className="text-xs text-slate-500 mt-1">Simplify difficult texts and listen with Australian voice audio.</div>
+              </Link>
+
+              <Link to="/student/quiz-me" className="p-4 rounded-2xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800/80 hover:shadow-md hover:border-amber-400 transition-all group">
+                <div className="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 flex items-center justify-center mb-2.5">
+                  <Lightbulb size={18} />
+                </div>
+                <div className="font-bold text-sm text-slate-900 dark:text-white group-hover:text-amber-600">AI Quiz Me</div>
+                <div className="text-xs text-slate-500 mt-1">Self-assess any topic with instant explanations and badges.</div>
+              </Link>
+
+              <Link to="/student/writing-studio" className="p-4 rounded-2xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800/80 hover:shadow-md hover:border-indigo-400 transition-all group">
+                <div className="w-9 h-9 rounded-xl bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mb-2.5">
+                  <PenTool size={18} />
+                </div>
+                <div className="font-bold text-sm text-slate-900 dark:text-white group-hover:text-indigo-600">Writing Studio</div>
+                <div className="text-xs text-slate-500 mt-1">Targeted writing feedback on structure, voice, and NAPLAN grammar.</div>
+              </Link>
+
+              <Link to="/student/test-environment" className="p-4 rounded-2xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800/80 hover:shadow-md hover:border-emerald-400 transition-all group">
+                <div className="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-2.5">
+                  <CheckSquare size={18} />
+                </div>
+                <div className="font-bold text-sm text-slate-900 dark:text-white group-hover:text-emerald-600">Test Environment</div>
+                <div className="text-xs text-slate-500 mt-1">Distraction-free digital exam room with automated scoring & review.</div>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
+
+  // ----------------------------------------------------
+  // 🏛️ INSTITUTE MANAGEMENT VIEW (If effective role is institute)
+  // ----------------------------------------------------
+  if (effectiveRole === 'institute') {
+    return (
+      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }} className="page">
+        {isSuperAdmin && (
+          <div className="mb-4 flex justify-between items-center bg-purple-50/70 dark:bg-purple-950/30 p-3 rounded-2xl border border-purple-200 dark:border-purple-900">
+            <span className="text-xs font-bold text-purple-900 dark:text-purple-300">
+              Super Admin Filter Active: Showing Institute Management
+            </span>
+            <RoleFilterBar compact />
+          </div>
+        )}
+
+        <div className="card shadow-lg border border-slate-200/60 dark:border-white/10 bg-white/70 dark:bg-zinc-900/70 backdrop-blur-3xl rounded-3xl p-5 sm:p-7">
+          <div className="flex items-center gap-3.5 mb-6">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-purple-600 to-pink-600 text-white flex items-center justify-center shadow-md">
+              <Building2 size={24} />
+            </div>
+            <div>
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">Institute Management Console</h2>
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Curriculum Grounding, Educator & Student Governance, and Reporting</p>
+            </div>
+          </div>
+
+          {/* Quick Tools Grid - EXACT 4 INSTITUTE MANAGEMENT TOOLS */}
+          <div>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-3">Institute Administrative Modules</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Link to="/admin/rag-ingestion" className="p-5 rounded-2xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800/80 hover:shadow-md hover:border-purple-400 transition-all group">
+                <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400 flex items-center justify-center mb-3">
+                  <Database size={20} />
+                </div>
+                <div className="font-bold text-base text-slate-900 dark:text-white group-hover:text-purple-600">RAG Ingestion and Update</div>
+                <div className="text-xs text-slate-500 mt-1">Upload school syllabi, curriculum PDFs and policies into vector embeddings.</div>
+              </Link>
+
+              <Link to="/admin/teachers" className="p-5 rounded-2xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800/80 hover:shadow-md hover:border-blue-400 transition-all group">
+                <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-3">
+                  <GraduationCap size={20} />
+                </div>
+                <div className="font-bold text-base text-slate-900 dark:text-white group-hover:text-blue-600">Teacher Management</div>
+                <div className="text-xs text-slate-500 mt-1">Onboard staff, assign tool permissions and set monthly AI usage limits.</div>
+              </Link>
+
+              <Link to="/admin/students" className="p-5 rounded-2xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800/80 hover:shadow-md hover:border-emerald-400 transition-all group">
+                <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-3">
+                  <Backpack size={20} />
+                </div>
+                <div className="font-bold text-base text-slate-900 dark:text-white group-hover:text-emerald-600">Student Management</div>
+                <div className="text-xs text-slate-500 mt-1">Enroll learners, set daily prompt quotas, and manage safety intervention locks.</div>
+              </Link>
+
+              <Link to="/admin/report-card" className="p-5 rounded-2xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800/80 hover:shadow-md hover:border-indigo-400 transition-all group">
+                <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mb-3">
+                  <ClipboardList size={20} />
+                </div>
+                <div className="font-bold text-base text-slate-900 dark:text-white group-hover:text-indigo-600">Report Card Generator</div>
+                <div className="text-xs text-slate-500 mt-1">Auto-synthesize pastoral student comments compliant with QCAA A-E reporting.</div>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    );
+  }
+
+  // ----------------------------------------------------
+  // 🌟 SUPER ADMIN UNIFIED CONSOLE (When roleFilter === 'all')
+  // ----------------------------------------------------
+  return (
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }} className="page space-y-6">
+      {/* Top Banner with Filter Bar */}
+      <div className="card shadow-lg border border-slate-200/60 dark:border-white/10 bg-white/70 dark:bg-zinc-900/70 backdrop-blur-3xl rounded-3xl p-5 sm:p-7">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 to-orange-600 text-white flex items-center justify-center shadow-lg shadow-orange-500/20">
+              <Shield size={26} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">Super Admin Command Center</h1>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 uppercase">
+                  Global View
+                </span>
+              </div>
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
+                Filter and manage features segregated specifically across Teachers, Students, and Institute Management.
+              </p>
+            </div>
+          </div>
+
+          <RoleFilterBar />
+        </div>
+      </div>
+
+      {/* SEGREGATED SUITES - ALL 3 GROUPS */}
+      
+      {/* GROUP 1: TEACHER FEATURES */}
+      <div className="card shadow-lg border border-slate-200/60 dark:border-white/10 bg-white/70 dark:bg-zinc-900/70 backdrop-blur-3xl rounded-3xl p-5 sm:p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-xs">
+              <GraduationCap size={16} />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-slate-900 dark:text-white">1. Teacher Features</h2>
+              <span className="text-[11px] text-slate-500">Curriculum planning, rubrics, worksheets, assessments & leveling</span>
+            </div>
+          </div>
+          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+            6 Core Tools
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <Link to="/educator/lesson-planner" className="p-3.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:border-blue-400 transition-all flex items-center gap-3">
+            <BookOpen size={16} className="text-blue-600 shrink-0" />
+            <div>
+              <div className="text-xs font-bold text-slate-900 dark:text-white">(a) Lesson Planner</div>
+              <div className="text-[10px] text-slate-400">ACARA v9.0 outcomes & differentiation</div>
+            </div>
+          </Link>
+
+          <Link to="/educator/rubric-generator" className="p-3.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:border-blue-400 transition-all flex items-center gap-3">
+            <ClipboardList size={16} className="text-teal-600 shrink-0" />
+            <div>
+              <div className="text-xs font-bold text-slate-900 dark:text-white">(b) Rubric Generator</div>
+              <div className="text-[10px] text-slate-400">QCAA ISMG criteria & cognitive verbs</div>
+            </div>
+          </Link>
+
+          <Link to="/educator/worksheet-generator" className="p-3.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:border-blue-400 transition-all flex items-center gap-3">
+            <FileSpreadsheet size={16} className="text-orange-600 shrink-0" />
+            <div>
+              <div className="text-xs font-bold text-slate-900 dark:text-white">(c) Worksheet Generator</div>
+              <div className="text-[10px] text-slate-400">Printable student sheets with answer keys</div>
+            </div>
+          </Link>
+
+          <Link to="/educator/assessment-generator" className="p-3.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:border-blue-400 transition-all flex items-center gap-3">
+            <CheckSquare size={16} className="text-indigo-600 shrink-0" />
+            <div>
+              <div className="text-xs font-bold text-slate-900 dark:text-white">(d) Assessment & Quiz Gen</div>
+              <div className="text-[10px] text-slate-400">NAPLAN tests with automated scoring</div>
+            </div>
+          </Link>
+
+          <Link to="/educator/custom-bots" className="p-3.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:border-blue-400 transition-all flex items-center gap-3">
+            <Sparkles size={16} className="text-purple-600 shrink-0" />
+            <div>
+              <div className="text-xs font-bold text-slate-900 dark:text-white">(e) Custom Chat Bot</div>
+              <div className="text-[10px] text-slate-400">Persona & Socratic strictness studio</div>
+            </div>
+          </Link>
+
+          <Link to="/educator/leveler" className="p-3.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:border-blue-400 transition-all flex items-center gap-3">
+            <Scissors size={16} className="text-cyan-600 shrink-0" />
+            <div>
+              <div className="text-xs font-bold text-slate-900 dark:text-white">(f) Text Leveler</div>
+              <div className="text-[10px] text-slate-400">Prep to Year 5 Lexile differentiation</div>
+            </div>
+          </Link>
+        </div>
+      </div>
+
+      {/* GROUP 2: STUDENT FEATURES */}
+      <div className="card shadow-lg border border-slate-200/60 dark:border-white/10 bg-white/70 dark:bg-zinc-900/70 backdrop-blur-3xl rounded-3xl p-5 sm:p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold text-xs">
+              <Backpack size={16} />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-slate-900 dark:text-white">2. Student Features</h2>
+              <span className="text-[11px] text-slate-500">Socratic guidance, reading support, quizzes & test taking</span>
+            </div>
+          </div>
+          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+            5 Core Tools
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <Link to="/socratic-tutor" className="p-3.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:border-emerald-400 transition-all flex items-center gap-3">
+            <Sparkles size={16} className="text-blue-600 shrink-0" />
+            <div>
+              <div className="text-xs font-bold text-slate-900 dark:text-white">(a) Socratic Sandbox AI</div>
+              <div className="text-[10px] text-slate-400">Real-time Socratic guiding dialogue</div>
+            </div>
+          </Link>
+
+          <Link to="/student/text-leveler" className="p-3.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:border-emerald-400 transition-all flex items-center gap-3">
+            <Scissors size={16} className="text-cyan-600 shrink-0" />
+            <div>
+              <div className="text-xs font-bold text-slate-900 dark:text-white">(b) Text Leveler (Student)</div>
+              <div className="text-[10px] text-slate-400">Simplify difficult text with audio reading</div>
+            </div>
+          </Link>
+
+          <Link to="/student/quiz-me" className="p-3.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:border-emerald-400 transition-all flex items-center gap-3">
+            <Lightbulb size={16} className="text-amber-600 shrink-0" />
+            <div>
+              <div className="text-xs font-bold text-slate-900 dark:text-white">(c) AI Quiz Me</div>
+              <div className="text-[10px] text-slate-400">Self-guided interactive knowledge check</div>
+            </div>
+          </Link>
+
+          <Link to="/student/writing-studio" className="p-3.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:border-emerald-400 transition-all flex items-center gap-3">
+            <PenTool size={16} className="text-indigo-600 shrink-0" />
+            <div>
+              <div className="text-xs font-bold text-slate-900 dark:text-white">(d) Writing Studio</div>
+              <div className="text-[10px] text-slate-400">Targeted grammar and cohesion feedback</div>
+            </div>
+          </Link>
+
+          <Link to="/student/test-environment" className="p-3.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:border-emerald-400 transition-all flex items-center gap-3">
+            <CheckSquare size={16} className="text-emerald-600 shrink-0" />
+            <div>
+              <div className="text-xs font-bold text-slate-900 dark:text-white">(e) Test Environment</div>
+              <div className="text-[10px] text-slate-400">Take exams with automated QCAA grading</div>
+            </div>
+          </Link>
+        </div>
+      </div>
+
+      {/* GROUP 3: INSTITUTE MANAGEMENT FEATURES */}
+      <div className="card shadow-lg border border-slate-200/60 dark:border-white/10 bg-white/70 dark:bg-zinc-900/70 backdrop-blur-3xl rounded-3xl p-5 sm:p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400 flex items-center justify-center font-bold text-xs">
+              <Building2 size={16} />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-slate-900 dark:text-white">3. Institute Management</h2>
+              <span className="text-[11px] text-slate-500">Knowledge RAG, teacher/student governance & reporting</span>
+            </div>
+          </div>
+          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200">
+            4 Core Modules
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <Link to="/admin/rag-ingestion" className="p-3.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:border-purple-400 transition-all flex items-center gap-3">
+            <Database size={16} className="text-purple-600 shrink-0" />
+            <div>
+              <div className="text-xs font-bold text-slate-900 dark:text-white">(a) RAG Ingestion & Base</div>
+              <div className="text-[10px] text-slate-400">Vectorize district curriculum PDFs</div>
+            </div>
+          </Link>
+
+          <Link to="/admin/teachers" className="p-3.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:border-purple-400 transition-all flex items-center gap-3">
+            <GraduationCap size={16} className="text-blue-600 shrink-0" />
+            <div>
+              <div className="text-xs font-bold text-slate-900 dark:text-white">(b) Teacher Management</div>
+              <div className="text-[10px] text-slate-400">Onboard, tool permissions & limits</div>
+            </div>
+          </Link>
+
+          <Link to="/admin/students" className="p-3.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:border-purple-400 transition-all flex items-center gap-3">
+            <Backpack size={16} className="text-emerald-600 shrink-0" />
+            <div>
+              <div className="text-xs font-bold text-slate-900 dark:text-white">(c) Student Management</div>
+              <div className="text-[10px] text-slate-400">Rosters, safety locks & AI quotas</div>
+            </div>
+          </Link>
+
+          <Link to="/admin/report-card" className="p-3.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:border-purple-400 transition-all flex items-center gap-3">
+            <ClipboardList size={16} className="text-indigo-600 shrink-0" />
+            <div>
+              <div className="text-xs font-bold text-slate-900 dark:text-white">(d) Report Card Gen</div>
+              <div className="text-[10px] text-slate-400">Synthesize QCAA pastoral comments</div>
+            </div>
+          </Link>
         </div>
       </div>
     </motion.div>
-  )
+  );
 }
+
+export default Dashboard;

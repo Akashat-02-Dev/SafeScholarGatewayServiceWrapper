@@ -6,6 +6,8 @@
 *.dylib
 *.test
 *.out
+*.rdb
+*.tar.gz
 bin/
 dist/
 ui/dist/
@@ -14,6 +16,8 @@ node_modules/
 
 # Environment files
 .env
+.env.*
+.env.hostinger
 .env.local
 .env.*.local
 
@@ -24,9 +28,15 @@ __pycache__/
 venv/
 .venv/
 
+# CDK & deployment scratch
+cdk/
+cdk.out/
+empty_tmp/
+config/jwt/
 
 # IDE & OS files
 .vscode/
 .idea/
 .DS_Store
 Thumbs.db
+

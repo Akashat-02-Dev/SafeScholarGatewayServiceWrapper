@@ -5,13 +5,17 @@ import './index.css'
 import './App.css'
 import App from './App.tsx'
 import { AuthProvider } from './services/authService'
+import { RoleFilterProvider } from './services/roleFilterContext'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
       <AuthProvider>
-        <App />
+        <RoleFilterProvider>
+          <App />
+        </RoleFilterProvider>
       </AuthProvider>
     </BrowserRouter>
   </StrictMode>,
 )
+

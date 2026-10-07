@@ -1,0 +1,108 @@
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: safescholar-redis
+    restart: always
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - safescholar-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  ai-orchestrator:
+    build:
+      context: ./ai-orchestrator-service
+      dockerfile: Dockerfile
+    container_name: safescholar-ai-orchestrator
+    restart: always
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: ${SUPABASE_DATABASE_URL}
+      REDIS_URL: redis://redis:6379/0
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      GOOGLE_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      LLM_TIMEOUT_SECONDS: 60
+      MAX_RETRIES: 2
+    networks:
+      - safescholar-net
+
+  lms-integration:
+    build:
+      context: ./lms-integration-service
+      dockerfile: Dockerfile
+    container_name: safescholar-lms-integration
+    restart: always
+    environment:
+      CANVAS_BASE_URL: ${CANVAS_BASE_URL:-https://canvas.instructure.com/api/v1}
+      CANVAS_CLIENT_ID: ${CANVAS_CLIENT_ID:-}
+      CANVAS_CLIENT_SECRET: ${CANVAS_CLIENT_SECRET:-}
+      GOOGLE_CLASSROOM_API_URL: ${GOOGLE_CLASSROOM_API_URL:-https://classroom.googleapis.com/v1}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      HTTP_TIMEOUT: 15
+    networks:
+      - safescholar-net
+
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.gateway
+    container_name: safescholar-gateway
+    restart: always
+    depends_on:
+      redis:
+        condition: service_healthy
+      ai-orchestrator:
+        condition: service_started
+      lms-integration:
+        condition: service_started
+    volumes:
+      - ./config/config.prod.docker.yaml:/app/config/config.prod.yaml:ro
+      - jwt_keys:/app/config/jwt
+    environment:
+      APP_ENV: prod
+      CONFIG_PATH: /app/config/config.prod.yaml
+      POSTGRES_CONN_STRING: ${SUPABASE_POSTGRES_CONN_STRING}
+      REDIS_ADDR: redis:6379
+      ALLOW_INSECURE_HTTP: "1"
+      ALLOW_INSECURE_REDIS: "1"
+      AUTO_GENERATE_JWT_KEYS: "1"
+      SYS_ADMIN_EMAIL: ${SYS_ADMIN_EMAIL:-admin@safescholar.com}
+      SYS_ADMIN_PASSWORD: ${SYS_ADMIN_PASSWORD:-Admin!1234@-SafeScholar}
+      SYS_ADMIN_FIRST_NAME: ${SYS_ADMIN_FIRST_NAME:-System}
+      SYS_ADMIN_LAST_NAME: ${SYS_ADMIN_LAST_NAME:-Administrator}
+      AI_ORCHESTRATOR_URL: http://ai-orchestrator:8000
+      LMS_INTEGRATION_URL: http://lms-integration:8001
+      EXTERNAL_BASE_URL: ${EXTERNAL_BASE_URL:-http://localhost}
+    networks:
+      - safescholar-net
+
+  ui:
+    build:
+      context: ./ui
+      dockerfile: Dockerfile
+    container_name: safescholar-ui
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - gateway
+    networks:
+      - safescholar-net
+
+networks:
+  safescholar-net:
+    driver: bridge
+
+volumes:
+  redis_data:
+  jwt_keys:

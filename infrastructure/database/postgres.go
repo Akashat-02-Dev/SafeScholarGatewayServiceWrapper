@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -47,6 +48,11 @@ func Connect(ctx context.Context, cfg config.PostgresConfig) (*pgxpool.Pool, err
 		poolCfg.ConnConfig.TLSConfig = tlsCfg
 	}
 
+	// If port 6543 (PgBouncer transaction mode) or PGX_SIMPLE_PROTOCOL is requested, disable prepared statements
+	if strings.Contains(cfg.ConnString, ":6543") || os.Getenv("PGX_SIMPLE_PROTOCOL") == "1" {
+		poolCfg.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
+	}
+
 	if cfg.AppName != "" {
 		poolCfg.ConnConfig.RuntimeParams["application_name"] = cfg.AppName
 	}
@@ -61,17 +67,18 @@ func Connect(ctx context.Context, cfg config.PostgresConfig) (*pgxpool.Pool, err
 		poolCfg.HealthCheckPeriod = cfg.HealthCheckPeriod
 	}
 
-	poolCfg.ConnConfig.ConnectTimeout = 5 * time.Second
+	// 15 seconds connect timeout for reliable remote cloud/Supabase handshakes
+	poolCfg.ConnConfig.ConnectTimeout = 15 * time.Second
 
 	pool, err := pgxpool.NewWithConfig(ctx, poolCfg)
 	if err != nil {
 		return nil, fmt.Errorf("connect postgres: %w", err)
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	pingCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 
-	if err := pool.Ping(ctx); err != nil {
+	if err := pool.Ping(pingCtx); err != nil {
 		pool.Close()
 		return nil, fmt.Errorf("ping postgres: %w", err)
 	}

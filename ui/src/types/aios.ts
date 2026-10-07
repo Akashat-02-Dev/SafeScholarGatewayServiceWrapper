@@ -5,10 +5,18 @@ export type AIToolID =
   | 'lesson_planner' 
   | 'leveler' 
   | 'video_question_maker' 
-  | 'iep_generator';
+  | 'iep_generator'
+  | 'worksheet_generator'
+  | 'assessment_generator'
+  | 'ismg_rubric_generator'
+  | 'writing_feedback'
+  | 'quiz_generator'
+  | 'character_bot'
+  | 'custom_bot'
+  | 'report_card_generator';
 
 export interface AICompletionRequest<T = Record<string, unknown>> {
-  tool_id: AIToolID;
+  tool_id: AIToolID | string;
   institution_id: string;
   parameters: T;
   session_id?: string;
@@ -25,6 +33,60 @@ export interface AICompletionResponse<T = string | Record<string, unknown>> {
   model_used: string;
   tokens: TokenUsage;
   metadata?: Record<string, string>;
+}
+
+export interface WorksheetQuestion {
+  number: number;
+  prompt: string;
+  type: string;
+  options?: string[] | null;
+  answer: string;
+}
+
+export interface WorksheetExercise {
+  section_name: string;
+  instructions: string;
+  questions: WorksheetQuestion[];
+}
+
+export interface WorksheetSchema {
+  title: string;
+  grade_level: string;
+  subject: string;
+  learning_focus: string;
+  aligned_standards: string[];
+  student_instructions: string;
+  exercises: WorksheetExercise[];
+  differentiation?: {
+    support_notes?: string;
+    extension_notes?: string;
+  };
+  teacher_summary?: string;
+}
+
+export interface AssessmentQuestion {
+  id: string;
+  number: number;
+  question_text: string;
+  question_type: string;
+  options?: string[];
+  correct_answer: string;
+  marks: number;
+  explanation: string;
+  cognitive_verb?: string;
+}
+
+export interface AssessmentSchema {
+  test_title: string;
+  grade_level: string;
+  subject: string;
+  assessment_type: string;
+  time_limit_minutes: number;
+  total_marks: number;
+  instructions: string;
+  aligned_standards: string[];
+  questions: AssessmentQuestion[];
+  grading_scale?: Record<string, string>;
 }
 
 // Target Schemas for Specific Tools

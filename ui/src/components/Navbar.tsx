@@ -3,6 +3,7 @@ import { useAuth } from '../services/authService'
 import { motion } from 'framer-motion'
 import { LogOut, UserRound } from 'lucide-react'
 import { ThemeToggle } from './ThemeToggle'
+import { RoleFilterBar } from './RoleFilterBar'
 
 export function Navbar() {
   const { status, me, logout } = useAuth()
@@ -18,6 +19,8 @@ export function Navbar() {
             <span className="hidden sm:inline">SafeScholar</span>
           </Link>
         </motion.div>
+
+        <RoleFilterBar />
 
         <div className="flex-1" />
 

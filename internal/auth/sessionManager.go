@@ -15,14 +15,15 @@ import (
 )
 
 type Session struct {
-	SessionID string    `json:"sessionId"`
-	UserID    string    `json:"userId"`
-	TokenID   string    `json:"tokenId"`
-	IPAddress string    `json:"ipAddress"`
-	UserAgent string    `json:"userAgent"`
-	CreatedAt time.Time `json:"createdAt"`
-	ExpiresAt time.Time `json:"expiresAt"`
-	Revoked   bool      `json:"revoked"`
+	SessionID     string    `json:"sessionId"`
+	UserID        string    `json:"userId"`
+	InstitutionID string    `json:"institutionId,omitempty"`
+	TokenID       string    `json:"tokenId"`
+	IPAddress     string    `json:"ipAddress"`
+	UserAgent     string    `json:"userAgent"`
+	CreatedAt     time.Time `json:"createdAt"`
+	ExpiresAt     time.Time `json:"expiresAt"`
+	Revoked       bool      `json:"revoked"`
 }
 
 type SessionManager struct {
@@ -60,14 +61,14 @@ func (m *SessionManager) Create(ctx context.Context, session Session) error {
 			return err
 		}
 		defer func() { _ = tx.Rollback(context.Background()) }()
-		if err := database.ApplyAppContext(ctx, tx, database.AppContext{AllowLogin: true}); err != nil {
+		if err := database.ApplyAppContext(ctx, tx, database.AppContext{InstitutionID: session.InstitutionID, AllowLogin: true}); err != nil {
 			return err
 		}
 		_, err = tx.Exec(ctx, `
-insert into sessions(session_id, user_id, token_id, ip_address, user_agent, created_at, expires_at, revoked)
-values (nullif($1,'')::uuid, nullif($2,'')::uuid, nullif($3,'')::uuid, nullif($4,''), nullif($5,''), $6, $7, $8)
+insert into sessions(session_id, user_id, institution_id, token_id, ip_address, user_agent, created_at, expires_at, revoked)
+values (nullif($1,'')::uuid, nullif($2,'')::uuid, nullif($3,'')::uuid, nullif($4,'')::uuid, nullif($5,''), nullif($6,''), $7, $8, $9)
 on conflict (session_id) do nothing`,
-			session.SessionID, session.UserID, session.TokenID, strings.TrimSpace(session.IPAddress), strings.TrimSpace(session.UserAgent), session.CreatedAt, session.ExpiresAt, session.Revoked,
+			session.SessionID, session.UserID, strings.TrimSpace(session.InstitutionID), session.TokenID, strings.TrimSpace(session.IPAddress), strings.TrimSpace(session.UserAgent), session.CreatedAt, session.ExpiresAt, session.Revoked,
 		)
 		if err != nil {
 			return err
@@ -116,21 +117,23 @@ func (m *SessionManager) Validate(ctx context.Context, institutionID, sessionID 
 		return Session{}, err
 	}
 	defer func() { _ = tx.Rollback(context.Background()) }()
-	if err := database.ApplyAppContext(ctx, tx, database.AppContext{InstitutionID: institutionID}); err != nil {
+	if err := database.ApplyAppContext(ctx, tx, database.AppContext{InstitutionID: institutionID, AllowLogin: true}); err != nil {
 		return Session{}, err
 	}
 
 	var s Session
+	var instID string
 	var tokenID string
 	var ipAddr string
 	var ua string
 	err = tx.QueryRow(ctx, `
-select session_id::text, user_id::text, coalesce(token_id::text,''), coalesce(ip_address,''), coalesce(user_agent,''), created_at, expires_at, revoked
+select session_id::text, user_id::text, coalesce(institution_id::text,''), coalesce(token_id::text,''), coalesce(ip_address,''), coalesce(user_agent,''), created_at, expires_at, revoked
 from sessions
-where session_id = nullif($1,'')::uuid`, sid).Scan(&s.SessionID, &s.UserID, &tokenID, &ipAddr, &ua, &s.CreatedAt, &s.ExpiresAt, &s.Revoked)
+where session_id = nullif($1,'')::uuid`, sid).Scan(&s.SessionID, &s.UserID, &instID, &tokenID, &ipAddr, &ua, &s.CreatedAt, &s.ExpiresAt, &s.Revoked)
 	if err != nil {
 		return Session{}, errors.New("invalid session")
 	}
+	s.InstitutionID = strings.TrimSpace(instID)
 	s.TokenID = strings.TrimSpace(tokenID)
 	s.IPAddress = strings.TrimSpace(ipAddr)
 	s.UserAgent = strings.TrimSpace(ua)

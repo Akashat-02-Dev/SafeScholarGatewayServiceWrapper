@@ -323,6 +323,7 @@ func (s *OAuthService) Callback(ctx context.Context, provider Provider, code, st
 		if err := s.sessionMgr.Create(ctx, auth.Session{
 			SessionID: sessionID,
 			UserID:    userID,
+			InstitutionID: institutionID,
 			IPAddress: ipAddress,
 			UserAgent: userAgent,
 			CreatedAt: time.Now().UTC(),

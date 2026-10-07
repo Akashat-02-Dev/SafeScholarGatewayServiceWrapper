@@ -10,6 +10,7 @@ import (
 	"safescholar/gateway/config"
 	"safescholar/gateway/infrastructure/database"
 	"safescholar/gateway/internal/auth"
+	"safescholar/gateway/internal/rbac"
 	"safescholar/gateway/internal/security"
 
 	"github.com/jackc/pgx/v5"
@@ -32,6 +33,10 @@ func EnsureSysAdmin(ctx context.Context, cfg config.BootstrapConfig, auditEnable
 	}
 
 	if _, err := tx.Exec(ctx, `select pg_advisory_xact_lock(7211843001)`); err != nil {
+		return err
+	}
+
+	if err := ensureSystemRoles(ctx, tx); err != nil {
 		return err
 	}
 
@@ -140,4 +145,80 @@ func countSysAdmins(ctx context.Context, tx pgx.Tx) (int64, error) {
 		return 0, err
 	}
 	return c, nil
+}
+
+func ensureSystemRoles(ctx context.Context, tx pgx.Tx) error {
+	rolesToEnsure := []struct {
+		name        string
+		description string
+		perms       []string
+	}{
+		{
+			name:        "sysadmin",
+			description: "System administrator",
+			perms:       nil, // all permissions
+		},
+		{
+			name:        "student",
+			description: "Student role",
+			perms:       []string{rbac.PermissionExecuteAITutor},
+		},
+		{
+			name:        "teacher",
+			description: "Teacher / Educator role",
+			perms: []string{
+				rbac.PermissionExecuteAITutor,
+				rbac.PermissionGenerateLesson,
+				rbac.PermissionUseLeveler,
+				rbac.PermissionUseVideoAssessor,
+				rbac.PermissionGenerateIEP,
+			},
+		},
+	}
+
+	for _, rDef := range rolesToEnsure {
+		var roleID string
+		err := tx.QueryRow(ctx, `
+select role_id::text
+from roles
+where institution_id is null and lower(name)=lower($1)
+limit 1`, rDef.name).Scan(&roleID)
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				err = tx.QueryRow(ctx, `
+insert into roles(institution_id, name, description, is_system_role, created_at)
+values (null, $1, $2, true, now())
+returning role_id::text`, rDef.name, rDef.description).Scan(&roleID)
+				if err != nil {
+					return err
+				}
+			} else {
+				return err
+			}
+		}
+
+		if rDef.perms == nil {
+			_, err = tx.Exec(ctx, `
+insert into role_permissions (role_id, permission_id)
+select $1::uuid, p.permission_id
+from permissions p
+on conflict do nothing`, roleID)
+			if err != nil {
+				return err
+			}
+		} else {
+			for _, permName := range rDef.perms {
+				_, err = tx.Exec(ctx, `
+insert into role_permissions (role_id, permission_id)
+select $1::uuid, p.permission_id
+from permissions p
+where upper(p.name) = upper($2)
+on conflict do nothing`, roleID, permName)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
 }

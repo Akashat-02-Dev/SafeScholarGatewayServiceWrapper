@@ -43,3 +43,5 @@ jwt_keys/
 ui/
 ai-orchestrator-service/
 lms-integration-service/
+cdk/
+cdk.out/
