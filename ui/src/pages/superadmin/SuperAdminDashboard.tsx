@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Shield, Building2, Activity, CheckCircle2, 
-  Cpu, HardDrive, AlertCircle, RefreshCw,
+  HardDrive, AlertCircle, RefreshCw,
   Clock, Plus, Play, Pause, Sliders, Trash2,
   Users, GraduationCap, X, Calendar, Sparkles
 } from 'lucide-react'
@@ -274,40 +274,66 @@ export function SuperAdminDashboard() {
           {err ? <div className="toast toastError mb-4">{err}</div> : null}
           {ok ? <div className="toast toastOk mb-4 flex items-center gap-2"><CheckCircle2 size={18} /> {ok}</div> : null}
 
-          {/* Quick Metrics */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
-            <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 p-5 shadow-sm">
-              <div className="text-slate-600 dark:text-slate-300 font-semibold text-xs sm:text-sm flex items-center gap-2 mb-2">
-                <Cpu size={18} className="text-indigo-500" /> Total Active Tenants
+          {/* Quick Metrics - 6 Global Governance Indicators */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3.5 sm:gap-4 mb-8">
+            <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 p-4 shadow-sm">
+              <div className="text-slate-600 dark:text-slate-300 font-semibold text-xs flex items-center gap-1.5 mb-1.5">
+                <Building2 size={16} className="text-indigo-500" /> Total Institutes
               </div>
-              <div className="text-2xl sm:text-3xl font-black text-slate-800 dark:text-white">{telemetry.length}</div>
+              <div className="text-xl sm:text-2xl font-black text-slate-800 dark:text-white">
+                {Math.max(trials.length, telemetry.length)}
+              </div>
+              <div className="text-[10px] text-slate-400 mt-0.5">Enrolled schools</div>
             </div>
 
-            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-50/50 to-purple-50/50 dark:from-indigo-950/20 dark:to-purple-950/20 border border-indigo-200/60 dark:border-indigo-800/60 p-5 shadow-sm">
-              <div className="text-indigo-700 dark:text-indigo-300 font-semibold text-xs sm:text-sm flex items-center gap-2 mb-2">
-                <Clock size={18} className="text-indigo-600 dark:text-indigo-400" /> Active Trials (7-30d)
+            <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 p-4 shadow-sm">
+              <div className="text-slate-600 dark:text-slate-300 font-semibold text-xs flex items-center gap-1.5 mb-1.5">
+                <Users size={16} className="text-blue-500" /> Active Teachers
               </div>
-              <div className="text-2xl sm:text-3xl font-black text-indigo-900 dark:text-indigo-100">
-                {activeTrialCount} <span className="text-xs font-medium text-slate-500">/ {trialList.length} total</span>
+              <div className="text-xl sm:text-2xl font-black text-slate-800 dark:text-white">
+                {trials.reduce((sum, t) => sum + (t.activeTeachers || 0), 0) || telemetry.reduce((sum, t) => sum + (t.activeTeachers || 0), 0)}
               </div>
+              <div className="text-[10px] text-slate-400 mt-0.5">Across all institutes</div>
+            </div>
+
+            <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 p-4 shadow-sm">
+              <div className="text-slate-600 dark:text-slate-300 font-semibold text-xs flex items-center gap-1.5 mb-1.5">
+                <GraduationCap size={16} className="text-emerald-500" /> Active Students
+              </div>
+              <div className="text-xl sm:text-2xl font-black text-slate-800 dark:text-white">
+                {trials.reduce((sum, t) => sum + (t.activeStudents || 0), 0) || telemetry.reduce((sum, t) => sum + (t.activeCandidates || 0), 0)}
+              </div>
+              <div className="text-[10px] text-slate-400 mt-0.5">Across all institutes</div>
+            </div>
+
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-50/50 to-purple-50/50 dark:from-indigo-950/20 dark:to-purple-950/20 border border-indigo-200/60 dark:border-indigo-800/60 p-4 shadow-sm">
+              <div className="text-indigo-700 dark:text-indigo-300 font-semibold text-xs flex items-center gap-1.5 mb-1.5">
+                <Clock size={16} className="text-indigo-600 dark:text-indigo-400" /> Active Trials
+              </div>
+              <div className="text-xl sm:text-2xl font-black text-indigo-900 dark:text-indigo-100">
+                {activeTrialCount} <span className="text-xs font-medium text-slate-500">/ {trialList.length}</span>
+              </div>
+              <div className="text-[10px] text-slate-400 mt-0.5">7-30d pilot access</div>
             </div>
             
-            <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 p-5 shadow-sm">
-              <div className="text-slate-600 dark:text-slate-300 font-semibold text-xs sm:text-sm flex items-center gap-2 mb-2">
-                <HardDrive size={18} className="text-blue-500" /> Volumetric Request Rate
+            <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 p-4 shadow-sm">
+              <div className="text-slate-600 dark:text-slate-300 font-semibold text-xs flex items-center gap-1.5 mb-1.5">
+                <HardDrive size={16} className="text-blue-500" /> AI Request Rate
               </div>
-              <div className="text-2xl sm:text-3xl font-black text-slate-800 dark:text-white">
-                {telemetry.reduce((sum, t) => sum + t.totalRequests, 0)} <span className="text-xs font-medium text-slate-500">reqs/hr</span>
+              <div className="text-xl sm:text-2xl font-black text-slate-800 dark:text-white">
+                {telemetry.reduce((sum, t) => sum + (t.totalRequests || 0), 0)}
               </div>
+              <div className="text-[10px] text-slate-400 mt-0.5">requests / hour</div>
             </div>
             
-            <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 p-5 shadow-sm">
-              <div className="text-slate-600 dark:text-slate-300 font-semibold text-xs sm:text-sm flex items-center gap-2 mb-2">
-                <Activity size={18} className="text-emerald-500" /> Total Token Load
+            <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 p-4 shadow-sm">
+              <div className="text-slate-600 dark:text-slate-300 font-semibold text-xs flex items-center gap-1.5 mb-1.5">
+                <Activity size={16} className="text-amber-500" /> AI Token Usage
               </div>
-              <div className="text-2xl sm:text-3xl font-black text-slate-800 dark:text-white">
-                {telemetry.reduce((sum, t) => sum + t.promptTokens + t.completionTokens, 0).toLocaleString()} <span className="text-xs font-medium text-slate-500">tokens</span>
+              <div className="text-xl sm:text-2xl font-black text-slate-800 dark:text-white">
+                {telemetry.reduce((sum, t) => sum + (t.promptTokens || 0) + (t.completionTokens || 0), 0).toLocaleString()}
               </div>
+              <div className="text-[10px] text-slate-400 mt-0.5">Total tokens consumed</div>
             </div>
           </div>
 

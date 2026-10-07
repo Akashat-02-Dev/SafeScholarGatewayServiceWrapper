@@ -5,7 +5,7 @@ import {
   LayoutGrid, BookOpen, FileText, FileSpreadsheet, 
   ClipboardCheck, Sparkles, Scissors, PenTool, 
   Lightbulb, CheckCircle2, Database, 
-  GraduationCap, Backpack, Building2
+  GraduationCap, Backpack, Building2, Shield
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -56,6 +56,17 @@ export function Sidebar() {
         <div className="flex flex-row md:flex-col gap-1 sm:gap-2 relative overflow-x-auto md:overflow-visible scrollbar-hide snap-x items-center md:items-stretch" style={{ WebkitOverflowScrolling: 'touch' }}>
           
           <SidebarLink to="/dashboard" icon={LayoutGrid} label="Dashboard" />
+
+          {/* SUPER ADMIN SECTION */}
+          {isSuperAdmin && (
+            <div className="flex flex-row md:flex-col gap-1 sm:gap-1.5 md:mt-2 pb-1.5 md:border-b md:border-slate-200/60 md:dark:border-white/10">
+              <div className="hidden md:flex items-center gap-1.5 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 bg-amber-50/80 dark:bg-amber-950/40 rounded-lg">
+                <Shield size={13} />
+                <span>Super Admin</span>
+              </div>
+              <SidebarLink to="/superadmin" icon={Shield} label="Super Admin Hub" />
+            </div>
+          )}
 
           {/* TEACHER SECTION */}
           {showTeacher && (

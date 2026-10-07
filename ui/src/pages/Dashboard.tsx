@@ -5,7 +5,7 @@ import {
   Shield, Building2, GraduationCap, 
   BookOpen, CheckSquare, Sparkles,
   ClipboardList, Backpack, FileSpreadsheet,
-  Scissors, PenTool, Lightbulb, Database
+  Scissors, PenTool, Lightbulb, Database, Users
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { RoleFilterBar } from '../components/RoleFilterBar';
@@ -281,6 +281,56 @@ export function Dashboard() {
           </div>
 
           <RoleFilterBar />
+        </div>
+      </div>
+
+      {/* 🚀 SUPER ADMIN MASTER GOVERNANCE & TELEMETRY SUITE */}
+      <div className="card shadow-xl border border-amber-200/80 dark:border-amber-900/40 bg-gradient-to-br from-amber-50/90 via-orange-50/50 to-white/90 dark:from-zinc-900/90 dark:via-zinc-900/80 dark:to-amber-950/20 backdrop-blur-3xl rounded-3xl p-6 sm:p-7">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div className="space-y-3 max-w-2xl">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700 uppercase tracking-wider">
+              <Shield size={14} className="text-amber-600 dark:text-amber-400" />
+              <span>Multi-Tenant Infrastructure Hub</span>
+            </div>
+            <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+              Institute Onboarding, Quotas & AI Usage Telemetry
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+              Provision new pilot institutions with 7-30 day trial bounds, monitor real-time teacher and student enrollments against allocated quotas, and track high-resolution AI token consumption and request throughput across all schools.
+            </p>
+            
+            <div className="flex flex-wrap items-center gap-2.5 pt-1">
+              <div className="px-3 py-1.5 rounded-xl bg-white/80 dark:bg-zinc-800/80 border border-slate-200 dark:border-zinc-700 text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 shadow-sm">
+                <Building2 size={14} className="text-indigo-600 dark:text-indigo-400" />
+                <span>Onboard & Manage Institutes</span>
+              </div>
+              <div className="px-3 py-1.5 rounded-xl bg-white/80 dark:bg-zinc-800/80 border border-slate-200 dark:border-zinc-700 text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 shadow-sm">
+                <Users size={14} className="text-blue-600 dark:text-blue-400" />
+                <span>Teacher & Student Headcounts</span>
+              </div>
+              <div className="px-3 py-1.5 rounded-xl bg-white/80 dark:bg-zinc-800/80 border border-slate-200 dark:border-zinc-700 text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 shadow-sm">
+                <Sparkles size={14} className="text-amber-600 dark:text-amber-400" />
+                <span>Token Telemetry & AI Limits</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row lg:flex-col gap-3 shrink-0">
+            <Link
+              to="/superadmin"
+              className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:to-orange-600 text-white font-bold text-sm shadow-lg shadow-orange-500/25 hover:shadow-xl hover:scale-[1.02] transition-all"
+            >
+              <Shield size={18} />
+              <span>Launch Super Admin Hub</span>
+            </Link>
+            <Link
+              to="/superadmin/dashboard"
+              className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-white dark:bg-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-700 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-zinc-700 text-xs font-bold shadow-sm transition-all"
+            >
+              <Building2 size={16} className="text-indigo-600" />
+              <span>Onboard Institute & Trials</span>
+            </Link>
+          </div>
         </div>
       </div>
 

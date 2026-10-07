@@ -410,6 +410,26 @@ function App() {
                   </PageTransition>
                 }
               />
+              <Route
+                path="/superadmin"
+                element={
+                  <PageTransition>
+                    <AuthedLayout>
+                      <SuperAdminDashboard />
+                    </AuthedLayout>
+                  </PageTransition>
+                }
+              />
+              <Route
+                path="/admin/superadmin"
+                element={
+                  <PageTransition>
+                    <AuthedLayout>
+                      <SuperAdminDashboard />
+                    </AuthedLayout>
+                  </PageTransition>
+                }
+              />
             </Route>
 
             <Route element={<RoleGuard requiredPermissions={['MANAGE_USERS']} />}>

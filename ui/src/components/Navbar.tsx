@@ -1,12 +1,14 @@
 import { Link } from 'react-router-dom'
 import { useAuth } from '../services/authService'
+import { useRoleFilter } from '../services/roleFilterContext'
 import { motion } from 'framer-motion'
-import { LogOut, UserRound } from 'lucide-react'
+import { LogOut, UserRound, Shield } from 'lucide-react'
 import { ThemeToggle } from './ThemeToggle'
 import { RoleFilterBar } from './RoleFilterBar'
 
 export function Navbar() {
   const { status, me, logout } = useAuth()
+  const { isSuperAdmin } = useRoleFilter()
 
   return (
     <div className="sticky top-0 z-50 m-4 rounded-[2rem] bg-white/60 dark:bg-zinc-900/40 backdrop-blur-2xl -webkit-backdrop-filter transform-gpu border border-white/40 dark:border-white/[0.04] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-glass-dark">
@@ -21,6 +23,17 @@ export function Navbar() {
         </motion.div>
 
         <RoleFilterBar />
+
+        {isSuperAdmin && (
+          <Link
+            to="/superadmin"
+            className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-600 text-white text-xs font-bold shadow-sm hover:shadow-md hover:scale-105 transition-all"
+            title="Open Super Admin Hub: Onboarding, Quotas & AI Telemetry"
+          >
+            <Shield size={14} />
+            <span>Super Admin</span>
+          </Link>
+        )}
 
         <div className="flex-1" />
 
