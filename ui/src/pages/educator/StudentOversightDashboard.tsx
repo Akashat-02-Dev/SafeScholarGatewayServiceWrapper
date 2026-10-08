@@ -231,7 +231,7 @@ export default function StudentOversightDashboard() {
   const selectedSession = selectedSessionId ? sessions[selectedSessionId] : null
 
   return (
-    <div className="page" style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', flexDirection: 'column', height: 'calc(100vh - 120px)', gap: '16px' }}>
+    <div className="page w-full" style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 120px)', gap: '16px' }}>
       {/* Dashboard Topbar */}
       <div className="card" style={{ background: 'var(--card)', backdropFilter: 'blur(20px)', border: '1px solid var(--border)' }}>
         <div className="cardInner" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px' }}>

@@ -244,15 +244,15 @@ export function SuperAdminDashboard() {
         <div className="cardInner p-4 sm:p-6 md:p-8">
           
           {/* Header */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-zinc-800 pb-6 mb-6">
-            <div className="flex items-center gap-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-zinc-800 pb-5 sm:pb-6 mb-6">
+            <div className="flex items-center gap-3.5 sm:gap-4 min-w-0">
               <div className="flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-tr from-blue-700 via-indigo-800 to-purple-900 text-white shadow-lg shrink-0">
                 <Shield size={24} className="sm:w-7 sm:h-7" />
               </div>
-              <div>
-                <h2 className="text-xl sm:text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight flex items-center gap-2">
-                  Global Infrastructure & Trial Console
-                  <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+              <div className="min-w-0">
+                <h2 className="text-xl sm:text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight flex flex-wrap items-center gap-2">
+                  <span>Global Infrastructure &amp; Trial Console</span>
+                  <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 shrink-0">
                     Super Admin Only
                   </span>
                 </h2>
@@ -265,7 +265,7 @@ export function SuperAdminDashboard() {
             <button
               onClick={() => void loadData()}
               disabled={isLoading}
-              className="inline-flex items-center gap-2 px-3.5 py-2 text-xs sm:text-sm font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-700 dark:text-slate-300 transition-colors shadow-sm self-end sm:self-center"
+              className="inline-flex items-center gap-2 px-3.5 py-2 text-xs sm:text-sm font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-700 dark:text-slate-300 transition-colors shadow-sm self-end sm:self-center shrink-0"
             >
               <RefreshCw size={14} className={isLoading ? "animate-spin" : ""} /> Refresh
             </button>
@@ -275,77 +275,83 @@ export function SuperAdminDashboard() {
           {ok ? <div className="toast toastOk mb-4 flex items-center gap-2"><CheckCircle2 size={18} /> {ok}</div> : null}
 
           {/* Quick Metrics - 6 Global Governance Indicators */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3.5 sm:gap-4 mb-8">
-            <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 p-4 shadow-sm">
-              <div className="text-slate-600 dark:text-slate-300 font-semibold text-xs flex items-center gap-1.5 mb-1.5">
-                <Building2 size={16} className="text-indigo-500" /> Total Institutes
+          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2.5 sm:gap-3.5 lg:gap-4 mb-6 sm:mb-8">
+            <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 p-3 sm:p-4 shadow-sm min-w-0 flex flex-col justify-between">
+              <div className="text-slate-600 dark:text-slate-300 font-semibold text-[11px] sm:text-xs flex items-center gap-1.5 mb-1 truncate">
+                <Building2 size={15} className="text-indigo-500 shrink-0" />
+                <span className="truncate">Institutes</span>
               </div>
-              <div className="text-xl sm:text-2xl font-black text-slate-800 dark:text-white">
+              <div className="text-lg sm:text-2xl font-black text-slate-800 dark:text-white truncate">
                 {Math.max(trials.length, telemetry.length)}
               </div>
-              <div className="text-[10px] text-slate-400 mt-0.5">Enrolled schools</div>
+              <div className="text-[10px] text-slate-400 mt-0.5 truncate">Total enrolled</div>
             </div>
 
-            <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 p-4 shadow-sm">
-              <div className="text-slate-600 dark:text-slate-300 font-semibold text-xs flex items-center gap-1.5 mb-1.5">
-                <Users size={16} className="text-blue-500" /> Active Teachers
+            <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 p-3 sm:p-4 shadow-sm min-w-0 flex flex-col justify-between">
+              <div className="text-slate-600 dark:text-slate-300 font-semibold text-[11px] sm:text-xs flex items-center gap-1.5 mb-1 truncate">
+                <Users size={15} className="text-blue-500 shrink-0" />
+                <span className="truncate">Teachers</span>
               </div>
-              <div className="text-xl sm:text-2xl font-black text-slate-800 dark:text-white">
+              <div className="text-lg sm:text-2xl font-black text-slate-800 dark:text-white truncate">
                 {trials.reduce((sum, t) => sum + (t.activeTeachers || 0), 0) || telemetry.reduce((sum, t) => sum + (t.activeTeachers || 0), 0)}
               </div>
-              <div className="text-[10px] text-slate-400 mt-0.5">Across all institutes</div>
+              <div className="text-[10px] text-slate-400 mt-0.5 truncate">Active staff</div>
             </div>
 
-            <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 p-4 shadow-sm">
-              <div className="text-slate-600 dark:text-slate-300 font-semibold text-xs flex items-center gap-1.5 mb-1.5">
-                <GraduationCap size={16} className="text-emerald-500" /> Active Students
+            <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 p-3 sm:p-4 shadow-sm min-w-0 flex flex-col justify-between">
+              <div className="text-slate-600 dark:text-slate-300 font-semibold text-[11px] sm:text-xs flex items-center gap-1.5 mb-1 truncate">
+                <GraduationCap size={15} className="text-emerald-500 shrink-0" />
+                <span className="truncate">Students</span>
               </div>
-              <div className="text-xl sm:text-2xl font-black text-slate-800 dark:text-white">
+              <div className="text-lg sm:text-2xl font-black text-slate-800 dark:text-white truncate">
                 {trials.reduce((sum, t) => sum + (t.activeStudents || 0), 0) || telemetry.reduce((sum, t) => sum + (t.activeCandidates || 0), 0)}
               </div>
-              <div className="text-[10px] text-slate-400 mt-0.5">Across all institutes</div>
+              <div className="text-[10px] text-slate-400 mt-0.5 truncate">Active learners</div>
             </div>
 
-            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-50/50 to-purple-50/50 dark:from-indigo-950/20 dark:to-purple-950/20 border border-indigo-200/60 dark:border-indigo-800/60 p-4 shadow-sm">
-              <div className="text-indigo-700 dark:text-indigo-300 font-semibold text-xs flex items-center gap-1.5 mb-1.5">
-                <Clock size={16} className="text-indigo-600 dark:text-indigo-400" /> Active Trials
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-50/50 to-purple-50/50 dark:from-indigo-950/20 dark:to-purple-950/20 border border-indigo-200/60 dark:border-indigo-800/60 p-3 sm:p-4 shadow-sm min-w-0 flex flex-col justify-between">
+              <div className="text-indigo-700 dark:text-indigo-300 font-semibold text-[11px] sm:text-xs flex items-center gap-1.5 mb-1 truncate">
+                <Clock size={15} className="text-indigo-600 dark:text-indigo-400 shrink-0" />
+                <span className="truncate">Trials</span>
               </div>
-              <div className="text-xl sm:text-2xl font-black text-indigo-900 dark:text-indigo-100">
+              <div className="text-lg sm:text-2xl font-black text-indigo-900 dark:text-indigo-100 truncate">
                 {activeTrialCount} <span className="text-xs font-medium text-slate-500">/ {trialList.length}</span>
               </div>
-              <div className="text-[10px] text-slate-400 mt-0.5">7-30d pilot access</div>
+              <div className="text-[10px] text-slate-400 mt-0.5 truncate">7-30d access</div>
             </div>
             
-            <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 p-4 shadow-sm">
-              <div className="text-slate-600 dark:text-slate-300 font-semibold text-xs flex items-center gap-1.5 mb-1.5">
-                <HardDrive size={16} className="text-blue-500" /> AI Request Rate
+            <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 p-3 sm:p-4 shadow-sm min-w-0 flex flex-col justify-between">
+              <div className="text-slate-600 dark:text-slate-300 font-semibold text-[11px] sm:text-xs flex items-center gap-1.5 mb-1 truncate">
+                <HardDrive size={15} className="text-blue-500 shrink-0" />
+                <span className="truncate">AI Requests</span>
               </div>
-              <div className="text-xl sm:text-2xl font-black text-slate-800 dark:text-white">
+              <div className="text-lg sm:text-2xl font-black text-slate-800 dark:text-white truncate">
                 {telemetry.reduce((sum, t) => sum + (t.totalRequests || 0), 0)}
               </div>
-              <div className="text-[10px] text-slate-400 mt-0.5">requests / hour</div>
+              <div className="text-[10px] text-slate-400 mt-0.5 truncate">reqs / hour</div>
             </div>
             
-            <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 p-4 shadow-sm">
-              <div className="text-slate-600 dark:text-slate-300 font-semibold text-xs flex items-center gap-1.5 mb-1.5">
-                <Activity size={16} className="text-amber-500" /> AI Token Usage
+            <div className="relative overflow-hidden rounded-2xl bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 p-3 sm:p-4 shadow-sm min-w-0 flex flex-col justify-between">
+              <div className="text-slate-600 dark:text-slate-300 font-semibold text-[11px] sm:text-xs flex items-center gap-1.5 mb-1 truncate">
+                <Activity size={15} className="text-amber-500 shrink-0" />
+                <span className="truncate">AI Tokens</span>
               </div>
-              <div className="text-xl sm:text-2xl font-black text-slate-800 dark:text-white">
+              <div className="text-lg sm:text-2xl font-black text-slate-800 dark:text-white truncate">
                 {telemetry.reduce((sum, t) => sum + (t.promptTokens || 0) + (t.completionTokens || 0), 0).toLocaleString()}
               </div>
-              <div className="text-[10px] text-slate-400 mt-0.5">Total tokens consumed</div>
+              <div className="text-[10px] text-slate-400 mt-0.5 truncate">Tokens used</div>
             </div>
           </div>
 
           {/* ======================================================== */}
           {/* SECTION 1: Trial Onboarding & Governance (Super Admin)    */}
           {/* ======================================================== */}
-          <div className="mb-10 p-5 sm:p-7 rounded-3xl bg-slate-50/80 dark:bg-zinc-800/40 border border-slate-200 dark:border-zinc-700/80 shadow-sm">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+          <div className="mb-8 sm:mb-10 p-4 sm:p-6 lg:p-7 rounded-3xl bg-slate-50/80 dark:bg-zinc-800/40 border border-slate-200 dark:border-zinc-700/80 shadow-sm">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-5 sm:mb-6">
               <div>
                 <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2.5">
-                  <Sparkles size={20} className="text-amber-500" />
-                  Trial Onboarding & Institutional Governance
+                  <Sparkles size={20} className="text-amber-500 shrink-0" />
+                  <span>Trial Onboarding &amp; Institutional Governance</span>
                 </h3>
                 <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
                   Onboard pilot institutions with time-bounded access (7 to 30 days) and enforce strict quotas on onboarded teachers and students.
@@ -354,7 +360,7 @@ export function SuperAdminDashboard() {
 
               <button
                 onClick={() => setShowOnboardModal(true)}
-                className="inline-flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md hover:shadow-lg transition-all"
+                className="inline-flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-semibold rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md hover:shadow-lg transition-all shrink-0"
               >
                 <Plus size={16} /> Onboard Trial Institute
               </button>
@@ -367,16 +373,16 @@ export function SuperAdminDashboard() {
                 <div className="text-xs text-slate-400 mt-1">Click "Onboard Trial Institute" above to provision a limited-time trial (7-30 days) with teacher and student limits.</div>
               </div>
             ) : (
-              <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-sm">
-                <table className="w-full text-sm text-left whitespace-nowrap">
-                  <thead className="text-xs text-slate-500 dark:text-slate-400 uppercase bg-slate-100/70 dark:bg-zinc-800/80">
+              <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-sm scrollbar-thin">
+                <table className="w-full text-xs sm:text-sm text-left">
+                  <thead className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 uppercase bg-slate-100/70 dark:bg-zinc-800/80 tracking-wider">
                     <tr>
-                      <th className="px-5 py-3.5 font-semibold">Institute & Domain</th>
-                      <th className="px-5 py-3.5 font-semibold text-center">Trial Status</th>
-                      <th className="px-5 py-3.5 font-semibold text-center">Remaining</th>
-                      <th className="px-5 py-3.5 font-semibold text-center">Teacher Quota</th>
-                      <th className="px-5 py-3.5 font-semibold text-center">Student Quota</th>
-                      <th className="px-5 py-3.5 font-semibold text-right">Actions</th>
+                      <th className="px-3.5 sm:px-4 py-3 font-semibold">Institute &amp; Domain</th>
+                      <th className="px-3 sm:px-4 py-3 font-semibold text-center whitespace-nowrap">Trial Status</th>
+                      <th className="px-3 sm:px-4 py-3 font-semibold text-center whitespace-nowrap">Remaining</th>
+                      <th className="px-3 sm:px-4 py-3 font-semibold text-center whitespace-nowrap">Teacher Quota</th>
+                      <th className="px-3 sm:px-4 py-3 font-semibold text-center whitespace-nowrap">Student Quota</th>
+                      <th className="px-3 sm:px-4 py-3 font-semibold text-right whitespace-nowrap">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200 dark:divide-zinc-800">
@@ -390,11 +396,11 @@ export function SuperAdminDashboard() {
 
                       return (
                         <tr key={inst.institutionId} className="hover:bg-slate-50/50 dark:hover:bg-zinc-800/50 transition-colors">
-                          <td className="px-5 py-4">
-                            <div className="font-bold text-slate-900 dark:text-slate-100">{inst.name}</div>
-                            <div className="text-xs text-slate-500 font-mono mt-0.5">{inst.domain}</div>
+                          <td className="px-3.5 sm:px-4 py-3.5">
+                            <div className="font-bold text-slate-900 dark:text-slate-100 leading-snug">{inst.name}</div>
+                            <div className="text-[11px] sm:text-xs text-slate-500 font-mono mt-0.5">{inst.domain || 'Direct Access'}</div>
                           </td>
-                          <td className="px-5 py-4 text-center">
+                          <td className="px-3 sm:px-4 py-3.5 text-center whitespace-nowrap">
                             {isActive && (
                               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
                                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -412,14 +418,14 @@ export function SuperAdminDashboard() {
                               </span>
                             )}
                           </td>
-                          <td className="px-5 py-4 text-center font-medium">
+                          <td className="px-3 sm:px-4 py-3.5 text-center whitespace-nowrap font-medium">
                             {isExpired ? (
                               <span className="text-xs text-rose-500 font-semibold">Ended</span>
                             ) : isPaused ? (
                               <span className="text-xs text-amber-500 font-semibold">Suspended</span>
                             ) : (
                               <div className="flex flex-col items-center">
-                                <span className="font-bold text-slate-800 dark:text-slate-200">
+                                <span className="font-bold text-slate-800 dark:text-slate-200 text-xs sm:text-sm">
                                   {inst.daysRemaining} days left
                                 </span>
                                 {inst.trialEndsAt && (
@@ -431,8 +437,8 @@ export function SuperAdminDashboard() {
                             )}
                           </td>
                           {/* Teacher Quota */}
-                          <td className="px-5 py-4 text-center">
-                            <div className="flex flex-col items-center gap-1 min-w-[110px]">
+                          <td className="px-3 sm:px-4 py-3.5 text-center whitespace-nowrap">
+                            <div className="flex flex-col items-center gap-1 min-w-[95px] max-w-[120px] mx-auto">
                               <div className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
                                 <Users size={12} className="text-indigo-500" />
                                 {inst.activeTeachers} / {inst.maxTeachers}
@@ -448,8 +454,8 @@ export function SuperAdminDashboard() {
                             </div>
                           </td>
                           {/* Student Quota */}
-                          <td className="px-5 py-4 text-center">
-                            <div className="flex flex-col items-center gap-1 min-w-[110px]">
+                          <td className="px-3 sm:px-4 py-3.5 text-center whitespace-nowrap">
+                            <div className="flex flex-col items-center gap-1 min-w-[95px] max-w-[120px] mx-auto">
                               <div className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1">
                                 <GraduationCap size={12} className="text-blue-500" />
                                 {inst.activeStudents} / {inst.maxStudents}
@@ -465,15 +471,15 @@ export function SuperAdminDashboard() {
                             </div>
                           </td>
                           {/* Action Buttons */}
-                          <td className="px-5 py-4 text-right">
-                            <div className="inline-flex items-center gap-1.5">
+                          <td className="px-3 sm:px-4 py-3.5 text-right whitespace-nowrap">
+                            <div className="inline-flex items-center gap-1">
                               {isActive ? (
                                 <button
                                   onClick={() => void handleToggleTrial(inst, 'pause')}
                                   title="Pause Trial Access"
                                   className="p-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:hover:bg-amber-900/50 dark:text-amber-300 transition-colors"
                                 >
-                                  <Pause size={14} />
+                                  <Pause size={13} />
                                 </button>
                               ) : (
                                 <button
@@ -481,7 +487,7 @@ export function SuperAdminDashboard() {
                                   title="Resume Trial Access"
                                   className="p-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 dark:text-emerald-300 transition-colors"
                                 >
-                                  <Play size={14} />
+                                  <Play size={13} />
                                 </button>
                               )}
 
@@ -492,7 +498,7 @@ export function SuperAdminDashboard() {
                                   setExtendDays(7)
                                 }}
                                 title="Extend Duration"
-                                className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/50 dark:text-indigo-300 transition-colors"
+                                className="px-2 py-1 text-xs font-semibold rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/50 dark:text-indigo-300 transition-colors"
                               >
                                 + Extend
                               </button>
@@ -507,7 +513,7 @@ export function SuperAdminDashboard() {
                                 title="Adjust Quotas"
                                 className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-zinc-800 dark:hover:bg-zinc-700 dark:text-slate-300 transition-colors"
                               >
-                                <Sliders size={14} />
+                                <Sliders size={13} />
                               </button>
 
                               <button
@@ -515,7 +521,7 @@ export function SuperAdminDashboard() {
                                 title="Revoke & Delete Trial"
                                 className="p-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 dark:bg-rose-950/40 dark:hover:bg-rose-900/50 dark:text-rose-400 transition-colors"
                               >
-                                <Trash2 size={14} />
+                                <Trash2 size={13} />
                               </button>
                             </div>
                           </td>
@@ -540,7 +546,7 @@ export function SuperAdminDashboard() {
               </div>
             ) : (
               <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-zinc-700 bg-white/50 dark:bg-zinc-800/50 backdrop-blur-xl">
-                <table className="w-full text-sm text-left whitespace-nowrap">
+                <table className="w-full text-sm text-left whitespace-nowrap min-w-[650px]">
                   <thead className="text-xs text-slate-500 dark:text-slate-400 uppercase bg-slate-50/80 dark:bg-zinc-900/80">
                     <tr>
                       <th className="px-4 sm:px-6 py-3 sm:py-4 font-semibold">School District Name</th>
@@ -594,7 +600,7 @@ export function SuperAdminDashboard() {
               </div>
             ) : (
               <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-zinc-700 bg-white/50 dark:bg-zinc-800/50 backdrop-blur-xl">
-                <table className="w-full text-sm text-left whitespace-nowrap">
+                <table className="w-full text-sm text-left whitespace-nowrap min-w-[760px]">
                   <thead className="text-xs text-slate-500 dark:text-slate-400 uppercase bg-slate-50/80 dark:bg-zinc-900/80">
                     <tr>
                       <th className="px-4 sm:px-6 py-3 sm:py-4 font-semibold">Tenant Name</th>

@@ -39,10 +39,10 @@ import { AnimatePresence, motion } from 'framer-motion'
 
 function AuthedLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="max-w-[1100px] mx-auto px-3 sm:px-6 w-full pb-10">
-      <div className="flex flex-col md:flex-row gap-4 md:gap-6 relative">
+    <div className="w-full max-w-[1600px] 2xl:max-w-[1720px] mx-auto px-3 sm:px-6 lg:px-8 pb-28 md:pb-12 transition-all">
+      <div className="flex flex-col md:flex-row gap-4 lg:gap-6 relative w-full items-start">
         <Sidebar />
-        <div className="flex-1 min-w-0">{children}</div>
+        <main className="flex-1 min-w-0 w-full">{children}</main>
       </div>
     </div>
   )
@@ -55,6 +55,7 @@ function PageTransition({ children }: { children: ReactNode }) {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
       transition={{ duration: 0.3, ease: 'easeInOut' }}
+      className="w-full flex-1 flex flex-col"
     >
       {children}
     </motion.div>

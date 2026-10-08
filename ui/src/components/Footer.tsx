@@ -10,7 +10,7 @@ export function Footer() {
       <div className="h-px w-full bg-gradient-to-r from-transparent via-slate-300 dark:via-zinc-700 to-transparent opacity-50"></div>
       
       <div className="bg-white/40 dark:bg-zinc-950/40 backdrop-blur-3xl -webkit-backdrop-filter transform-gpu border-t border-white/40 dark:border-white/5 pb-8 pt-12 md:pb-12 md:pt-16">
-        <div className="max-w-[1100px] mx-auto px-6">
+        <div className="w-full max-w-[1600px] 2xl:max-w-[1720px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-10 md:gap-8 mb-12">
             
             {/* Brand Column */}

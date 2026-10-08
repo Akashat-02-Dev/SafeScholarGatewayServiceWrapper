@@ -11,8 +11,8 @@ export function Navbar() {
   const { isSuperAdmin } = useRoleFilter()
 
   return (
-    <div className="sticky top-0 z-50 m-4 rounded-[2rem] bg-white/60 dark:bg-zinc-900/40 backdrop-blur-2xl -webkit-backdrop-filter transform-gpu border border-white/40 dark:border-white/[0.04] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-glass-dark">
-      <div className="max-w-[1100px] mx-auto px-4 sm:px-6 py-2 sm:py-3 flex items-center gap-2 sm:gap-4">
+    <div className="sticky top-0 z-50 mx-2 sm:mx-4 my-2 sm:my-3 rounded-2xl sm:rounded-[2rem] bg-white/70 dark:bg-zinc-900/60 backdrop-blur-2xl -webkit-backdrop-filter transform-gpu border border-white/40 dark:border-white/[0.04] shadow-[0_8px_30px_rgb(0,0,0,0.04)] dark:shadow-glass-dark">
+      <div className="w-full max-w-[1600px] 2xl:max-w-[1720px] mx-auto px-3 sm:px-6 lg:px-8 py-2 sm:py-2.5 flex items-center gap-2 sm:gap-4">
         <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: 'easeOut' }}>
           <Link to="/dashboard" className="flex items-center gap-2 sm:gap-3 font-serif font-bold text-base sm:text-lg text-blue-900 dark:text-blue-100">
             <span className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white/75 dark:bg-zinc-800/50 shadow-sm border border-blue-900/10 dark:border-white/[0.04] shrink-0">
@@ -22,12 +22,14 @@ export function Navbar() {
           </Link>
         </motion.div>
 
-        <RoleFilterBar />
+        <div className="hidden md:flex items-center">
+          <RoleFilterBar />
+        </div>
 
         {isSuperAdmin && (
           <Link
             to="/superadmin"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-600 text-white text-xs font-bold shadow-sm hover:shadow-md hover:scale-105 transition-all shrink-0"
+            className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-600 text-white text-xs font-bold shadow-sm hover:shadow-md transition-all shrink-0"
             title="Open Super Admin Hub: Onboard Institutes, Manage Quotas & AI Usage"
           >
             <Shield size={14} />

@@ -149,7 +149,7 @@ export const RAGIngestionPanel: React.FC = () => {
   );
 
   return (
-    <div className="page" style={{ maxWidth: '1100px', margin: '0 auto' }}>
+    <div className="page w-full">
       {/* Header */}
       <header style={{ marginBottom: '24px' }}>
         <h1 className="pageTitle" style={{ fontSize: '26px', color: 'var(--c-navy)', fontFamily: "'Merriweather', Georgia, serif", display: 'flex', alignItems: 'center', gap: '10px' }}>

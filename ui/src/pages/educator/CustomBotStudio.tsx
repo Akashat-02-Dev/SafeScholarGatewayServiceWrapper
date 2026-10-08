@@ -144,7 +144,7 @@ export default function CustomBotStudio() {
   }
 
   return (
-    <div className="page" style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+    <div className="page w-full" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       {/* Title */}
       <div>
         <h1 className="pageTitle" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>

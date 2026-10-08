@@ -50,69 +50,63 @@ export function Sidebar() {
   const showInstitute = isSuperAdmin ? (roleFilter === 'all' || roleFilter === 'institute') : (effectiveRole === 'institute' || effectiveRole === 'all');
 
   return (
-    <>
-      {/* Mobile Dock / Desktop Sidebar */}
-      <div className="fixed md:relative bottom-4 md:bottom-auto inset-x-4 md:inset-x-auto z-50 md:z-40 w-auto md:w-64 shrink-0 bg-white/80 md:bg-white/70 dark:bg-zinc-900/80 md:dark:bg-zinc-900/60 backdrop-blur-3xl md:backdrop-blur-2xl -webkit-backdrop-filter transform-gpu border border-white/60 dark:border-white/[0.06] rounded-3xl md:rounded-[2rem] shadow-2xl md:shadow-[0_8px_30px_rgb(0,0,0,0.04)] md:dark:shadow-glass-dark p-2 md:p-4 flex flex-col">
-        <div className="flex flex-row md:flex-col gap-1 sm:gap-2 relative overflow-x-auto md:overflow-visible scrollbar-hide snap-x items-center md:items-stretch" style={{ WebkitOverflowScrolling: 'touch' }}>
-          
-          <SidebarLink to="/dashboard" icon={LayoutGrid} label="Dashboard" />
+    <aside className="fixed md:relative bottom-3 sm:bottom-4 md:bottom-auto inset-x-2 sm:inset-x-4 md:inset-x-auto z-50 md:z-40 w-auto md:w-64 shrink-0 bg-white/85 md:bg-white/70 dark:bg-zinc-900/85 md:dark:bg-zinc-900/60 backdrop-blur-3xl md:backdrop-blur-2xl -webkit-backdrop-filter transform-gpu border border-white/60 dark:border-white/[0.06] rounded-3xl md:rounded-[2rem] shadow-2xl md:shadow-[0_8px_30px_rgb(0,0,0,0.04)] md:dark:shadow-glass-dark p-1.5 sm:p-2 md:p-4 flex flex-col">
+      <div className="flex flex-row md:flex-col gap-1 sm:gap-2 relative overflow-x-auto md:overflow-visible scrollbar-hide snap-x items-center md:items-stretch" style={{ WebkitOverflowScrolling: 'touch' }}>
+        
+        <SidebarLink to="/dashboard" icon={LayoutGrid} label="Dashboard" />
 
-          {/* SUPER ADMIN SECTION */}
-          {isSuperAdmin && (
-            <div className="flex flex-row md:flex-col gap-1 sm:gap-1.5 md:mt-2 pb-1.5 md:border-b md:border-slate-200/60 md:dark:border-white/10">
-              <div className="hidden md:flex items-center gap-1.5 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 bg-amber-50/80 dark:bg-amber-950/40 rounded-lg">
-                <Shield size={13} />
-                <span>Super Admin</span>
-              </div>
-              <SidebarLink to="/superadmin" icon={Shield} label="Super Admin Hub" />
+        {/* SUPER ADMIN SECTION */}
+        {isSuperAdmin && (
+          <div className="flex flex-row md:flex-col gap-1 sm:gap-1.5 md:mt-2 pb-1.5 md:border-b md:border-slate-200/60 md:dark:border-white/10">
+            <div className="hidden md:flex items-center gap-1.5 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 bg-amber-50/80 dark:bg-amber-950/40 rounded-lg">
+              <Shield size={13} />
+              <span>Super Admin</span>
             </div>
-          )}
+            <SidebarLink to="/superadmin" icon={Shield} label="Super Admin Hub" />
+          </div>
+        )}
 
-          {/* TEACHER SECTION */}
-          {showTeacher && (
-            <div className="flex flex-row md:flex-col gap-1 sm:gap-1.5 md:mt-2">
-              <div className="hidden md:flex items-center gap-1.5 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-blue-700 dark:text-blue-400 bg-blue-50/60 dark:bg-blue-950/30 rounded-lg">
-                <GraduationCap size={13} />
-                <span>Teachers</span>
-              </div>
-              {teacherRoutes.map((route) => (
-                <SidebarLink key={route.path} to={route.path} icon={route.icon} label={route.label} />
-              ))}
+        {/* TEACHER SECTION */}
+        {showTeacher && (
+          <div className="flex flex-row md:flex-col gap-1 sm:gap-1.5 md:mt-2">
+            <div className="hidden md:flex items-center gap-1.5 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-blue-700 dark:text-blue-400 bg-blue-50/60 dark:bg-blue-950/30 rounded-lg">
+              <GraduationCap size={13} />
+              <span>Teachers</span>
             </div>
-          )}
+            {teacherRoutes.map((route) => (
+              <SidebarLink key={route.path} to={route.path} icon={route.icon} label={route.label} />
+            ))}
+          </div>
+        )}
 
-          {/* STUDENT SECTION */}
-          {showStudent && (
-            <div className="flex flex-row md:flex-col gap-1 sm:gap-1.5 md:mt-3">
-              <div className="hidden md:flex items-center gap-1.5 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 bg-emerald-50/60 dark:bg-emerald-950/30 rounded-lg">
-                <Backpack size={13} />
-                <span>Students</span>
-              </div>
-              {studentRoutes.map((route) => (
-                <SidebarLink key={route.path} to={route.path} icon={route.icon} label={route.label} />
-              ))}
+        {/* STUDENT SECTION */}
+        {showStudent && (
+          <div className="flex flex-row md:flex-col gap-1 sm:gap-1.5 md:mt-3">
+            <div className="hidden md:flex items-center gap-1.5 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 bg-emerald-50/60 dark:bg-emerald-950/30 rounded-lg">
+              <Backpack size={13} />
+              <span>Students</span>
             </div>
-          )}
+            {studentRoutes.map((route) => (
+              <SidebarLink key={route.path} to={route.path} icon={route.icon} label={route.label} />
+            ))}
+          </div>
+        )}
 
-          {/* INSTITUTE MANAGEMENT SECTION */}
-          {showInstitute && (
-            <div className="flex flex-row md:flex-col gap-1 sm:gap-1.5 md:mt-3">
-              <div className="hidden md:flex items-center gap-1.5 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-purple-700 dark:text-purple-400 bg-purple-50/60 dark:bg-purple-950/30 rounded-lg">
-                <Building2 size={13} />
-                <span>Institute Mgmt</span>
-              </div>
-              {instituteRoutes.map((route) => (
-                <SidebarLink key={route.path} to={route.path} icon={route.icon} label={route.label} />
-              ))}
+        {/* INSTITUTE MANAGEMENT SECTION */}
+        {showInstitute && (
+          <div className="flex flex-row md:flex-col gap-1 sm:gap-1.5 md:mt-3">
+            <div className="hidden md:flex items-center gap-1.5 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-purple-700 dark:text-purple-400 bg-purple-50/60 dark:bg-purple-950/30 rounded-lg">
+              <Building2 size={13} />
+              <span>Institute Mgmt</span>
             </div>
-          )}
+            {instituteRoutes.map((route) => (
+              <SidebarLink key={route.path} to={route.path} icon={route.icon} label={route.label} />
+            ))}
+          </div>
+        )}
 
-        </div>
       </div>
-      
-      {/* Mobile Spacer so content isn't hidden behind the dock */}
-      <div className="block md:hidden h-24 shrink-0 w-full" />
-    </>
+    </aside>
   );
 }
 

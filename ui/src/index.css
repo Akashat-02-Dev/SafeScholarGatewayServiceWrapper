@@ -42,7 +42,7 @@
 @layer components {
   /* PAGE STRUCTURE */
   .page {
-    @apply w-full max-w-7xl mx-auto py-4 sm:py-6 animate-slide-up;
+    @apply w-full mx-auto py-2 sm:py-4 md:py-6 animate-slide-up;
   }
   .pageTitle {
     @apply text-2xl font-bold text-slate-800 dark:text-zinc-50 tracking-tight;
