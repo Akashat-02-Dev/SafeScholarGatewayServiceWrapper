@@ -44,6 +44,10 @@ func Routes() []Route {
 		{Method: http.MethodPost, PathPrefix: "/api/auth/reset-password", AuthRequired: false},
 		{Method: http.MethodPost, PathPrefix: "/api/auth/logout", AuthRequired: true},
 		{Method: http.MethodGet, PathPrefix: "/api/auth/me", AuthRequired: true},
+		{Method: http.MethodGet, PathPrefix: "/api/auth/profile", AuthRequired: true},
+		{Method: http.MethodPatch, PathPrefix: "/api/auth/profile", AuthRequired: true},
+		{Method: http.MethodPost, PathPrefix: "/api/auth/profile/request-change", AuthRequired: true},
+		{Method: http.MethodPost, PathPrefix: "/api/auth/change-password", AuthRequired: true},
 		{Method: http.MethodGet, PathPrefix: "/api/v1/dashboard/metrics", AuthRequired: true},
 
 		{Method: http.MethodGet, PathPrefix: "/api/oauth/google/start", AuthRequired: false},

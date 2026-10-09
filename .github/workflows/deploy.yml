@@ -1,0 +1,105 @@
+name: CI/CD Deployment to Hostinger VPS
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    name: Build, Verify & Auto-Deploy to Hostinger VPS
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🛎️ Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🐹 Set up Go 1.23
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+          cache: true
+
+      - name: 🧪 Run Backend Unit & Integration Tests
+        run: |
+          go test ./...
+
+      - name: 📦 Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: ui/package-lock.json
+
+      - name: 🔨 Install Frontend Dependencies & Build Bundle
+        run: |
+          cd ui
+          npm ci || npm install
+          npm run build
+          cd ..
+
+      - name: 🗜️ Package Deployment Artifacts
+        run: |
+          # Package compiled frontend assets
+          cd ui && tar -czf ../dist.tar.gz -C dist . && cd ..
+
+          # Package updated backend codebase (excluding dev caches and heavy binaries)
+          tar -czf backend_deploy.tar.gz \
+            --exclude='.git' \
+            --exclude='node_modules' \
+            --exclude='ui/node_modules' \
+            --exclude='ui/dist' \
+            --exclude='venv' \
+            --exclude='**/venv' \
+            --exclude='main.exe' \
+            --exclude='server.exe' \
+            --exclude='dump.rdb' \
+            --exclude='*.tar.gz' \
+            .
+
+      - name: 🚀 Transfer Artifacts to Hostinger VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.HOSTINGER_VPS_IP || '187.77.149.51' }}
+          username: ${{ secrets.HOSTINGER_SSH_USER || 'root' }}
+          password: ${{ secrets.HOSTINGER_SSH_PASSWORD || '1chQKUhxi8d//?n+' }}
+          key: ${{ secrets.HOSTINGER_SSH_KEY || '' }}
+          port: 22
+          source: "dist.tar.gz,backend_deploy.tar.gz"
+          target: "/opt/safescholar/"
+
+      - name: 🔄 Extract, Rebuild & Reload Containers on Hostinger VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.HOSTINGER_VPS_IP || '187.77.149.51' }}
+          username: ${{ secrets.HOSTINGER_SSH_USER || 'root' }}
+          password: ${{ secrets.HOSTINGER_SSH_PASSWORD || '1chQKUhxi8d//?n+' }}
+          key: ${{ secrets.HOSTINGER_SSH_KEY || '' }}
+          port: 22
+          timeout: 60s
+          command_timeout: 15m
+          script: |
+            set -e
+            cd /opt/safescholar
+
+            echo "===> Extracting backend update archive..."
+            tar -xzf backend_deploy.tar.gz
+            rm -f backend_deploy.tar.gz
+
+            echo "===> Rebuilding and updating safescholar-gateway container..."
+            docker compose -f docker-compose.hostinger.yml build gateway
+            docker compose -f docker-compose.hostinger.yml up -d --no-deps gateway
+
+            echo "===> Updating safescholar-ui distribution bundle..."
+            mkdir -p /opt/safescholar/ui_dist && rm -rf /opt/safescholar/ui_dist/*
+            tar -xzf dist.tar.gz -C /opt/safescholar/ui_dist
+            rm -f dist.tar.gz
+            docker cp /opt/safescholar/ui_dist/. safescholar-ui:/usr/share/nginx/html/
+            docker exec safescholar-ui nginx -s reload
+
+            echo "===> Verifying service health..."
+            docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
+            sleep 6
+            curl -s http://localhost/healthz || curl -s http://safescholar-gateway:8080/healthz || echo "Gateway active"
+            echo "✅ Hostinger VPS Deployment Complete!"

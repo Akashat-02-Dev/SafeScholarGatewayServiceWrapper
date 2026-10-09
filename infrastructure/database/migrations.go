@@ -878,6 +878,20 @@ create policy approval_requests_isolation on institution_approval_requests using
 );
 `,
 		},
+		{
+			Name: "010_profile_and_approval_workflow",
+			SQL: `
+create index if not exists idx_approval_requests_user_id on institution_approval_requests(user_id, status);
+
+drop policy if exists approval_requests_isolation on institution_approval_requests;
+create policy approval_requests_isolation on institution_approval_requests using (
+  current_setting('app.allow_login', true) = 'true'
+  or user_id::text = current_setting('app.user_id', true)
+  or institution_id::text = current_setting('app.institution_id', true)
+  or current_setting('app.is_sys_admin', true) = 'true'
+);
+`,
+		},
 	}
 }
 

@@ -947,51 +947,94 @@ func (s *AuthService) ApproveUser(ctx context.Context, reviewerUserID, reviewerI
 		}
 	}
 
-	_, err = tx.Exec(ctx, `update users set status=$1, updated_at=now() where user_id=nullif($2,'')::uuid`, st, uid)
-	if err != nil {
-		return err
-	}
-
-	// Fetch requested role from pending request if roleID is not explicitly provided
-	var requestedRole string
+	// Check if this pending request is a profile edit request
+	var reqType string
+	var reqMetaBytes []byte
 	_ = tx.QueryRow(ctx, `
-		select requested_role from institution_approval_requests 
+		select coalesce(request_type, ''), coalesce(metadata, '{}'::jsonb)::text
+		from institution_approval_requests 
 		where user_id=nullif($1,'')::uuid and status='PENDING' 
 		order by created_at desc limit 1
-	`, uid).Scan(&requestedRole)
+	`, uid).Scan(&reqType, &reqMetaBytes)
 
-	// If status is approved ('active'), assign appropriate role
-	if st == "active" {
-		targetRoleID := rid
-		if targetRoleID == "" && requestedRole != "" {
-			// Find existing role matching requested_role
-			_ = tx.QueryRow(ctx, `
-				select role_id::text from roles 
-				where (institution_id = nullif($1,'')::uuid or institution_id is null) 
-				  and lower(name) = lower($2)
-				order by (institution_id is not null) desc
-				limit 1
-			`, userInst, requestedRole).Scan(&targetRoleID)
-
-			// If still empty, create it
-			if targetRoleID == "" {
-				_ = tx.QueryRow(ctx, `
-					insert into roles(institution_id, name, description, is_system_role, created_at)
-					values (nullif($1,'')::uuid, lower($2), initcap($2) || ' Role', false, now())
-					returning role_id::text
-				`, userInst, requestedRole).Scan(&targetRoleID)
+	if reqType == "profile_edit" {
+		if st == "active" {
+			var metaMap map[string]any
+			if len(reqMetaBytes) > 0 {
+				_ = json.Unmarshal(reqMetaBytes, &metaMap)
+			}
+			if reqChanges, ok := metaMap["requested_changes"].(map[string]any); ok {
+				var currentMetaBytes []byte
+				var currFirstName, currLastName string
+				_ = tx.QueryRow(ctx, `select coalesce(first_name,''), coalesce(last_name,''), coalesce(metadata, '{}'::jsonb)::text from users where user_id=nullif($1,'')::uuid`, uid).Scan(&currFirstName, &currLastName, &currentMetaBytes)
+				userMeta := make(map[string]any)
+				if len(currentMetaBytes) > 0 {
+					_ = json.Unmarshal(currentMetaBytes, &userMeta)
+				}
+				for k, v := range reqChanges {
+					if k == "firstName" {
+						if s, ok := v.(string); ok && s != "" {
+							currFirstName = s
+						}
+					} else if k == "lastName" {
+						if s, ok := v.(string); ok && s != "" {
+							currLastName = s
+						}
+					} else {
+						userMeta[k] = v
+					}
+				}
+				updatedMetaJSON, _ := json.Marshal(userMeta)
+				_, _ = tx.Exec(ctx, `update users set first_name=$1, last_name=$2, metadata=$3::jsonb, updated_at=now() where user_id=nullif($4,'')::uuid`, currFirstName, currLastName, string(updatedMetaJSON), uid)
 			}
 		}
+	} else {
+		_, err = tx.Exec(ctx, `update users set status=$1, updated_at=now() where user_id=nullif($2,'')::uuid`, st, uid)
+		if err != nil {
+			return err
+		}
 
-		if targetRoleID != "" {
-			_, err = tx.Exec(ctx, `
-				insert into user_roles(user_id, role_id)
-				values (nullif($1,'')::uuid, nullif($2,'')::uuid)
-				on conflict (user_id, role_id) do nothing`,
-				uid, targetRoleID,
-			)
-			if err != nil {
-				return err
+		// Fetch requested role from pending request if roleID is not explicitly provided
+		var requestedRole string
+		_ = tx.QueryRow(ctx, `
+			select requested_role from institution_approval_requests 
+			where user_id=nullif($1,'')::uuid and status='PENDING' 
+			order by created_at desc limit 1
+		`, uid).Scan(&requestedRole)
+
+		// If status is approved ('active'), assign appropriate role
+		if st == "active" {
+			targetRoleID := rid
+			if targetRoleID == "" && requestedRole != "" {
+				// Find existing role matching requested_role
+				_ = tx.QueryRow(ctx, `
+					select role_id::text from roles 
+					where (institution_id = nullif($1,'')::uuid or institution_id is null) 
+					  and lower(name) = lower($2)
+					order by (institution_id is not null) desc
+					limit 1
+				`, userInst, requestedRole).Scan(&targetRoleID)
+
+				// If still empty, create it
+				if targetRoleID == "" {
+					_ = tx.QueryRow(ctx, `
+						insert into roles(institution_id, name, description, is_system_role, created_at)
+						values (nullif($1,'')::uuid, lower($2), initcap($2) || ' Role', false, now())
+						returning role_id::text
+					`, userInst, requestedRole).Scan(&targetRoleID)
+				}
+			}
+
+			if targetRoleID != "" {
+				_, err = tx.Exec(ctx, `
+					insert into user_roles(user_id, role_id)
+					values (nullif($1,'')::uuid, nullif($2,'')::uuid)
+					on conflict (user_id, role_id) do nothing`,
+					uid, targetRoleID,
+				)
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -1821,6 +1864,454 @@ func (s *AuthService) ResetPassword(ctx context.Context, token string, newPasswo
 			Metadata: map[string]any{
 				"timestamp": time.Now().UTC(),
 			},
+		})
+	}
+
+	return nil
+}
+
+type UserProfile struct {
+	UserID          string                   `json:"userId"`
+	InstitutionID   string                   `json:"institutionId"`
+	InstitutionName string                   `json:"institutionName"`
+	InstitutionType string                   `json:"institutionType"`
+	Domain          string                   `json:"domain"`
+	Email           string                   `json:"email"`
+	FirstName       string                   `json:"firstName"`
+	LastName        string                   `json:"lastName"`
+	DisplayName     string                   `json:"displayName"`
+	Phone           string                   `json:"phone"`
+	Bio             string                   `json:"bio"`
+	IsSysAdmin      bool                     `json:"isSysAdmin"`
+	Roles           []string                 `json:"roles"`
+	Permissions     []string                 `json:"permissions"`
+	Metadata        map[string]any           `json:"metadata"`
+	PendingRequest  *ApprovalRequestSummary  `json:"pendingRequest,omitempty"`
+	RequestHistory  []ApprovalRequestSummary `json:"requestHistory"`
+	CreatedAt       time.Time                `json:"createdAt"`
+	LastLogin       *time.Time               `json:"lastLogin,omitempty"`
+}
+
+type UpdateProfileRequest struct {
+	DisplayName             string         `json:"displayName"`
+	Phone                   string         `json:"phone"`
+	Bio                     string         `json:"bio"`
+	NotificationPreferences map[string]any `json:"notificationPreferences"`
+	AvatarURL               string         `json:"avatarUrl"`
+}
+
+type ProfileChangeRequestPayload struct {
+	RequestedChanges map[string]any `json:"requestedChanges"`
+	Reason           string         `json:"reason"`
+}
+
+func (s *AuthService) GetProfile(ctx context.Context, userID string) (UserProfile, error) {
+	if s.pool == nil {
+		return UserProfile{}, errors.New("database pool unavailable")
+	}
+	uid := strings.TrimSpace(userID)
+	if uid == "" {
+		return UserProfile{}, errors.New("user ID required")
+	}
+
+	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return UserProfile{}, err
+	}
+	defer func() { _ = tx.Rollback(context.Background()) }()
+
+	if err := database.ApplyAppContext(ctx, tx, database.AppContext{AllowLogin: true, UserID: uid}); err != nil {
+		return UserProfile{}, err
+	}
+
+	var instID, email, firstName, lastName string
+	var metaBytes []byte
+	var isSysAdmin bool
+	var createdAt time.Time
+	var lastLogin *time.Time
+
+	err = tx.QueryRow(ctx, `
+		select coalesce(institution_id::text,''), email, coalesce(first_name,''), coalesce(last_name,''), 
+		       coalesce(metadata, '{}'::jsonb)::text, is_sys_admin, created_at, last_login
+		from users
+		where user_id = nullif($1,'')::uuid
+		limit 1
+	`, uid).Scan(&instID, &email, &firstName, &lastName, &metaBytes, &isSysAdmin, &createdAt, &lastLogin)
+	if err != nil {
+		return UserProfile{}, fmt.Errorf("user not found: %w", err)
+	}
+
+	var instName, instType, domain string
+	if instID != "" {
+		_ = tx.QueryRow(ctx, `
+			select coalesce(name,''), coalesce(institute_type,''), coalesce(domain,'')
+			from institutions
+			where institution_id = nullif($1,'')::uuid
+		`, instID).Scan(&instName, &instType, &domain)
+	}
+
+	roles, roleIDs, _ := loadUserRoles(ctx, tx, instID, uid)
+	perms, _ := loadUserPermissions(ctx, tx, instID, roleIDs)
+	if isSysAdmin {
+		perms = append(perms, "SUPER_ADMIN")
+	}
+
+	meta := make(map[string]any)
+	if len(metaBytes) > 0 {
+		_ = json.Unmarshal(metaBytes, &meta)
+	}
+
+	displayName := ""
+	if p, ok := meta["preferred_name"].(string); ok && p != "" {
+		displayName = p
+	} else {
+		displayName = strings.TrimSpace(firstName + " " + lastName)
+	}
+	phone := ""
+	if p, ok := meta["phone"].(string); ok {
+		phone = p
+	}
+	bio := ""
+	if b, ok := meta["bio"].(string); ok {
+		bio = b
+	}
+
+	var pendingReq *ApprovalRequestSummary
+	var pReqID, pInstID, pUID, pStatus, pReqType, pReason string
+	var pMetaBytes []byte
+	var pCreatedAt time.Time
+	var pReviewedAt *time.Time
+	err = tx.QueryRow(ctx, `
+		select request_id::text, coalesce(institution_id::text,''), user_id::text, status, 
+		       coalesce(request_type,''), coalesce(metadata, '{}'::jsonb)::text, 
+		       coalesce(rejection_reason,''), created_at, reviewed_at
+		from institution_approval_requests
+		where user_id = nullif($1,'')::uuid and status = 'PENDING'
+		order by created_at desc
+		limit 1
+	`, uid).Scan(&pReqID, &pInstID, &pUID, &pStatus, &pReqType, &pMetaBytes, &pReason, &pCreatedAt, &pReviewedAt)
+	if err == nil {
+		pMeta := make(map[string]any)
+		if len(pMetaBytes) > 0 {
+			_ = json.Unmarshal(pMetaBytes, &pMeta)
+		}
+		var pRevStr string
+		if pReviewedAt != nil {
+			pRevStr = pReviewedAt.Format(time.RFC3339)
+		}
+		pendingReq = &ApprovalRequestSummary{
+			RequestID:       pReqID,
+			InstitutionID:   pInstID,
+			InstitutionName: instName,
+			UserID:          pUID,
+			Email:           email,
+			FirstName:       firstName,
+			LastName:        lastName,
+			RequestType:     pReqType,
+			Status:          pStatus,
+			Metadata:        pMeta,
+			RejectionReason: pReason,
+			CreatedAt:       pCreatedAt.Format(time.RFC3339),
+			ReviewedAt:      pRevStr,
+		}
+	}
+
+	var history []ApprovalRequestSummary
+	hRows, err := tx.Query(ctx, `
+		select request_id::text, coalesce(institution_id::text,''), user_id::text, status, 
+		       coalesce(request_type,''), coalesce(metadata, '{}'::jsonb)::text, 
+		       coalesce(rejection_reason,''), created_at, reviewed_at
+		from institution_approval_requests
+		where user_id = nullif($1,'')::uuid
+		order by created_at desc
+		limit 5
+	`, uid)
+	if err == nil {
+		defer hRows.Close()
+		for hRows.Next() {
+			var hReqID, hInstID, hUID, hStatus, hReqType, hReason string
+			var hMetaBytes []byte
+			var hCreatedAt time.Time
+			var hReviewedAt *time.Time
+			if err := hRows.Scan(&hReqID, &hInstID, &hUID, &hStatus, &hReqType, &hMetaBytes, &hReason, &hCreatedAt, &hReviewedAt); err == nil {
+				hMeta := make(map[string]any)
+				if len(hMetaBytes) > 0 {
+					_ = json.Unmarshal(hMetaBytes, &hMeta)
+				}
+				var hRevStr string
+				if hReviewedAt != nil {
+					hRevStr = hReviewedAt.Format(time.RFC3339)
+				}
+				history = append(history, ApprovalRequestSummary{
+					RequestID:       hReqID,
+					InstitutionID:   hInstID,
+					InstitutionName: instName,
+					UserID:          hUID,
+					Email:           email,
+					FirstName:       firstName,
+					LastName:        lastName,
+					RequestType:     hReqType,
+					Status:          hStatus,
+					Metadata:        hMeta,
+					RejectionReason: hReason,
+					CreatedAt:       hCreatedAt.Format(time.RFC3339),
+					ReviewedAt:      hRevStr,
+				})
+			}
+		}
+	}
+
+	_ = tx.Commit(ctx)
+
+	return UserProfile{
+		UserID:          uid,
+		InstitutionID:   instID,
+		InstitutionName: instName,
+		InstitutionType: instType,
+		Domain:          domain,
+		Email:           email,
+		FirstName:       firstName,
+		LastName:        lastName,
+		DisplayName:     displayName,
+		Phone:           phone,
+		Bio:             bio,
+		IsSysAdmin:      isSysAdmin,
+		Roles:           roles,
+		Permissions:     perms,
+		Metadata:        meta,
+		PendingRequest:  pendingReq,
+		RequestHistory:  history,
+		CreatedAt:       createdAt,
+		LastLogin:       lastLogin,
+	}, nil
+}
+
+func (s *AuthService) UpdateProfile(ctx context.Context, userID string, req UpdateProfileRequest) error {
+	if s.pool == nil {
+		return errors.New("database pool unavailable")
+	}
+	uid := strings.TrimSpace(userID)
+	if uid == "" {
+		return errors.New("user ID required")
+	}
+
+	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback(context.Background()) }()
+
+	if err := database.ApplyAppContext(ctx, tx, database.AppContext{AllowLogin: true, UserID: uid}); err != nil {
+		return err
+	}
+
+	var metaBytes []byte
+	err = tx.QueryRow(ctx, `select coalesce(metadata, '{}'::jsonb)::text from users where user_id = nullif($1,'')::uuid`, uid).Scan(&metaBytes)
+	if err != nil {
+		return fmt.Errorf("user not found: %w", err)
+	}
+
+	meta := make(map[string]any)
+	if len(metaBytes) > 0 {
+		_ = json.Unmarshal(metaBytes, &meta)
+	}
+
+	if req.DisplayName != "" {
+		meta["preferred_name"] = strings.TrimSpace(req.DisplayName)
+	}
+	if req.Phone != "" {
+		meta["phone"] = strings.TrimSpace(req.Phone)
+	}
+	if req.Bio != "" {
+		meta["bio"] = strings.TrimSpace(req.Bio)
+	}
+	if req.AvatarURL != "" {
+		meta["avatar_url"] = strings.TrimSpace(req.AvatarURL)
+	}
+	if req.NotificationPreferences != nil {
+		meta["notifications"] = req.NotificationPreferences
+	}
+
+	updatedJSON, err := json.Marshal(meta)
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(ctx, `update users set metadata = $1::jsonb, updated_at = now() where user_id = nullif($2,'')::uuid`, string(updatedJSON), uid)
+	if err != nil {
+		return err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return err
+	}
+
+	if s.auditLogger != nil {
+		_ = s.auditLogger.Log(ctx, security.AuditEvent{
+			UserID:     uid,
+			Action:     "PROFILE_UPDATED",
+			Resource:   "user",
+			ResourceID: uid,
+			CreatedAt:  time.Now().UTC(),
+		})
+	}
+
+	return nil
+}
+
+func (s *AuthService) RequestProfileChange(ctx context.Context, userID, userInstitutionID string, req ProfileChangeRequestPayload) error {
+	if s.pool == nil {
+		return errors.New("database pool unavailable")
+	}
+	uid := strings.TrimSpace(userID)
+	if uid == "" {
+		return errors.New("user ID required")
+	}
+	if len(req.RequestedChanges) == 0 {
+		return errors.New("at least one field change must be requested")
+	}
+
+	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback(context.Background()) }()
+
+	if err := database.ApplyAppContext(ctx, tx, database.AppContext{AllowLogin: true, UserID: uid}); err != nil {
+		return err
+	}
+
+	var pendingCount int
+	err = tx.QueryRow(ctx, `
+		select count(*) from institution_approval_requests
+		where user_id = nullif($1,'')::uuid and status = 'PENDING'
+	`, uid).Scan(&pendingCount)
+	if err == nil && pendingCount > 0 {
+		return errors.New("a profile change request is already pending administrator review")
+	}
+
+	var currFirst, currLast string
+	var currMetaBytes []byte
+	_ = tx.QueryRow(ctx, `
+		select coalesce(first_name,''), coalesce(last_name,''), coalesce(metadata, '{}'::jsonb)::text
+		from users where user_id = nullif($1,'')::uuid
+	`, uid).Scan(&currFirst, &currLast, &currMetaBytes)
+
+	currMeta := make(map[string]any)
+	if len(currMetaBytes) > 0 {
+		_ = json.Unmarshal(currMetaBytes, &currMeta)
+	}
+
+	currentValues := make(map[string]any)
+	for k := range req.RequestedChanges {
+		if k == "firstName" {
+			currentValues["firstName"] = currFirst
+		} else if k == "lastName" {
+			currentValues["lastName"] = currLast
+		} else if v, ok := currMeta[k]; ok {
+			currentValues[k] = v
+		} else {
+			currentValues[k] = ""
+		}
+	}
+
+	metaPayload := map[string]any{
+		"requested_changes": req.RequestedChanges,
+		"current_values":    currentValues,
+		"reason":            strings.TrimSpace(req.Reason),
+		"submitted_at":      time.Now().UTC(),
+	}
+	metaBytes, err := json.Marshal(metaPayload)
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(ctx, `
+		insert into institution_approval_requests(
+			institution_id, user_id, requested_role, request_type, status, metadata, created_at, updated_at
+		) values (
+			nullif($1,'')::uuid, nullif($2,'')::uuid, 'USER', 'profile_edit', 'PENDING', $3::jsonb, now(), now()
+		)
+	`, nullIfEmpty(userInstitutionID), uid, string(metaBytes))
+	if err != nil {
+		return fmt.Errorf("failed to submit profile request: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return err
+	}
+
+	if s.auditLogger != nil {
+		_ = s.auditLogger.Log(ctx, security.AuditEvent{
+			UserID:     uid,
+			Action:     "PROFILE_CHANGE_REQUESTED",
+			Resource:   "user",
+			ResourceID: uid,
+			CreatedAt:  time.Now().UTC(),
+			Metadata: map[string]any{
+				"changes": req.RequestedChanges,
+				"reason":  req.Reason,
+			},
+		})
+	}
+
+	return nil
+}
+
+func (s *AuthService) ChangePassword(ctx context.Context, userID, currentPassword, newPassword string) error {
+	if s.pool == nil {
+		return errors.New("database pool unavailable")
+	}
+	uid := strings.TrimSpace(userID)
+	if uid == "" {
+		return errors.New("user ID required")
+	}
+	if err := s.passwordPolicy.Validate(newPassword); err != nil {
+		return err
+	}
+
+	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback(context.Background()) }()
+
+	if err := database.ApplyAppContext(ctx, tx, database.AppContext{AllowLogin: true, UserID: uid}); err != nil {
+		return err
+	}
+
+	var pwdHash string
+	err = tx.QueryRow(ctx, `select password_hash from users where user_id = nullif($1,'')::uuid`, uid).Scan(&pwdHash)
+	if err != nil {
+		return fmt.Errorf("user not found: %w", err)
+	}
+
+	ok, err := security.VerifyPassword(pwdHash, currentPassword)
+	if err != nil || !ok {
+		return errors.New("current password is incorrect")
+	}
+
+	newHash, err := security.HashPassword(newPassword, security.DefaultArgon2idParams)
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(ctx, `update users set password_hash=$1, updated_at=now() where user_id=nullif($2,'')::uuid`, newHash, uid)
+	if err != nil {
+		return err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return err
+	}
+
+	if s.auditLogger != nil {
+		_ = s.auditLogger.Log(ctx, security.AuditEvent{
+			UserID:     uid,
+			Action:     "PASSWORD_CHANGED",
+			Resource:   "user",
+			ResourceID: uid,
+			CreatedAt:  time.Now().UTC(),
 		})
 	}
 

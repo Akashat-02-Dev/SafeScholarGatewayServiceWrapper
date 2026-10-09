@@ -169,6 +169,21 @@ func (r *Router) serve(w http.ResponseWriter, req *http.Request) {
 	case route.PathPrefix == "/api/auth/me":
 		r.handleMe(w, req)
 		return
+	case route.PathPrefix == "/api/auth/profile":
+		if req.Method == http.MethodGet {
+			r.handleGetProfile(w, req)
+		} else if req.Method == http.MethodPatch {
+			r.handleUpdateProfile(w, req)
+		} else {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		}
+		return
+	case route.PathPrefix == "/api/auth/profile/request-change":
+		r.handleRequestProfileChange(w, req)
+		return
+	case route.PathPrefix == "/api/auth/change-password":
+		r.handleChangePassword(w, req)
+		return
 	case route.PathPrefix == "/api/v1/dashboard/metrics":
 		r.handleDashboardMetrics(w, req)
 		return
@@ -501,6 +516,110 @@ func (r *Router) handleMe(w http.ResponseWriter, req *http.Request) {
 		"isSysAdmin":    me.IsSysAdmin,
 		"roles":         me.Roles,
 		"permissions":   me.Permissions,
+	})
+}
+
+func (r *Router) handleGetProfile(w http.ResponseWriter, req *http.Request) {
+	uc := middleware.UserContextFromContext(req.Context())
+	if !uc.IsAuthenticated {
+		security.WriteJSONError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	if r.authSvc == nil {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		return
+	}
+	profile, err := r.authSvc.GetProfile(req.Context(), uc.UserID)
+	if err != nil {
+		security.WriteJSONError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, profile)
+}
+
+func (r *Router) handleUpdateProfile(w http.ResponseWriter, req *http.Request) {
+	uc := middleware.UserContextFromContext(req.Context())
+	if !uc.IsAuthenticated {
+		security.WriteJSONError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	if r.authSvc == nil {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		return
+	}
+	var up auth.UpdateProfileRequest
+	if err := json.NewDecoder(req.Body).Decode(&up); err != nil {
+		security.WriteJSONError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if err := r.authSvc.UpdateProfile(req.Context(), uc.UserID, up); err != nil {
+		security.WriteJSONError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"message": "Profile updated successfully.",
+	})
+}
+
+func (r *Router) handleRequestProfileChange(w http.ResponseWriter, req *http.Request) {
+	if req.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	uc := middleware.UserContextFromContext(req.Context())
+	if !uc.IsAuthenticated {
+		security.WriteJSONError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	if r.authSvc == nil {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		return
+	}
+	var payload auth.ProfileChangeRequestPayload
+	if err := json.NewDecoder(req.Body).Decode(&payload); err != nil {
+		security.WriteJSONError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if err := r.authSvc.RequestProfileChange(req.Context(), uc.UserID, uc.InstitutionID, payload); err != nil {
+		security.WriteJSONError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusCreated, map[string]any{
+		"message": "Profile change request submitted successfully for administrator review.",
+		"status":  "PENDING",
+	})
+}
+
+type changePasswordReq struct {
+	CurrentPassword string `json:"currentPassword"`
+	NewPassword     string `json:"newPassword"`
+}
+
+func (r *Router) handleChangePassword(w http.ResponseWriter, req *http.Request) {
+	if req.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	uc := middleware.UserContextFromContext(req.Context())
+	if !uc.IsAuthenticated {
+		security.WriteJSONError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	if r.authSvc == nil {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		return
+	}
+	var cp changePasswordReq
+	if err := json.NewDecoder(req.Body).Decode(&cp); err != nil {
+		security.WriteJSONError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if err := r.authSvc.ChangePassword(req.Context(), uc.UserID, cp.CurrentPassword, cp.NewPassword); err != nil {
+		security.WriteJSONError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"message": "Password changed successfully.",
 	})
 }
 

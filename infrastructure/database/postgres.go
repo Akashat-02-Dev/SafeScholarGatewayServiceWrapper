@@ -89,6 +89,8 @@ func Connect(ctx context.Context, cfg config.PostgresConfig) (*pgxpool.Pool, err
 type AppContext struct {
 	InstitutionID string
 	AllowLogin    bool
+	IsSysAdmin    bool
+	UserID        string
 }
 
 func ApplyAppContext(ctx context.Context, tx pgx.Tx, ac AppContext) error {
@@ -101,6 +103,16 @@ func ApplyAppContext(ctx context.Context, tx pgx.Tx, ac AppContext) error {
 	}
 	if _, err := tx.Exec(ctx, `select set_config('app.allow_login', $1, true)`, allowLogin); err != nil {
 		return err
+	}
+	if ac.IsSysAdmin {
+		if _, err := tx.Exec(ctx, `select set_config('app.is_sys_admin', 'true', true)`); err != nil {
+			return err
+		}
+	}
+	if strings.TrimSpace(ac.UserID) != "" {
+		if _, err := tx.Exec(ctx, `select set_config('app.user_id', $1, true)`, ac.UserID); err != nil {
+			return err
+		}
 	}
 	if strings.TrimSpace(ac.InstitutionID) != "" {
 		if _, err := tx.Exec(ctx, `select set_config('app.institution_id', $1, true)`, ac.InstitutionID); err != nil {

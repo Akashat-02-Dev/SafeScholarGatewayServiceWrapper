@@ -32,6 +32,7 @@ import { StudentChatHub } from './pages/student/StudentChatHub'
 import { StudentJoinRoom } from './pages/student/StudentJoinRoom'
 import { StudentTextLevelerPage } from './pages/student/StudentTextLevelerPage'
 import { StudentTestEnvironmentPage } from './pages/student/StudentTestEnvironmentPage'
+import { ProfilePage } from './pages/ProfilePage'
 
 import { useLocation } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -80,6 +81,17 @@ function App() {
                 <PageTransition>
                   <AuthedLayout>
                     <Dashboard />
+                  </AuthedLayout>
+                </PageTransition>
+              }
+            />
+
+            <Route
+              path="/profile"
+              element={
+                <PageTransition>
+                  <AuthedLayout>
+                    <ProfilePage />
                   </AuthedLayout>
                 </PageTransition>
               }

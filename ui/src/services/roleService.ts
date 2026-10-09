@@ -211,3 +211,75 @@ export async function isolateUserAccount(userId: string, institutionId: string) 
   })
 }
 
+export interface UserProfileData {
+  userId: string
+  institutionId: string
+  institutionName?: string
+  institutionType?: string
+  domain?: string
+  email: string
+  firstName: string
+  lastName: string
+  displayName: string
+  phone?: string
+  bio?: string
+  isSysAdmin: boolean
+  roles: string[]
+  permissions: string[]
+  metadata?: Record<string, any>
+  pendingRequest?: ApprovalRequest
+  requestHistory?: ApprovalRequest[]
+  createdAt: string
+  lastLogin?: string
+}
+
+export interface UpdateProfilePayload {
+  displayName?: string
+  phone?: string
+  bio?: string
+  avatarUrl?: string
+  notificationPreferences?: Record<string, any>
+}
+
+export interface ProfileChangeRequestPayload {
+  requestedChanges: Record<string, any>
+  reason?: string
+}
+
+export interface ChangePasswordPayload {
+  currentPassword: string
+  newPassword: string
+}
+
+export async function getUserProfile(accessToken: string) {
+  return apiFetch<UserProfileData>('/api/auth/profile', {
+    method: 'GET',
+    accessToken,
+  })
+}
+
+export async function updateUserProfile(accessToken: string, payload: UpdateProfilePayload) {
+  return apiFetch<{ message: string }>('/api/auth/profile', {
+    method: 'PATCH',
+    accessToken,
+    body: payload,
+  })
+}
+
+export async function requestProfileChange(accessToken: string, payload: ProfileChangeRequestPayload) {
+  return apiFetch<{ message: string; status: string }>('/api/auth/profile/request-change', {
+    method: 'POST',
+    accessToken,
+    body: payload,
+  })
+}
+
+export async function changeUserPassword(accessToken: string, payload: ChangePasswordPayload) {
+  return apiFetch<{ message: string }>('/api/auth/change-password', {
+    method: 'POST',
+    accessToken,
+    body: payload,
+  })
+}
+
+
