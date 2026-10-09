@@ -16,6 +16,7 @@ export interface AssignedAssessment {
   alignedStandards: string[];
   questions: AssessmentQuestion[];
   status: 'active' | 'closed';
+  isImmediateStart?: boolean;
 }
 
 export interface StudentTestSubmission {
@@ -303,6 +304,73 @@ const INITIAL_ASSIGNED_TESTS: AssignedAssessment[] = [
   }
 ];
 
+const INITIAL_STUDENT_SUBMISSIONS: StudentTestSubmission[] = [
+  {
+    id: 'sub-seed-alex',
+    assessmentId: 'test-y3-fractions',
+    assessmentTitle: 'Year 3 Mathematics: Fractions & Number Line Mastery',
+    studentId: 'std-001',
+    studentName: 'Alex Johnson',
+    studentEmail: 'student@safescholar.edu.au',
+    studentYearLevel: 'Year 3',
+    submittedAt: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
+    earnedMarks: 8,
+    totalMarks: 10,
+    percentage: 80,
+    gradeBand: 'B',
+    answers: { 1: '6/8 (or 3/4)', 2: '4 quarters', 3: '2 1/2', 4: '1/4 is greater' },
+    timeSpentSeconds: 720
+  },
+  {
+    id: 'sub-seed-mia',
+    assessmentId: 'test-y4-science',
+    assessmentTitle: 'Year 4 Science: Living & Non-Living Ecosystems Checkpoint',
+    studentId: 'std-002',
+    studentName: 'Mia Chen',
+    studentEmail: 'mia.chen@safescholar.edu.au',
+    studentYearLevel: 'Year 4',
+    submittedAt: new Date(Date.now() - 3 * 3600 * 1000).toISOString(),
+    earnedMarks: 10,
+    totalMarks: 10,
+    percentage: 100,
+    gradeBand: 'A',
+    answers: { 1: 'Growth and response to stimuli', 2: 'Water temperature and sunlight', 3: 'Curved claws and strong limbs for climbing' },
+    timeSpentSeconds: 610
+  },
+  {
+    id: 'sub-seed-lucas',
+    assessmentId: 'test-y3-fractions',
+    assessmentTitle: 'Year 3 Mathematics: Fractions & Number Line Mastery',
+    studentId: 'std-003',
+    studentName: 'Lucas Miller',
+    studentEmail: 'lucas.m@safescholar.edu.au',
+    studentYearLevel: 'Year 3',
+    submittedAt: new Date(Date.now() - 5 * 3600 * 1000).toISOString(),
+    earnedMarks: 6,
+    totalMarks: 10,
+    percentage: 60,
+    gradeBand: 'C',
+    answers: { 1: '6/8 (or 3/4)', 2: '2 quarters', 3: '2 1/2', 4: 'They are equal' },
+    timeSpentSeconds: 840
+  },
+  {
+    id: 'sub-seed-chloe',
+    assessmentId: 'test-prep-phonics',
+    assessmentTitle: 'Prep / Foundation: Letters, Sounds & Sight Words',
+    studentId: 'std-004',
+    studentName: 'Chloe Taylor',
+    studentEmail: 'chloe.t@safescholar.edu.au',
+    studentYearLevel: 'Prep',
+    submittedAt: new Date(Date.now() - 6 * 3600 * 1000).toISOString(),
+    earnedMarks: 6,
+    totalMarks: 6,
+    percentage: 100,
+    gradeBand: 'A',
+    answers: { 1: 'K', 2: 'Hat', 3: 'Yellow' },
+    timeSpentSeconds: 320
+  }
+];
+
 export const assessmentAssignmentService = {
   /**
    * Retrieves all published teacher assessments
@@ -344,6 +412,8 @@ export const assessmentAssignmentService = {
       deadline: string; // ISO string
       teacherName: string;
       teacherEmail: string;
+      isImmediateStart?: boolean;
+      timeLimitMinutes?: number;
     }
   ): AssignedAssessment {
     const current = this.getAssignedAssessments();
@@ -359,12 +429,13 @@ export const assessmentAssignmentService = {
       assignedByTeacherEmail: options.teacherEmail || 'teacher@safescholar.edu.au',
       createdAt: new Date().toISOString(),
       deadline: options.deadline || new Date(Date.now() + 48 * 3600 * 1000).toISOString(),
-      timeLimitMinutes: generated.time_limit_minutes || 20,
+      timeLimitMinutes: options.timeLimitMinutes || generated.time_limit_minutes || 20,
       totalMarks: generated.total_marks || (generated.questions?.length ? generated.questions.length * 2 : 20),
       instructions: generated.instructions || `Australian Curriculum ${normalizedGrade} assessment. Please answer all questions before the declared deadline.`,
       alignedStandards: generated.aligned_standards || ['ACARA v9.0'],
       questions: generated.questions || [],
-      status: 'active'
+      status: 'active',
+      isImmediateStart: options.isImmediateStart || false
     };
 
     const updated = [newAssigned, ...current];
@@ -412,9 +483,21 @@ export const assessmentAssignmentService = {
   getAllSubmissions(): StudentTestSubmission[] {
     try {
       const stored = localStorage.getItem(STORAGE_KEY_SUBMISSIONS);
-      return stored ? JSON.parse(stored) : [];
+      if (stored) {
+        return JSON.parse(stored);
+      }
     } catch {
-      return [];
+      // fallback
+    }
+    this.saveSubmissions(INITIAL_STUDENT_SUBMISSIONS);
+    return INITIAL_STUDENT_SUBMISSIONS;
+  },
+
+  saveSubmissions(subs: StudentTestSubmission[]): void {
+    try {
+      localStorage.setItem(STORAGE_KEY_SUBMISSIONS, JSON.stringify(subs));
+    } catch (e) {
+      console.warn('Could not save submissions to localStorage', e);
     }
   },
 

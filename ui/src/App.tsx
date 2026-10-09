@@ -30,7 +30,6 @@ import { StudentManagementPage } from './pages/admin/StudentManagementPage'
 import { WritingStudio } from './pages/student/WritingStudio'
 import { StudentChatHub } from './pages/student/StudentChatHub'
 import { StudentJoinRoom } from './pages/student/StudentJoinRoom'
-import { QuizMe } from './pages/student/QuizMe'
 import { StudentTextLevelerPage } from './pages/student/StudentTextLevelerPage'
 import { StudentTestEnvironmentPage } from './pages/student/StudentTestEnvironmentPage'
 
@@ -112,16 +111,20 @@ function App() {
                   </PageTransition>
                 }
               />
-              {/* (c) AI Quiz Me */}
+              {/* (c) Join Custom Chatbot Room provided by Teacher */}
               <Route
-                path="/student/quiz-me"
+                path="/student/join-room"
                 element={
                   <PageTransition>
                     <AuthedLayout>
-                      <QuizMe />
+                      <StudentJoinRoom />
                     </AuthedLayout>
                   </PageTransition>
                 }
+              />
+              <Route
+                path="/student/quiz-me"
+                element={<Navigate to="/student/join-room" replace />}
               />
               {/* (d) Writing Studio */}
               <Route

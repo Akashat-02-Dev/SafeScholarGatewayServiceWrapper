@@ -4,7 +4,7 @@ import { useRoleFilter } from '../services/roleFilterContext';
 import { 
   LayoutGrid, BookOpen, FileText, FileSpreadsheet, 
   ClipboardCheck, Sparkles, Scissors, PenTool, 
-  Lightbulb, CheckCircle2, Database, 
+  Bot, CheckCircle2, Database, 
   GraduationCap, Backpack, Building2, Shield
 } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -29,7 +29,7 @@ const teacherRoutes: NavItem[] = [
 const studentRoutes: NavItem[] = [
   { label: 'Socratic Sandbox', path: '/socratic-tutor', icon: Sparkles },
   { label: 'Reading Leveler', path: '/student/text-leveler', icon: Scissors },
-  { label: 'AI Quiz Me', path: '/student/quiz-me', icon: Lightbulb },
+  { label: 'Join Chatbot Room', path: '/student/join-room', icon: Bot },
   { label: 'Writing Studio', path: '/student/writing-studio', icon: PenTool },
   { label: 'Test Environment', path: '/student/test-environment', icon: CheckCircle2 },
 ];

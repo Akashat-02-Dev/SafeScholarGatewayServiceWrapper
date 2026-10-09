@@ -15,7 +15,7 @@ import {
   ClipboardCheck, Clock, CheckCircle2, Lock, 
   Trophy, HelpCircle, Check, X, ArrowRight, ArrowLeft, 
   RefreshCw, GraduationCap, BookOpen, 
-  AlertCircle, ChevronRight, RotateCcw
+  AlertCircle, ChevronRight, RotateCcw, Zap
 } from 'lucide-react';
 
 export const StudentTestEnvironmentPage: React.FC = () => {
@@ -136,7 +136,16 @@ export const StudentTestEnvironmentPage: React.FC = () => {
       return;
     }
 
-    // Rule 2: Declared Deadline Verification
+    // Rule 2: Single Attempt Enforcement (Assessment can only be attempted once)
+    const existingSubmission = assessmentAssignmentService.getSubmissionForStudentAndTest(studentEmail, test.id);
+    if (existingSubmission) {
+      setAccessDeniedMessage(
+        `Single Attempt Policy: You have already completed your attempt for "${test.title}" on ${new Date(existingSubmission.submittedAt).toLocaleDateString()} at ${new Date(existingSubmission.submittedAt).toLocaleTimeString()} with a score of ${existingSubmission.earnedMarks}/${existingSubmission.totalMarks} (${existingSubmission.percentage}% - Grade ${existingSubmission.gradeBand}). As per academic policy, this assessment can only be attempted once within the declared deadline.`
+      );
+      return;
+    }
+
+    // Rule 3: Declared Deadline Verification
     if (isDeadlineExpired(test.deadline)) {
       setAccessDeniedMessage(
         `Submission Window Closed: The deadline declared by your teacher for "${test.title}" expired on ${new Date(test.deadline).toLocaleString()}. New attempts are locked.`
@@ -411,7 +420,7 @@ export const StudentTestEnvironmentPage: React.FC = () => {
                     {/* Top Year Level & Deadline Strip */}
                     <div className="p-5 pb-3">
                       <div className="flex items-center justify-between gap-2 mb-3">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${
                             isGradeMatch
                               ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-blue-200'
@@ -419,6 +428,11 @@ export const StudentTestEnvironmentPage: React.FC = () => {
                           }`}>
                             {t.gradeLevel}
                           </span>
+                          {t.isImmediateStart && (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700 flex items-center gap-1">
+                              <Zap size={10} className="fill-amber-500 text-amber-500" /> Immediate Start
+                            </span>
+                          )}
                           <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">
                             {t.subject}
                           </span>
@@ -437,6 +451,12 @@ export const StudentTestEnvironmentPage: React.FC = () => {
 
                       <div className="text-xs text-slate-500 dark:text-slate-400 mt-2 flex items-center gap-2">
                         <span>Teacher: <strong className="text-slate-700 dark:text-slate-300">{t.assignedByTeacherName}</strong></span>
+                        {t.isImmediateStart && (
+                          <>
+                            <span>•</span>
+                            <span className="text-amber-600 dark:text-amber-400 font-bold">{t.timeLimitMinutes || 20}m Finish Window</span>
+                          </>
+                        )}
                       </div>
 
                       {/* Standards / Details */}
@@ -462,7 +482,7 @@ export const StudentTestEnvironmentPage: React.FC = () => {
                         {pastSubmission ? (
                           <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-400">
                             <CheckCircle2 size={14} />
-                            <span>Submitted: {pastSubmission.earnedMarks}/{pastSubmission.totalMarks} ({pastSubmission.gradeBand})</span>
+                            <span>Attempted Once: {pastSubmission.earnedMarks}/{pastSubmission.totalMarks} (Grade {pastSubmission.gradeBand})</span>
                           </div>
                         ) : !isGradeMatch ? (
                           <div className="flex items-center gap-1 text-[11px] font-bold text-slate-500">
@@ -476,7 +496,7 @@ export const StudentTestEnvironmentPage: React.FC = () => {
                           </div>
                         ) : (
                           <div className="text-[11px] font-bold text-blue-600 dark:text-blue-400">
-                            Open for Submissions
+                            Single Attempt Open
                           </div>
                         )}
                       </div>
@@ -489,7 +509,7 @@ export const StudentTestEnvironmentPage: React.FC = () => {
                             onClick={() => handleReviewSubmission(t)}
                             className="px-3.5 py-1.5 rounded-xl bg-slate-200 dark:bg-zinc-700 hover:bg-slate-300 text-slate-800 dark:text-slate-200 text-xs font-bold flex items-center gap-1 transition-all"
                           >
-                            <span>Review Score</span>
+                            <span>Review Result</span>
                             <ChevronRight size={13} />
                           </button>
                         ) : !isGradeMatch ? (

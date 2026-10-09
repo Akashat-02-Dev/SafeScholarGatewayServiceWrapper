@@ -14,7 +14,8 @@ import type { AssessmentSchema } from '../../types/aios';
 import { 
   ClipboardCheck, Sparkles, Printer, Calendar, 
   Clock, Layers, AlertCircle, Loader2,
-  Send, Users, CheckCircle2, ExternalLink, RefreshCw
+  Send, Users, CheckCircle2, ExternalLink, RefreshCw,
+  Zap, Eye, X, Check, Award
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -49,8 +50,8 @@ export const AssessmentGeneratorPage: React.FC = () => {
   const [topic, setTopic] = useState('');
   const [details, setDetails] = useState('');
 
-  // Declared Deadline State
-  const [deadlinePreset, setDeadlinePreset] = useState<'24h' | '48h' | '72h' | '7d' | 'custom'>('48h');
+  // Declared Deadline State ('immediate' finishes within 1 hour based on question count)
+  const [deadlinePreset, setDeadlinePreset] = useState<'immediate' | '24h' | '48h' | '72h' | '7d' | 'custom'>('48h');
   const [customDeadline, setCustomDeadline] = useState(() => {
     const d = new Date(Date.now() + 48 * 3600 * 1000);
     return d.toISOString().slice(0, 16);
@@ -69,6 +70,7 @@ export const AssessmentGeneratorPage: React.FC = () => {
   const [selectedTestForSubs, setSelectedTestForSubs] = useState<AssignedAssessment | null>(null);
   const [submissionsList, setSubmissionsList] = useState<StudentTestSubmission[]>([]);
   const [filterYear, setFilterYear] = useState<string>('all');
+  const [viewingSubmission, setViewingSubmission] = useState<StudentTestSubmission | null>(null);
 
   useEffect(() => {
     loadAssignedTests();
@@ -90,7 +92,16 @@ export const AssessmentGeneratorPage: React.FC = () => {
     }
   };
 
+  // Immediate start: calculated to be attempted and finished within an hour (max 60m, min 15m) based on question count
+  const getImmediateDurationMinutes = (count: number) => {
+    return Math.min(60, Math.max(15, count * 5));
+  };
+
   const calculateDeadlineISO = (): string => {
+    if (deadlinePreset === 'immediate') {
+      const mins = getImmediateDurationMinutes(questionCount);
+      return new Date(Date.now() + mins * 60 * 1000).toISOString();
+    }
     if (deadlinePreset === '24h') return new Date(Date.now() + 24 * 3600 * 1000).toISOString();
     if (deadlinePreset === '48h') return new Date(Date.now() + 48 * 3600 * 1000).toISOString();
     if (deadlinePreset === '72h') return new Date(Date.now() + 72 * 3600 * 1000).toISOString();
@@ -130,8 +141,11 @@ export const AssessmentGeneratorPage: React.FC = () => {
     if (!assessment) return;
 
     const deadlineISO = calculateDeadlineISO();
-    const teacherName = me?.firstName ? `${me.firstName} ${me.lastName}` : 'Classroom Teacher';
+    const teacherName = me?.firstName ? `${me.firstName} ${me.lastName || ''}`.trim() : 'Classroom Teacher';
     const teacherEmail = me?.email || 'teacher@safescholar.edu.au';
+    const isImmediate = deadlinePreset === 'immediate';
+    const qCount = assessment.questions?.length || questionCount;
+    const immediateMins = isImmediate ? getImmediateDurationMinutes(qCount) : undefined;
 
     const published = assessmentAssignmentService.publishAssessment(assessment, {
       gradeLevel,
@@ -139,7 +153,9 @@ export const AssessmentGeneratorPage: React.FC = () => {
       assessmentType,
       deadline: deadlineISO,
       teacherName,
-      teacherEmail
+      teacherEmail,
+      isImmediateStart: isImmediate,
+      timeLimitMinutes: immediateMins
     });
 
     setPublishedTest(published);
@@ -297,37 +313,71 @@ export const AssessmentGeneratorPage: React.FC = () => {
 
                 {/* Declared Deadline Selector */}
                 <div className="p-3.5 rounded-2xl bg-indigo-50/60 dark:bg-indigo-950/20 border border-indigo-200/80 dark:border-indigo-900/40">
-                  <label className="block text-xs font-bold text-indigo-950 dark:text-indigo-300 mb-2 flex items-center gap-1.5">
-                    <Calendar size={14} className="text-indigo-600" /> Declared Student Submission Deadline
-                  </label>
-                  <div className="grid grid-cols-4 gap-1.5 mb-2.5">
-                    {(['24h', '48h', '72h', '7d'] as const).map((preset) => (
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-xs font-bold text-indigo-950 dark:text-indigo-300 flex items-center gap-1.5">
+                      <Calendar size={14} className="text-indigo-600" /> Declared Student Submission Deadline
+                    </label>
+                    {deadlinePreset === 'immediate' && (
+                      <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700 flex items-center gap-1">
+                        <Zap size={10} className="fill-amber-500" /> Immediate Start
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5 mb-2.5">
+                    {(['immediate', '24h', '48h', '72h', '7d'] as const).map((preset) => (
                       <button
                         key={preset}
                         type="button"
                         onClick={() => setDeadlinePreset(preset)}
-                        className={`py-1 rounded-lg text-[11px] font-bold transition-all ${
+                        className={`py-1.5 px-1 rounded-lg text-[11px] font-bold transition-all text-center flex items-center justify-center gap-1 ${
                           deadlinePreset === preset
-                            ? 'bg-indigo-600 text-white shadow-sm'
+                            ? 'bg-indigo-600 text-white shadow-sm ring-1 ring-indigo-400'
                             : 'bg-white dark:bg-zinc-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-zinc-700 hover:bg-slate-50'
                         }`}
                       >
-                        {preset === '24h' ? '24 Hours' : preset === '48h' ? '2 Days' : preset === '72h' ? '3 Days' : '1 Week'}
+                        {preset === 'immediate' ? (
+                          <>
+                            <Zap size={11} className={deadlinePreset === 'immediate' ? 'text-amber-300' : 'text-amber-500'} />
+                            <span>Immediate</span>
+                          </>
+                        ) : preset === '24h' ? (
+                          '24 Hours'
+                        ) : preset === '48h' ? (
+                          '2 Days'
+                        ) : preset === '72h' ? (
+                          '3 Days'
+                        ) : (
+                          '1 Week'
+                        )}
                       </button>
                     ))}
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="datetime-local"
-                      value={customDeadline}
-                      onChange={(e) => {
-                        setCustomDeadline(e.target.value);
-                        setDeadlinePreset('custom');
-                      }}
-                      className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs text-slate-800 dark:text-slate-200"
-                    />
-                  </div>
+                  {deadlinePreset === 'immediate' ? (
+                    <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-xs text-amber-900 dark:text-amber-200 flex items-start gap-2">
+                      <Zap size={15} className="text-amber-600 shrink-0 mt-0.5" />
+                      <div>
+                        <div className="font-bold">⚡ Immediate Start ({getImmediateDurationMinutes(questionCount)}m Window)</div>
+                        <div className="text-[11px] text-amber-700 dark:text-amber-300 mt-0.5">
+                          Automatically configured to be attempted and finished within 1 hour based on {questionCount} questions ({getImmediateDurationMinutes(questionCount)} mins).
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="datetime-local"
+                        value={customDeadline}
+                        onChange={(e) => {
+                          setCustomDeadline(e.target.value);
+                          setDeadlinePreset('custom');
+                        }}
+                        className="w-full px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs text-slate-800 dark:text-slate-200"
+                      />
+                    </div>
+                  )}
+
                   <div className="text-[10px] text-indigo-700 dark:text-indigo-400 mt-1.5">
                     Only students in <strong>{normalizeYearLevel(gradeLevel)}</strong> can attempt this test before this deadline.
                   </div>
@@ -585,10 +635,17 @@ export const AssessmentGeneratorPage: React.FC = () => {
                         : 'border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-800/80 hover:shadow-sm'
                     }`}
                   >
-                    <div className="flex justify-between items-start mb-2">
-                      <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">
-                        {test.gradeLevel}
-                      </span>
+                    <div className="flex justify-between items-start mb-2 gap-2">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">
+                          {test.gradeLevel}
+                        </span>
+                        {test.isImmediateStart && (
+                          <span className="px-2 py-0.5 rounded-lg text-[10px] font-black bg-amber-100 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700 flex items-center gap-1">
+                            <Zap size={10} className="fill-amber-500 text-amber-500" /> Immediate Start
+                          </span>
+                        )}
+                      </div>
                       <span className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border ${deadlineInfo.badgeColor}`}>
                         {deadlineInfo.text}
                       </span>
@@ -599,6 +656,12 @@ export const AssessmentGeneratorPage: React.FC = () => {
                       <span>{test.subject}</span>
                       <span>•</span>
                       <span>{test.questions?.length || 0} Questions</span>
+                      {test.isImmediateStart && (
+                        <>
+                          <span>•</span>
+                          <span className="text-amber-600 dark:text-amber-400 font-bold">{test.timeLimitMinutes || 20}m Window</span>
+                        </>
+                      )}
                     </div>
 
                     <div className="mt-3 pt-3 border-t border-slate-100 dark:border-zinc-700/60 flex items-center justify-between text-xs">
@@ -625,20 +688,25 @@ export const AssessmentGeneratorPage: React.FC = () => {
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="card shadow-xl border border-slate-200/60 dark:border-white/10 bg-white dark:bg-zinc-900 rounded-3xl p-5 sm:p-7"
+              className="card shadow-xl border border-slate-200/60 dark:border-white/10 bg-white dark:bg-zinc-900 rounded-3xl p-5 sm:p-7 space-y-5"
             >
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 mb-4 border-b border-slate-200 dark:border-zinc-800">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-200 dark:border-zinc-800">
                 <div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-100 text-blue-700">
                       {selectedTestForSubs.gradeLevel}
                     </span>
+                    {selectedTestForSubs.isImmediateStart && (
+                      <span className="px-2 py-0.5 rounded-md text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-1">
+                        <Zap size={10} className="fill-amber-500" /> Immediate Start ({selectedTestForSubs.timeLimitMinutes}m Window)
+                      </span>
+                    )}
                     <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                      Student Submissions: {selectedTestForSubs.title}
+                      Student Results: {selectedTestForSubs.title}
                     </h3>
                   </div>
-                  <div className="text-xs text-slate-500 mt-0.5">
-                    Deadline: {new Date(selectedTestForSubs.deadline).toLocaleString('en-AU')} • Total Marks: {selectedTestForSubs.totalMarks}
+                  <div className="text-xs text-slate-500 mt-1">
+                    Deadline: {new Date(selectedTestForSubs.deadline).toLocaleString('en-AU')} • Total Marks: {selectedTestForSubs.totalMarks} • Time Limit: {selectedTestForSubs.timeLimitMinutes || 20} mins
                   </div>
                 </div>
 
@@ -648,7 +716,10 @@ export const AssessmentGeneratorPage: React.FC = () => {
                   </span>
                   <button
                     type="button"
-                    onClick={() => setSelectedTestForSubs(null)}
+                    onClick={() => {
+                      setSelectedTestForSubs(null);
+                      setViewingSubmission(null);
+                    }}
                     className="text-xs font-bold text-slate-400 hover:text-slate-600 px-2 py-1"
                   >
                     Close
@@ -656,9 +727,41 @@ export const AssessmentGeneratorPage: React.FC = () => {
                 </div>
               </div>
 
+              {/* Class Summary KPIs if submissions exist */}
+              {submissionsList.length > 0 && (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-zinc-800 border border-slate-200/80 dark:border-zinc-700">
+                    <div className="text-[11px] font-bold text-slate-500 uppercase">Submissions</div>
+                    <div className="text-xl font-black text-slate-900 dark:text-white mt-0.5">{submissionsList.length}</div>
+                    <div className="text-[10px] text-slate-400 mt-0.5">Attempted once</div>
+                  </div>
+                  <div className="p-3.5 rounded-2xl bg-indigo-50/50 dark:bg-indigo-950/30 border border-indigo-200/70 dark:border-indigo-900/40">
+                    <div className="text-[11px] font-bold text-indigo-700 dark:text-indigo-400 uppercase">Class Average</div>
+                    <div className="text-xl font-black text-indigo-950 dark:text-indigo-100 mt-0.5">
+                      {Math.round(submissionsList.reduce((acc, s) => acc + s.percentage, 0) / submissionsList.length)}%
+                    </div>
+                    <div className="text-[10px] text-indigo-600/70 dark:text-indigo-400 mt-0.5">Mean performance</div>
+                  </div>
+                  <div className="p-3.5 rounded-2xl bg-emerald-50/50 dark:bg-emerald-950/30 border border-emerald-200/70 dark:border-emerald-900/40">
+                    <div className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 uppercase">Highest Score</div>
+                    <div className="text-xl font-black text-emerald-950 dark:text-emerald-100 mt-0.5">
+                      {Math.max(...submissionsList.map(s => s.percentage))}%
+                    </div>
+                    <div className="text-[10px] text-emerald-600/70 dark:text-emerald-400 mt-0.5">Top result</div>
+                  </div>
+                  <div className="p-3.5 rounded-2xl bg-blue-50/50 dark:bg-blue-950/30 border border-blue-200/70 dark:border-blue-900/40">
+                    <div className="text-[11px] font-bold text-blue-700 dark:text-blue-400 uppercase">Pass Rate (≥50%)</div>
+                    <div className="text-xl font-black text-blue-950 dark:text-blue-100 mt-0.5">
+                      {Math.round((submissionsList.filter(s => s.percentage >= 50).length / submissionsList.length) * 100)}%
+                    </div>
+                    <div className="text-[10px] text-blue-600/70 dark:text-blue-400 mt-0.5">Meets standards</div>
+                  </div>
+                </div>
+              )}
+
               {submissionsList.length > 0 ? (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
+                  <table className="w-full text-left text-xs whitespace-nowrap">
                     <thead>
                       <tr className="border-b border-slate-200 dark:border-zinc-800 text-slate-400 font-semibold uppercase text-[10px]">
                         <th className="pb-2.5">Student Name</th>
@@ -667,11 +770,12 @@ export const AssessmentGeneratorPage: React.FC = () => {
                         <th className="pb-2.5">Score / Marks</th>
                         <th className="pb-2.5">Percentage</th>
                         <th className="pb-2.5">Australian Grade Band</th>
+                        <th className="pb-2.5 text-right">Student Responses</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
                       {submissionsList.map((sub) => (
-                        <tr key={sub.id} className="text-slate-800 dark:text-slate-200">
+                        <tr key={sub.id} className="text-slate-800 dark:text-slate-200 hover:bg-slate-50/50 dark:hover:bg-zinc-800/50 transition-colors">
                           <td className="py-3 font-bold flex items-center gap-2">
                             <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300 flex items-center justify-center text-[10px]">
                               {sub.studentName.charAt(0)}
@@ -695,6 +799,16 @@ export const AssessmentGeneratorPage: React.FC = () => {
                               Grade {sub.gradeBand}
                             </span>
                           </td>
+                          <td className="py-3 text-right">
+                            <button
+                              type="button"
+                              onClick={() => setViewingSubmission(sub)}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 font-bold text-xs transition-colors shadow-sm"
+                            >
+                              <Eye size={13} />
+                              <span>View Responses</span>
+                            </button>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -704,8 +818,131 @@ export const AssessmentGeneratorPage: React.FC = () => {
                 <div className="py-8 text-center text-slate-500 text-xs">
                   <Clock size={24} className="mx-auto mb-2 text-slate-400" />
                   No students in {selectedTestForSubs.gradeLevel} have submitted this test yet.
-                  <div className="text-[11px] text-slate-400 mt-1">Students can attempt this test from the Student Test Environment before {new Date(selectedTestForSubs.deadline).toLocaleString('en-AU')}.</div>
+                  <div className="text-[11px] text-slate-400 mt-1">Students can attempt this test once from the Student Test Environment before {new Date(selectedTestForSubs.deadline).toLocaleString('en-AU')}.</div>
                 </div>
+              )}
+
+              {/* Student Response Audit Modal / Review Panel */}
+              {viewingSubmission && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.98 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="mt-6 p-5 sm:p-6 rounded-2xl bg-slate-50/90 dark:bg-zinc-800/90 border border-indigo-200 dark:border-zinc-700 shadow-inner space-y-4"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-zinc-700">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-2xl bg-indigo-600 text-white flex items-center justify-center font-bold text-base shadow">
+                        {viewingSubmission.studentName.charAt(0)}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-base font-bold text-slate-900 dark:text-white">
+                            {viewingSubmission.studentName}'s Test Responses
+                          </h4>
+                          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-100 text-blue-700">
+                            {viewingSubmission.studentYearLevel}
+                          </span>
+                        </div>
+                        <div className="text-xs text-slate-500">
+                          Submitted: {new Date(viewingSubmission.submittedAt).toLocaleString('en-AU')} • Duration: {Math.floor(viewingSubmission.timeSpentSeconds / 60)}m {viewingSubmission.timeSpentSeconds % 60}s
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2.5">
+                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700 shadow-sm">
+                        <Award size={16} className="text-indigo-600" />
+                        <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                          Score: <strong className="text-indigo-600 font-mono text-sm">{viewingSubmission.earnedMarks}/{viewingSubmission.totalMarks}</strong> ({viewingSubmission.percentage}%)
+                        </span>
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-indigo-100 text-indigo-700">
+                          Grade {viewingSubmission.gradeBand}
+                        </span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setViewingSubmission(null)}
+                        className="p-1.5 rounded-xl bg-slate-200 hover:bg-slate-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-slate-700 dark:text-slate-300 transition-colors"
+                        title="Close Inspector"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Question Responses Breakdown */}
+                  <div className="space-y-3 pt-1">
+                    <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      Question-by-Question Response Audit
+                    </div>
+
+                    {(selectedTestForSubs.questions || []).map((q, idx) => {
+                      const studentAns = viewingSubmission.answers[q.number];
+                      const isCorrect = studentAns && studentAns.trim().toLowerCase() === (q.correct_answer || '').trim().toLowerCase();
+                      const awardedMarks = isCorrect ? (q.marks || 2) : 0;
+
+                      return (
+                        <div
+                          key={q.id || idx}
+                          className={`p-4 rounded-xl border transition-all ${
+                            isCorrect
+                              ? 'bg-emerald-50/40 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/60'
+                              : 'bg-red-50/40 dark:bg-red-950/20 border-red-200 dark:border-red-800/60'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-3 mb-2">
+                            <div className="font-bold text-xs text-slate-900 dark:text-white flex items-center gap-2">
+                              <span className="w-5 h-5 rounded-full bg-slate-200 dark:bg-zinc-700 flex items-center justify-center text-[10px] shrink-0 font-bold">
+                                {q.number}
+                              </span>
+                              <span>{q.question_text}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              {isCorrect ? (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300 border border-emerald-300">
+                                  <Check size={12} /> Correct (+{awardedMarks}m)
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-800 dark:bg-red-900/60 dark:text-red-300 border border-red-300">
+                                  <X size={12} /> Incorrect (0/{q.marks || 2}m)
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs mt-3 pt-2.5 border-t border-slate-200/60 dark:border-zinc-700/60">
+                            <div>
+                              <span className="text-[10px] font-bold text-slate-400 block mb-0.5">Student's Submitted Answer:</span>
+                              <div className={`p-2 rounded-lg font-medium text-xs ${
+                                isCorrect 
+                                  ? 'bg-emerald-100/70 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-200' 
+                                  : 'bg-red-100/70 text-red-900 dark:bg-red-900/40 dark:text-red-200 line-through'
+                              }`}>
+                                {studentAns || '(No Answer Submitted)'}
+                              </div>
+                            </div>
+
+                            {!isCorrect && (
+                              <div>
+                                <span className="text-[10px] font-bold text-emerald-600 block mb-0.5">Official Correct Answer:</span>
+                                <div className="p-2 rounded-lg font-bold text-xs bg-emerald-100/70 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-200">
+                                  {q.correct_answer}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          {q.explanation && (
+                            <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-2.5 pt-2 border-t border-slate-200/40 dark:border-zinc-700/40">
+                              <strong>Marking Rationale:</strong> {q.explanation}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </motion.div>
               )}
             </motion.div>
           )}

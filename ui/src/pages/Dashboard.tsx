@@ -5,7 +5,7 @@ import {
   Shield, Building2, GraduationCap, 
   BookOpen, CheckSquare, Sparkles,
   ClipboardList, Backpack, FileSpreadsheet,
-  Scissors, PenTool, Lightbulb, Database, Users
+  Scissors, PenTool, Bot, Database, Users
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { RoleFilterBar } from '../components/RoleFilterBar';
@@ -175,12 +175,12 @@ export function Dashboard() {
                 <div className="text-xs text-slate-500 mt-1">Simplify difficult texts and listen with Australian voice audio.</div>
               </Link>
 
-              <Link to="/student/quiz-me" className="p-4 rounded-2xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800/80 hover:shadow-md hover:border-amber-400 transition-all group">
+              <Link to="/student/join-room" className="p-4 rounded-2xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800/80 hover:shadow-md hover:border-amber-400 transition-all group">
                 <div className="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 flex items-center justify-center mb-2.5">
-                  <Lightbulb size={18} />
+                  <Bot size={18} />
                 </div>
-                <div className="font-bold text-sm text-slate-900 dark:text-white group-hover:text-amber-600">AI Quiz Me</div>
-                <div className="text-xs text-slate-500 mt-1">Self-assess any topic with instant explanations and badges.</div>
+                <div className="font-bold text-sm text-slate-900 dark:text-white group-hover:text-amber-600">Join Chatbot Room</div>
+                <div className="text-xs text-slate-500 mt-1">Join custom Socratic chatbot rooms created and provided by your teacher.</div>
               </Link>
 
               <Link to="/student/writing-studio" className="p-4 rounded-2xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800/80 hover:shadow-md hover:border-indigo-400 transition-all group">
@@ -449,11 +449,11 @@ export function Dashboard() {
             </div>
           </Link>
 
-          <Link to="/student/quiz-me" className="p-3.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:border-emerald-400 transition-all flex items-center gap-3">
-            <Lightbulb size={16} className="text-amber-600 shrink-0" />
+          <Link to="/student/join-room" className="p-3.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:border-emerald-400 transition-all flex items-center gap-3">
+            <Bot size={16} className="text-amber-600 shrink-0" />
             <div>
-              <div className="text-xs font-bold text-slate-900 dark:text-white">(c) AI Quiz Me</div>
-              <div className="text-[10px] text-slate-400">Self-guided interactive knowledge check</div>
+              <div className="text-xs font-bold text-slate-900 dark:text-white">(c) Join Chatbot Room</div>
+              <div className="text-[10px] text-slate-400">Connect to teacher-created classroom chatbot rooms</div>
             </div>
           </Link>
 
