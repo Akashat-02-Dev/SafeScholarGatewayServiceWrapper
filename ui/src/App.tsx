@@ -33,6 +33,7 @@ import { StudentJoinRoom } from './pages/student/StudentJoinRoom'
 import { StudentTextLevelerPage } from './pages/student/StudentTextLevelerPage'
 import { StudentTestEnvironmentPage } from './pages/student/StudentTestEnvironmentPage'
 import { ProfilePage } from './pages/ProfilePage'
+import { LandingPage } from './pages/LandingPage'
 
 import { useLocation } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -488,8 +489,8 @@ function App() {
             </Route>
           </Route>
 
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/" element={<PageTransition><LandingPage /></PageTransition>} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AnimatePresence>
       <Footer />

@@ -17,11 +17,32 @@ export function LoginPage() {
   const loc = useLocation()
   const from = useMemo(() => (loc.state as { from?: string } | null)?.from || '/dashboard', [loc.state])
 
-  const [isRegister, setIsRegister] = useState(false)
+  const [isRegister, setIsRegister] = useState(() => {
+    const params = new URLSearchParams(loc.search)
+    return params.get('mode') === 'register' || Boolean((loc.state as any)?.isRegister)
+  })
   const [isForgotPassword, setIsForgotPassword] = useState(false)
   
   // Sign up role selection
-  const [signupRole, setSignupRole] = useState<'student' | 'teacher' | 'institute_management'>('student')
+  const [signupRole, setSignupRole] = useState<'student' | 'teacher' | 'institute_management'>(() => {
+    const params = new URLSearchParams(loc.search)
+    const r = params.get('role')
+    if (r === 'teacher' || r === 'student' || r === 'institute_management') {
+      return r
+    }
+    return 'student'
+  })
+
+  useEffect(() => {
+    const params = new URLSearchParams(loc.search)
+    if (params.get('mode') === 'register') {
+      setIsRegister(true)
+    }
+    const r = params.get('role')
+    if (r === 'teacher' || r === 'student' || r === 'institute_management') {
+      setSignupRole(r)
+    }
+  }, [loc.search])
 
   // Common credentials
   const [email, setEmail] = useState('')
