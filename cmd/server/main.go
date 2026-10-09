@@ -32,6 +32,7 @@ import (
 	"safescholar/gateway/internal/clients"
 	"safescholar/gateway/internal/gateway"
 	"safescholar/gateway/internal/oauth"
+	"safescholar/gateway/internal/plugins"
 	"safescholar/gateway/internal/rbac"
 	"safescholar/gateway/internal/security"
 	"safescholar/gateway/internal/trial"
@@ -137,6 +138,11 @@ func main() {
 		}
 	}
 
+	pluginRegistry := plugins.NewPluginRegistry(pool, logger)
+	if err := pluginRegistry.LoadFromDatabase(ctx); err != nil {
+		logger.Warn("Plugin registry loaded with in-memory defaults", "error", err)
+	}
+
 	handler, cleanup, err := gateway.NewRouter(gateway.RouterDeps{
 		Config:           cfg,
 		Logger:           logger,
@@ -154,6 +160,7 @@ func main() {
 		DBPool:           pool,
 		AIClient:         aiClient,
 		TrialService:     trial.NewTrialService(pool, auditLogger),
+		PluginRegistry:   pluginRegistry,
 	})
 	if err != nil {
 		fatal(err)

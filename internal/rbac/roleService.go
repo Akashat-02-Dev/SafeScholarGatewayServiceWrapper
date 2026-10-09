@@ -34,10 +34,13 @@ type ActorContext struct {
 }
 
 type RoleSummary struct {
-	RoleID      string `json:"roleId"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	IsSystem    bool   `json:"isSystem"`
+	RoleID        string   `json:"roleId"`
+	InstitutionID string   `json:"institutionId,omitempty"`
+	Name          string   `json:"name"`
+	Description   string   `json:"description"`
+	IsSystem      bool     `json:"isSystem"`
+	Permissions   []string `json:"permissions"`
+	UserCount     int      `json:"userCount"`
 }
 
 func NewRoleService(pool *pgxpool.Pool, auditLogger *security.AuditLogger, delegation *DelegationService) *RoleService {
@@ -48,6 +51,10 @@ func NewRoleService(pool *pgxpool.Pool, auditLogger *security.AuditLogger, deleg
 		delegation:   delegation,
 		permissions:  NewPermissionService(pool),
 	}
+}
+
+func (s *RoleService) Permissions() *PermissionService {
+	return s.permissions
 }
 
 func (s *RoleService) CreateRole(ctx context.Context, actor ActorContext, name, description string) (string, error) {
@@ -377,10 +384,16 @@ func (s *RoleService) ListRoles(ctx context.Context, actor ActorContext) ([]Role
 	}
 
 	rows, err := tx.Query(ctx, `
-select role_id::text, name, coalesce(description,''), is_system_role
-from roles
-where institution_id is null or institution_id::text = nullif($1,'')
-order by is_system_role desc, name asc`, actor.InstitutionID)
+select r.role_id::text,
+       coalesce(r.institution_id::text,''),
+       r.name,
+       coalesce(r.description,''),
+       r.is_system_role,
+       coalesce((select array_agg(p.name order by p.name) from role_permissions rp join permissions p on rp.permission_id = p.permission_id where rp.role_id = r.role_id), array[]::text[]),
+       coalesce((select count(*) from user_roles ur where ur.role_id = r.role_id), 0)
+from roles r
+where r.institution_id is null or r.institution_id::text = nullif($1,'')
+order by r.is_system_role desc, r.name asc`, actor.InstitutionID)
 	if err != nil {
 		return nil, err
 	}
@@ -389,8 +402,11 @@ order by is_system_role desc, name asc`, actor.InstitutionID)
 	out := make([]RoleSummary, 0, 16)
 	for rows.Next() {
 		var r RoleSummary
-		if err := rows.Scan(&r.RoleID, &r.Name, &r.Description, &r.IsSystem); err != nil {
+		if err := rows.Scan(&r.RoleID, &r.InstitutionID, &r.Name, &r.Description, &r.IsSystem, &r.Permissions, &r.UserCount); err != nil {
 			return nil, err
+		}
+		if r.Permissions == nil {
+			r.Permissions = []string{}
 		}
 		out = append(out, r)
 	}
@@ -402,6 +418,113 @@ order by is_system_role desc, name asc`, actor.InstitutionID)
 		return nil, err
 	}
 	return out, nil
+}
+
+func (s *RoleService) UpdateRole(ctx context.Context, actor ActorContext, roleID, name, description string) error {
+	if s.pool == nil {
+		return errors.New("role service not configured")
+	}
+	rid := strings.TrimSpace(roleID)
+	n := strings.ToLower(strings.TrimSpace(name))
+	if rid == "" || n == "" {
+		return errors.New("roleId and name required")
+	}
+
+	if !actor.IsSysAdmin {
+		can, err := s.canManageRoles(ctx, actor)
+		if err != nil {
+			return err
+		}
+		if !can || !s.policyEngine.Allowed(actor.Permissions, "CREATE_ROLE") {
+			return errors.New("forbidden")
+		}
+	}
+
+	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback(context.Background()) }()
+
+	if err := database.ApplyAppContext(ctx, tx, database.AppContext{InstitutionID: actor.InstitutionID}); err != nil {
+		return err
+	}
+
+	roleInst, isSystem, err := loadRoleMeta(ctx, tx, rid)
+	if err != nil {
+		return err
+	}
+	if isSystem {
+		return errors.New("system roles cannot be modified")
+	}
+	if !actor.IsSysAdmin && roleInst != strings.TrimSpace(actor.InstitutionID) {
+		return errors.New("forbidden")
+	}
+
+	_, err = tx.Exec(ctx, `update roles set name=$1, description=nullif($2,'') where role_id=nullif($3,'')::uuid`, n, strings.TrimSpace(description), rid)
+	if err != nil {
+		return err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return err
+	}
+
+	s.audit(ctx, actor, "ROLE_UPDATED", "role", rid, map[string]any{"name": n})
+	return nil
+}
+
+func (s *RoleService) DeleteRole(ctx context.Context, actor ActorContext, roleID string) error {
+	if s.pool == nil {
+		return errors.New("role service not configured")
+	}
+	rid := strings.TrimSpace(roleID)
+	if rid == "" {
+		return errors.New("roleId required")
+	}
+
+	if !actor.IsSysAdmin {
+		can, err := s.canManageRoles(ctx, actor)
+		if err != nil {
+			return err
+		}
+		if !can || !s.policyEngine.Allowed(actor.Permissions, "CREATE_ROLE") {
+			return errors.New("forbidden")
+		}
+	}
+
+	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback(context.Background()) }()
+
+	if err := database.ApplyAppContext(ctx, tx, database.AppContext{InstitutionID: actor.InstitutionID}); err != nil {
+		return err
+	}
+
+	roleInst, isSystem, err := loadRoleMeta(ctx, tx, rid)
+	if err != nil {
+		return err
+	}
+	if isSystem {
+		return errors.New("system roles cannot be deleted")
+	}
+	if !actor.IsSysAdmin && roleInst != strings.TrimSpace(actor.InstitutionID) {
+		return errors.New("forbidden")
+	}
+
+	_, err = tx.Exec(ctx, `delete from roles where role_id=nullif($1,'')::uuid`, rid)
+	if err != nil {
+		return err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return err
+	}
+
+	s.audit(ctx, actor, "ROLE_DELETED", "role", rid, nil)
+	return nil
 }
 
 func (s *RoleService) canManageRoles(ctx context.Context, actor ActorContext) (bool, error) {

@@ -2,9 +2,19 @@ import { apiFetch } from './apiClient'
 
 export type RoleSummary = {
   roleId: string
+  institutionId?: string
   name: string
   description: string
   isSystem: boolean
+  permissions?: string[]
+  userCount?: number
+}
+
+export type PermissionItem = {
+  permissionId: string
+  name: string
+  description: string
+  module: string
 }
 
 export async function listRoles(accessToken: string) {
@@ -19,11 +29,58 @@ export async function createRole(accessToken: string, name: string, description:
   })
 }
 
+export async function updateRole(accessToken: string, roleId: string, name: string, description: string) {
+  return apiFetch<{ message: string }>('/api/admin/roles/update', {
+    method: 'POST',
+    accessToken,
+    body: { roleId, name, description },
+  })
+}
+
+export async function deleteRole(accessToken: string, roleId: string) {
+  return apiFetch<{ message: string }>('/api/admin/roles/delete', {
+    method: 'POST',
+    accessToken,
+    body: { roleId },
+  })
+}
+
 export async function assignPermission(accessToken: string, roleId: string, permission: string) {
   return apiFetch<void>('/api/admin/roles/assign-permission', {
     method: 'POST',
     accessToken,
     body: { roleId, permission },
+  })
+}
+
+export async function unassignPermission(accessToken: string, roleId: string, permission: string) {
+  return apiFetch<void>('/api/admin/roles/unassign-permission', {
+    method: 'POST',
+    accessToken,
+    body: { roleId, permission },
+  })
+}
+
+export async function listAllPermissions(accessToken: string) {
+  return apiFetch<{ permissions: PermissionItem[] }>('/api/admin/permissions', {
+    method: 'GET',
+    accessToken,
+  })
+}
+
+export async function createCustomPermission(accessToken: string, name: string, description: string, module: string) {
+  return apiFetch<{ message: string }>('/api/admin/permissions', {
+    method: 'POST',
+    accessToken,
+    body: { name, description, module },
+  })
+}
+
+export async function deleteCustomPermission(accessToken: string, name: string) {
+  return apiFetch<{ message: string }>('/api/admin/permissions/delete', {
+    method: 'POST',
+    accessToken,
+    body: { name },
   })
 }
 

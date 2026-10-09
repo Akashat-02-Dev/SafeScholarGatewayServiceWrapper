@@ -17,6 +17,7 @@ import (
 	"safescholar/gateway/internal/contracts"
 	"safescholar/gateway/internal/middleware"
 	"safescholar/gateway/internal/oauth"
+	"safescholar/gateway/internal/plugins"
 	"safescholar/gateway/internal/rbac"
 	"safescholar/gateway/internal/security"
 	"safescholar/gateway/internal/trial"
@@ -33,19 +34,20 @@ type Router struct {
 	routes []Route
 	logger *slog.Logger
 
-	authSvc     *auth.AuthService
-	oauthSvc    *oauth.OAuthService
-	roleSvc     *rbac.RoleService
-	registry    *service_registry.Registry
-	proxy       *ServiceProxy
-	wsService   *WSService
-	modClient   *clients.ModerationClient
-	auditLogger *security.AuditLogger
-	oversightSvc *OversightService
-	aiClient    clients.AIOrchestratorClient
-	redisClient *redis.Client
-	dbPool      *pgxpool.Pool
-	trialSvc    *trial.TrialService
+	authSvc        *auth.AuthService
+	oauthSvc       *oauth.OAuthService
+	roleSvc        *rbac.RoleService
+	registry       *service_registry.Registry
+	proxy          *ServiceProxy
+	wsService      *WSService
+	modClient      *clients.ModerationClient
+	auditLogger    *security.AuditLogger
+	oversightSvc   *OversightService
+	aiClient       clients.AIOrchestratorClient
+	redisClient    *redis.Client
+	dbPool         *pgxpool.Pool
+	trialSvc       *trial.TrialService
+	pluginRegistry *plugins.PluginRegistry
 }
 
 type RouterDeps struct {
@@ -65,6 +67,7 @@ type RouterDeps struct {
 	DBPool           *pgxpool.Pool
 	AIClient         clients.AIOrchestratorClient
 	TrialService     *trial.TrialService
+	PluginRegistry   *plugins.PluginRegistry
 }
 
 func NewRouter(deps RouterDeps) (http.Handler, func(), error) {
@@ -79,21 +82,22 @@ func NewRouter(deps RouterDeps) (http.Handler, func(), error) {
 	}
 
 	r := &Router{
-		routes:      Routes(),
-		logger:      deps.Logger,
-		authSvc:     deps.AuthService,
-		oauthSvc:    deps.OAuthService,
-		roleSvc:     deps.RoleService,
-		registry:    deps.ServiceRegistry,
-		proxy:       deps.ServiceProxy,
-		wsService:   deps.WSService,
-		modClient:   deps.ModerationClient,
-		auditLogger: deps.AuditLogger,
-		oversightSvc: NewOversightService(deps.RedisClient),
-		aiClient:    deps.AIClient,
-		redisClient: deps.RedisClient,
-		dbPool:      deps.DBPool,
-		trialSvc:    deps.TrialService,
+		routes:         Routes(),
+		logger:         deps.Logger,
+		authSvc:        deps.AuthService,
+		oauthSvc:       deps.OAuthService,
+		roleSvc:        deps.RoleService,
+		registry:       deps.ServiceRegistry,
+		proxy:          deps.ServiceProxy,
+		wsService:      deps.WSService,
+		modClient:      deps.ModerationClient,
+		auditLogger:    deps.AuditLogger,
+		oversightSvc:   NewOversightService(deps.RedisClient),
+		aiClient:       deps.AIClient,
+		redisClient:    deps.RedisClient,
+		dbPool:         deps.DBPool,
+		trialSvc:       deps.TrialService,
+		pluginRegistry: deps.PluginRegistry,
 	}
 
 	base := http.HandlerFunc(r.serve)
@@ -306,14 +310,57 @@ func (r *Router) handleJWKS(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (r *Router) handleProxy(w http.ResponseWriter, req *http.Request, route Route) {
+	pluginID := route.ServiceName
+	switch pluginID {
+	case ServiceWorksheet:
+		pluginID = "worksheet_service"
+	case ServiceAssessment:
+		pluginID = "assessment_service"
+	case ServiceModeration:
+		pluginID = "moderation_service"
+	case "lms-integration":
+		pluginID = "lms_integration"
+	}
+
+	uc := middleware.UserContextFromContext(req.Context())
+	if r.pluginRegistry != nil && pluginID != "" {
+		if !r.pluginRegistry.IsPluginEnabled(pluginID, uc.InstitutionID) {
+			security.WriteJSONError(w, http.StatusForbidden, fmt.Sprintf("Feature '%s' is currently disabled by administrator", pluginID))
+			return
+		}
+		if p, ok := r.pluginRegistry.GetPlugin(pluginID); ok {
+			allowed, _ := p.CircuitBreaker.AllowRequest()
+			if !allowed {
+				security.WriteJSONError(w, http.StatusServiceUnavailable, fmt.Sprintf("Circuit breaker OPEN for upstream '%s'", pluginID))
+				return
+			}
+		}
+	}
+
+	start := time.Now()
 	baseURL, err := r.registry.Resolve(req.Context(), route.ServiceName)
 	if err != nil {
+		if r.pluginRegistry != nil && pluginID != "" {
+			if p, ok := r.pluginRegistry.GetPlugin(pluginID); ok {
+				p.CircuitBreaker.RecordFailure(err)
+			}
+		}
 		w.WriteHeader(http.StatusBadGateway)
 		return
 	}
 	if err := r.proxy.Forward(w, req, baseURL, route.StripPrefix); err != nil {
+		if r.pluginRegistry != nil && pluginID != "" {
+			if p, ok := r.pluginRegistry.GetPlugin(pluginID); ok {
+				p.CircuitBreaker.RecordFailure(err)
+			}
+		}
 		w.WriteHeader(http.StatusBadGateway)
 		return
+	}
+	if r.pluginRegistry != nil && pluginID != "" {
+		if p, ok := r.pluginRegistry.GetPlugin(pluginID); ok {
+			p.CircuitBreaker.RecordSuccess(time.Since(start))
+		}
 	}
 }
 
@@ -662,6 +709,45 @@ func (r *Router) handleAdmin(w http.ResponseWriter, req *http.Request, prefix st
 		}
 		r.handleToggleTrial(w, req)
 		return
+	case "/api/admin/roles/update":
+		if req.Method != http.MethodPost {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		r.handleUpdateRole(w, req, actor)
+		return
+	case "/api/admin/roles/delete":
+		if req.Method != http.MethodPost {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		r.handleDeleteRole(w, req, actor)
+		return
+	case "/api/admin/roles/unassign-permission":
+		if req.Method != http.MethodPost {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		r.handleUnassignPermission(w, req, actor)
+		return
+	case "/api/admin/permissions":
+		r.handleAdminPermissions(w, req, actor)
+		return
+	case "/api/admin/permissions/delete":
+		if req.Method != http.MethodPost {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		r.handleDeletePermission(w, req, actor)
+		return
+	case "/api/v1/admin/plugins",
+		"/api/v1/admin/plugins/toggle",
+		"/api/v1/admin/plugins/config",
+		"/api/v1/admin/plugins/reset-circuit",
+		"/api/v1/admin/plugins/tenant-override",
+		"/api/v1/admin/plugins/health-check":
+		r.handleAdminPlugins(w, req, prefix, actor)
+		return
 	default:
 		w.WriteHeader(http.StatusNotFound)
 	}
@@ -958,8 +1044,26 @@ func (r *Router) handleSpecificAITool(w http.ResponseWriter, req *http.Request, 
 		Parameters:    body.Parameters,
 	}
 
-	r.logger.Info("Executing secure AI completion request", "tool_id", toolID, "institution_id", uc.InstitutionID)
-	resp, err := r.aiClient.ExecutePrompt(req.Context(), &completionReq)
+	r.logger.Info("Executing resilient AI completion request", "tool_id", toolID, "institution_id", uc.InstitutionID)
+
+	var resp any
+	var isFallback bool
+	var err error
+
+	if r.pluginRegistry != nil {
+		resp, isFallback, err = r.pluginRegistry.ExecuteWithResilience(
+			req.Context(),
+			toolID,
+			uc.InstitutionID,
+			func(execCtx context.Context) (any, error) {
+				return r.aiClient.ExecutePrompt(execCtx, &completionReq)
+			},
+			body.Parameters,
+		)
+	} else {
+		resp, err = r.aiClient.ExecutePrompt(req.Context(), &completionReq)
+	}
+
 	if err != nil {
 		r.logger.Error("AI completion request failed", "tool_id", toolID, "error", err)
 		
@@ -980,10 +1084,22 @@ func (r *Router) handleSpecificAITool(w http.ResponseWriter, req *http.Request, 
 			})
 		}
 		
+		if errors.Is(err, plugins.ErrPluginDisabled) {
+			security.WriteJSONError(w, http.StatusForbidden, err.Error())
+			return
+		}
+		if errors.Is(err, plugins.ErrCircuitOpen) {
+			security.WriteJSONError(w, http.StatusServiceUnavailable, err.Error())
+			return
+		}
+
 		security.WriteJSONError(w, http.StatusBadGateway, fmt.Sprintf("Upstream Error: %v", err))
 		return
 	}
 
+	if isFallback {
+		w.Header().Set("X-Feature-Fallback", "true")
+	}
 	writeJSON(w, http.StatusOK, resp)
 }
 
@@ -1070,3 +1186,250 @@ func (r *Router) validateUserApprovalAgainstTrial(ctx context.Context, userID, r
 	}
 	return r.trialSvc.ValidateTrialQuota(ctx, instID, roleName)
 }
+
+type updateRoleRequest struct {
+	RoleID      string `json:"roleId"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+
+func (r *Router) handleUpdateRole(w http.ResponseWriter, req *http.Request, actor rbac.ActorContext) {
+	var body updateRoleRequest
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+		security.WriteJSONError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if err := r.roleSvc.UpdateRole(req.Context(), actor, body.RoleID, body.Name, body.Description); err != nil {
+		security.WriteJSONError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"message": "Role updated successfully"})
+}
+
+func (r *Router) handleDeleteRole(w http.ResponseWriter, req *http.Request, actor rbac.ActorContext) {
+	var body struct {
+		RoleID string `json:"roleId"`
+	}
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+		security.WriteJSONError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if err := r.roleSvc.DeleteRole(req.Context(), actor, body.RoleID); err != nil {
+		security.WriteJSONError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"message": "Role deleted successfully"})
+}
+
+func (r *Router) handleUnassignPermission(w http.ResponseWriter, req *http.Request, actor rbac.ActorContext) {
+	var ap assignPermissionRequest
+	if err := json.NewDecoder(req.Body).Decode(&ap); err != nil {
+		security.WriteJSONError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if err := r.roleSvc.RemovePermissionFromRole(req.Context(), actor, ap.RoleID, ap.PermissionCode); err != nil {
+		security.WriteJSONError(w, http.StatusForbidden, "forbidden")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (r *Router) handleAdminPermissions(w http.ResponseWriter, req *http.Request, actor rbac.ActorContext) {
+	if r.roleSvc == nil {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		return
+	}
+	if req.Method == http.MethodGet {
+		perms, err := r.roleSvc.Permissions().List(req.Context())
+		if err != nil {
+			security.WriteJSONError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"permissions": perms})
+		return
+	}
+	if req.Method == http.MethodPost {
+		if !actor.IsSysAdmin {
+			security.WriteJSONError(w, http.StatusForbidden, "super admin access required")
+			return
+		}
+		var cp struct {
+			Name        string `json:"name"`
+			Description string `json:"description"`
+			Module      string `json:"module"`
+		}
+		if err := json.NewDecoder(req.Body).Decode(&cp); err != nil {
+			security.WriteJSONError(w, http.StatusBadRequest, "invalid request body")
+			return
+		}
+		if err := r.roleSvc.Permissions().Create(req.Context(), cp.Name, cp.Description, cp.Module); err != nil {
+			security.WriteJSONError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		writeJSON(w, http.StatusCreated, map[string]any{"message": "Permission created successfully", "name": cp.Name})
+		return
+	}
+	w.WriteHeader(http.StatusMethodNotAllowed)
+}
+
+func (r *Router) handleDeletePermission(w http.ResponseWriter, req *http.Request, actor rbac.ActorContext) {
+	if !actor.IsSysAdmin {
+		security.WriteJSONError(w, http.StatusForbidden, "super admin access required")
+		return
+	}
+	var dp struct {
+		Name string `json:"name"`
+	}
+	if err := json.NewDecoder(req.Body).Decode(&dp); err != nil {
+		security.WriteJSONError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if err := r.roleSvc.Permissions().Delete(req.Context(), dp.Name); err != nil {
+		security.WriteJSONError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"message": "Permission deleted successfully"})
+}
+
+func (r *Router) handleAdminPlugins(w http.ResponseWriter, req *http.Request, prefix string, actor rbac.ActorContext) {
+	if r.pluginRegistry == nil {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		return
+	}
+	if !actor.IsSysAdmin {
+		security.WriteJSONError(w, http.StatusForbidden, "super admin access required")
+		return
+	}
+
+	switch prefix {
+	case "/api/v1/admin/plugins":
+		if req.Method != http.MethodGet {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		instID := req.URL.Query().Get("institutionId")
+		list := r.pluginRegistry.ListPlugins(instID)
+		writeJSON(w, http.StatusOK, map[string]any{"plugins": list})
+		return
+
+	case "/api/v1/admin/plugins/toggle":
+		if req.Method != http.MethodPost {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		var tp plugins.TogglePluginRequest
+		if err := json.NewDecoder(req.Body).Decode(&tp); err != nil {
+			security.WriteJSONError(w, http.StatusBadRequest, "invalid request body")
+			return
+		}
+		if err := r.pluginRegistry.TogglePlugin(req.Context(), tp.PluginID, tp.Enabled); err != nil {
+			security.WriteJSONError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{
+			"message":  "Plugin state toggled successfully",
+			"pluginId": tp.PluginID,
+			"enabled":  tp.Enabled,
+		})
+		return
+
+	case "/api/v1/admin/plugins/config":
+		if req.Method != http.MethodPost {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		var up plugins.UpdatePluginConfigRequest
+		if err := json.NewDecoder(req.Body).Decode(&up); err != nil {
+			security.WriteJSONError(w, http.StatusBadRequest, "invalid request body")
+			return
+		}
+		if err := r.pluginRegistry.UpdatePluginConfig(req.Context(), up); err != nil {
+			security.WriteJSONError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"message": "Plugin configuration updated successfully"})
+		return
+
+	case "/api/v1/admin/plugins/reset-circuit":
+		if req.Method != http.MethodPost {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		var rc plugins.ResetCircuitRequest
+		if err := json.NewDecoder(req.Body).Decode(&rc); err != nil {
+			security.WriteJSONError(w, http.StatusBadRequest, "invalid request body")
+			return
+		}
+		ok := r.pluginRegistry.ResetCircuit(rc.PluginID)
+		if !ok {
+			security.WriteJSONError(w, http.StatusNotFound, "plugin not found")
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"message": "Circuit breaker reset to CLOSED state", "pluginId": rc.PluginID})
+		return
+
+	case "/api/v1/admin/plugins/tenant-override":
+		if req.Method != http.MethodPost {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		var to plugins.TenantOverrideRequest
+		if err := json.NewDecoder(req.Body).Decode(&to); err != nil {
+			security.WriteJSONError(w, http.StatusBadRequest, "invalid request body")
+			return
+		}
+		if err := r.pluginRegistry.SetTenantOverride(req.Context(), to.InstitutionID, to.PluginID, to.Enabled); err != nil {
+			security.WriteJSONError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"message": "Tenant override configured successfully"})
+		return
+
+	case "/api/v1/admin/plugins/health-check":
+		if req.Method != http.MethodPost {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		var hc struct {
+			PluginID string `json:"pluginId"`
+		}
+		if err := json.NewDecoder(req.Body).Decode(&hc); err != nil {
+			security.WriteJSONError(w, http.StatusBadRequest, "invalid request body")
+			return
+		}
+		p, exists := r.pluginRegistry.GetPlugin(hc.PluginID)
+		if !exists {
+			security.WriteJSONError(w, http.StatusNotFound, "plugin not found")
+			return
+		}
+		start := time.Now()
+		var healthy bool
+		var detail string
+		if p.TargetService == "internal" {
+			healthy = true
+			detail = "Internal gateway subsystem operational"
+		} else {
+			baseURL, err := r.registry.Resolve(req.Context(), p.TargetService)
+			if err != nil {
+				healthy = false
+				detail = fmt.Sprintf("Service registry cannot resolve '%s': %v", p.TargetService, err)
+			} else {
+				healthy = true
+				detail = fmt.Sprintf("Service reachable at %s", baseURL)
+			}
+		}
+		writeJSON(w, http.StatusOK, map[string]any{
+			"pluginId":      p.ID,
+			"targetService": p.TargetService,
+			"healthy":       healthy,
+			"detail":        detail,
+			"latencyMs":     time.Since(start).Milliseconds(),
+			"circuitState":  p.CircuitBreaker.GetStats().State,
+		})
+		return
+
+	default:
+		w.WriteHeader(http.StatusNotFound)
+	}
+}
+

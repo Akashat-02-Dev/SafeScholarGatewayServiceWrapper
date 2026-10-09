@@ -64,13 +64,27 @@ func Routes() []Route {
 		{Method: http.MethodPost, PathPrefix: "/api/v1/admin/users/delete", AuthRequired: true, RequiredPermission: PermissionManageUsers},
 		{Method: http.MethodGet, PathPrefix: "/api/admin/roles", AuthRequired: true, RequiredPermission: PermissionCreateRole},
 		{Method: http.MethodPost, PathPrefix: "/api/admin/roles", AuthRequired: true, RequiredPermission: PermissionCreateRole},
+		{Method: http.MethodPost, PathPrefix: "/api/admin/roles/update", AuthRequired: true, RequiredPermission: PermissionCreateRole},
+		{Method: http.MethodPost, PathPrefix: "/api/admin/roles/delete", AuthRequired: true, RequiredPermission: PermissionCreateRole},
 		{Method: http.MethodPost, PathPrefix: "/api/admin/roles/assign-permission", AuthRequired: true, RequiredPermission: PermissionAssignPermission},
+		{Method: http.MethodPost, PathPrefix: "/api/admin/roles/unassign-permission", AuthRequired: true, RequiredPermission: PermissionAssignPermission},
 		{Method: http.MethodPost, PathPrefix: "/api/admin/users/assign-role", AuthRequired: true, RequiredPermission: PermissionAssignRole},
+		{Method: http.MethodGet, PathPrefix: "/api/admin/permissions", AuthRequired: true, RequiredPermission: PermissionCreateRole},
+		{Method: http.MethodPost, PathPrefix: "/api/admin/permissions", AuthRequired: true, RequiredPermission: "SUPER_ADMIN"},
+		{Method: http.MethodPost, PathPrefix: "/api/admin/permissions/delete", AuthRequired: true, RequiredPermission: "SUPER_ADMIN"},
 
 		// Super Admin Trial Governance Endpoints
 		{Method: http.MethodGet, PathPrefix: "/api/v1/admin/trials", AuthRequired: true, RequiredPermission: "SUPER_ADMIN"},
 		{Method: http.MethodPost, PathPrefix: "/api/v1/admin/trials/onboard", AuthRequired: true, RequiredPermission: "SUPER_ADMIN"},
 		{Method: http.MethodPost, PathPrefix: "/api/v1/admin/trials/toggle", AuthRequired: true, RequiredPermission: "SUPER_ADMIN"},
+
+		// Super Admin Plugin & Feature Resilience Mesh Endpoints
+		{Method: http.MethodGet, PathPrefix: "/api/v1/admin/plugins", AuthRequired: true, RequiredPermission: "SUPER_ADMIN"},
+		{Method: http.MethodPost, PathPrefix: "/api/v1/admin/plugins/toggle", AuthRequired: true, RequiredPermission: "SUPER_ADMIN"},
+		{Method: http.MethodPost, PathPrefix: "/api/v1/admin/plugins/config", AuthRequired: true, RequiredPermission: "SUPER_ADMIN"},
+		{Method: http.MethodPost, PathPrefix: "/api/v1/admin/plugins/reset-circuit", AuthRequired: true, RequiredPermission: "SUPER_ADMIN"},
+		{Method: http.MethodPost, PathPrefix: "/api/v1/admin/plugins/tenant-override", AuthRequired: true, RequiredPermission: "SUPER_ADMIN"},
+		{Method: http.MethodPost, PathPrefix: "/api/v1/admin/plugins/health-check", AuthRequired: true, RequiredPermission: "SUPER_ADMIN"},
 
 		// AiOS Endpoints
 		{Method: http.MethodGet, PathPrefix: "/api/v1/ai/tutor", AuthRequired: true, RequiredPermission: rbac.PermissionExecuteAITutor, ServiceName: "ai-orchestrator"},

@@ -1,11 +1,12 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { useLocation, Link } from 'react-router-dom';
 import { useRoleFilter } from '../services/roleFilterContext';
 import { 
   LayoutGrid, BookOpen, FileText, FileSpreadsheet, 
   ClipboardCheck, Sparkles, Scissors, PenTool, 
   Bot, CheckCircle2, Database, 
-  GraduationCap, Backpack, Building2, Shield
+  GraduationCap, Backpack, Building2, Shield,
+  Cpu, KeyRound
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -62,7 +63,9 @@ export function Sidebar() {
               <Shield size={13} />
               <span>Super Admin</span>
             </div>
-            <SidebarLink to="/superadmin" icon={Shield} label="Super Admin Hub" />
+            <SidebarLink to="/superadmin?tab=plugins" icon={Cpu} label="Resilience Mesh" />
+            <SidebarLink to="/superadmin?tab=rbac" icon={KeyRound} label="Roles & Perms" />
+            <SidebarLink to="/superadmin?tab=infrastructure" icon={Building2} label="Institutes & Trials" />
           </div>
         )}
 
@@ -111,29 +114,41 @@ export function Sidebar() {
 }
 
 function SidebarLink({ to, icon: Icon, label }: { to: string; icon: any; label: string }) {
+  const location = useLocation();
+  const currentPathWithSearch = location.pathname + location.search;
+  
+  // Exact or query matching
+  let isMatch = false;
+  if (to.includes('?')) {
+    isMatch = currentPathWithSearch === to;
+  } else {
+    // If to="/superadmin", match if pathname starts with /superadmin and no tab param
+    if (to === '/superadmin') {
+      isMatch = location.pathname === '/superadmin' && !location.search;
+    } else {
+      isMatch = location.pathname === to;
+    }
+  }
+
   return (
-    <NavLink
+    <Link
       to={to}
-      className={({ isActive }) => `relative flex flex-col md:flex-row items-center justify-center md:justify-start gap-1 md:gap-3 px-3 sm:px-4 py-2.5 md:py-2.5 rounded-2xl md:rounded-full text-[10px] sm:text-xs md:text-sm font-medium transition-colors z-10 shrink-0 w-[4.5rem] sm:w-[5.5rem] md:w-auto snap-center md:snap-align-none ${
-        isActive 
+      className={`relative flex flex-col md:flex-row items-center justify-center md:justify-start gap-1 md:gap-3 px-3 sm:px-4 py-2.5 md:py-2.5 rounded-2xl md:rounded-full text-[10px] sm:text-xs md:text-sm font-medium transition-colors z-10 shrink-0 w-[4.5rem] sm:w-[5.5rem] md:w-auto snap-center md:snap-align-none ${
+        isMatch 
           ? 'text-blue-700 dark:text-blue-300 font-bold' 
           : 'text-slate-600 dark:text-zinc-400 hover:bg-black/5 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'
       }`}
     >
-      {({ isActive }) => (
-        <>
-          {isActive && (
-            <motion.div
-              layoutId="sidebar-active-indicator"
-              className="absolute inset-0 bg-blue-100/70 dark:bg-blue-500/15 dark:border dark:border-blue-500/25 rounded-2xl md:rounded-full -z-10 shadow-sm"
-              transition={{ type: 'spring', stiffness: 350, damping: 30 }}
-            />
-          )}
-          <Icon size={18} className="md:w-[17px] md:h-[17px] shrink-0" strokeWidth={isActive ? 2.5 : 2} />
-          <span className="truncate w-full text-center md:text-left">{label}</span>
-        </>
+      {isMatch && (
+        <motion.div
+          layoutId="sidebar-active-indicator"
+          className="absolute inset-0 bg-blue-100/70 dark:bg-blue-500/15 dark:border dark:border-blue-500/25 rounded-2xl md:rounded-full -z-10 shadow-sm"
+          transition={{ type: 'spring', stiffness: 350, damping: 30 }}
+        />
       )}
-    </NavLink>
+      <Icon size={18} className="md:w-[17px] md:h-[17px] shrink-0" strokeWidth={isMatch ? 2.5 : 2} />
+      <span className="truncate w-full text-center md:text-left">{label}</span>
+    </Link>
   );
 }
 

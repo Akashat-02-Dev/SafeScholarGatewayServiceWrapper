@@ -5,7 +5,8 @@ import {
   Shield, Building2, GraduationCap, 
   BookOpen, CheckSquare, Sparkles,
   ClipboardList, Backpack, FileSpreadsheet,
-  Scissors, PenTool, Bot, Database, Users
+  Scissors, PenTool, Bot, Database, Users,
+  Cpu, KeyRound, Zap
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { RoleFilterBar } from '../components/RoleFilterBar';
@@ -29,29 +30,41 @@ export function Dashboard() {
   function renderSuperAdminQuickBar(portalName: string) {
     if (!isSuperAdmin) return null;
     return (
-      <div className="mb-5 p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/10 border border-amber-300 dark:border-amber-700/60 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shadow-sm">
+      <div className="mb-5 p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-amber-500/10 border border-amber-300 dark:border-amber-700/60 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 shadow-sm">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-600 text-white shadow-sm shrink-0">
             <Shield size={18} />
           </div>
           <div>
             <div className="text-xs font-bold text-amber-950 dark:text-amber-200 flex items-center gap-2">
-              Super Admin Controls
+              Super Admin Executive Controls
               <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-200/60 dark:bg-amber-900/40 text-amber-900 dark:text-amber-300">
                 {portalName}
               </span>
             </div>
             <div className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">
-              Multi-tenant institute onboarding, teacher/student quotas, and real-time AI token usage.
+              Microservice resilience mesh, dynamic granular RBAC, and multi-tenant trial quotas.
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+        <div className="flex flex-wrap items-center gap-2 self-stretch sm:self-auto shrink-0">
           <Link
-            to="/superadmin"
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white text-xs font-bold shadow-sm hover:shadow-md transition-all whitespace-nowrap"
+            to="/superadmin?tab=plugins"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-sm hover:shadow-md transition-all whitespace-nowrap"
           >
-            <Shield size={13} /> Open Super Admin Hub
+            <Cpu size={13} /> Resilience Mesh
+          </Link>
+          <Link
+            to="/superadmin?tab=rbac"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold shadow-sm hover:shadow-md transition-all whitespace-nowrap"
+          >
+            <KeyRound size={13} /> Roles &amp; Perms
+          </Link>
+          <Link
+            to="/superadmin?tab=infrastructure"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white text-xs font-bold shadow-sm hover:shadow-md transition-all whitespace-nowrap"
+          >
+            <Shield size={13} /> Admin Hub
           </Link>
           <RoleFilterBar compact />
         </div>
@@ -295,53 +308,146 @@ export function Dashboard() {
         </div>
       </div>
 
-      {/* 🚀 SUPER ADMIN MASTER GOVERNANCE & TELEMETRY SUITE */}
-      <div className="card shadow-xl border border-amber-200/80 dark:border-amber-900/40 bg-gradient-to-br from-amber-50/90 via-orange-50/50 to-white/90 dark:from-zinc-900/90 dark:via-zinc-900/80 dark:to-amber-950/20 backdrop-blur-3xl rounded-3xl p-6 sm:p-7">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="space-y-3 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700 uppercase tracking-wider">
-              <Shield size={14} className="text-amber-600 dark:text-amber-400" />
-              <span>Multi-Tenant Infrastructure Hub</span>
+      {/* 🚀 SUPER ADMIN 3-PILLAR ENTERPRISE GOVERNANCE COMMAND DECK */}
+      <div className="card shadow-xl border border-amber-200/80 dark:border-amber-900/40 bg-gradient-to-br from-amber-50/90 via-orange-50/40 to-white/90 dark:from-zinc-900/90 dark:via-zinc-900/80 dark:to-amber-950/20 backdrop-blur-3xl rounded-3xl p-5 sm:p-7">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-amber-200/60 dark:border-amber-900/30 pb-5 mb-5">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-2xl bg-gradient-to-tr from-amber-500 via-orange-500 to-amber-600 text-white shadow-md">
+              <Shield size={22} />
             </div>
-            <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-              Institute Onboarding, Quotas & AI Usage Telemetry
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-              Provision new pilot institutions with 7-30 day trial bounds, monitor real-time teacher and student enrollments against allocated quotas, and track high-resolution AI token consumption and request throughput across all schools.
-            </p>
-            
-            <div className="flex flex-wrap items-center gap-2.5 pt-1">
-              <div className="px-3 py-1.5 rounded-xl bg-white/80 dark:bg-zinc-800/80 border border-slate-200 dark:border-zinc-700 text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 shadow-sm">
-                <Building2 size={14} className="text-indigo-600 dark:text-indigo-400" />
-                <span>Onboard & Manage Institutes</span>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white tracking-tight">
+                  Enterprise Core Architecture &amp; Governance
+                </h2>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-200/70 dark:bg-amber-900/50 text-amber-900 dark:text-amber-300">
+                  Super Admin
+                </span>
               </div>
-              <div className="px-3 py-1.5 rounded-xl bg-white/80 dark:bg-zinc-800/80 border border-slate-200 dark:border-zinc-700 text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 shadow-sm">
-                <Users size={14} className="text-blue-600 dark:text-blue-400" />
-                <span>Teacher & Student Headcounts</span>
+              <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+                Fault-tolerant microservice plugins, circuit breaker resilience mesh, granular dynamic RBAC, and multi-tenant trial management.
+              </p>
+            </div>
+          </div>
+          <Link
+            to="/superadmin"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white text-xs font-bold shadow-md hover:shadow-lg transition-all shrink-0 self-start md:self-auto"
+          >
+            <Shield size={14} /> Launch Executive Console
+          </Link>
+        </div>
+
+        {/* 3 Core Architecture Pillars */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          
+          {/* Pillar 1: Plugins & Circuit Breaker Mesh */}
+          <div className="p-4 sm:p-5 rounded-2xl border border-indigo-200/80 dark:border-indigo-900/40 bg-white/80 dark:bg-zinc-800/80 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow">
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                  <Cpu size={20} />
+                </div>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                  Resilience Mesh
+                </span>
               </div>
-              <div className="px-3 py-1.5 rounded-xl bg-white/80 dark:bg-zinc-800/80 border border-slate-200 dark:border-zinc-700 text-xs font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-1.5 shadow-sm">
-                <Sparkles size={14} className="text-amber-600 dark:text-amber-400" />
-                <span>Token Telemetry & AI Limits</span>
+              <h3 className="font-bold text-sm text-slate-900 dark:text-white mb-1">
+                Core Plugins &amp; Circuit Breakers
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-3 leading-relaxed">
+                22 decoupled plugins. Zero cascade failures; isolated circuit breakers trip individually with automated Australian Curriculum fallbacks.
+              </p>
+              <div className="space-y-1.5 text-[11px] text-slate-600 dark:text-slate-300 mb-4 font-medium">
+                <div className="flex items-center gap-1.5">
+                  <Zap size={12} className="text-amber-500" />
+                  <span>Canary health probes &amp; manual trip resets</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Shield size={12} className="text-indigo-500" />
+                  <span>Per-tenant plugin toggles &amp; overrides</span>
+                </div>
               </div>
             </div>
+            <Link
+              to="/superadmin?tab=plugins"
+              className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-sm"
+            >
+              <Cpu size={14} /> Open Plugins Mesh
+            </Link>
           </div>
 
-          <div className="flex flex-col sm:flex-row lg:flex-col gap-3 shrink-0">
+          {/* Pillar 2: Dynamic Roles & Granular Permissions */}
+          <div className="p-4 sm:p-5 rounded-2xl border border-purple-200/80 dark:border-purple-900/40 bg-white/80 dark:bg-zinc-800/80 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow">
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+                  <KeyRound size={20} />
+                </div>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                  Granular RBAC
+                </span>
+              </div>
+              <h3 className="font-bold text-sm text-slate-900 dark:text-white mb-1">
+                Custom Roles &amp; Permissions
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-3 leading-relaxed">
+                Build granular roles, configure fine-grained permissions per feature module, and manage access boundaries across all school districts.
+              </p>
+              <div className="space-y-1.5 text-[11px] text-slate-600 dark:text-slate-300 mb-4 font-medium">
+                <div className="flex items-center gap-1.5">
+                  <Shield size={12} className="text-purple-500" />
+                  <span>Interactive module permission checklists</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <KeyRound size={12} className="text-teal-500" />
+                  <span>Custom permission creation &amp; revoking</span>
+                </div>
+              </div>
+            </div>
             <Link
-              to="/superadmin"
-              className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:to-orange-600 text-white font-bold text-sm shadow-lg shadow-orange-500/25 hover:shadow-xl hover:scale-[1.02] transition-all"
+              to="/superadmin?tab=rbac"
+              className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition-all shadow-sm"
             >
-              <Shield size={18} />
-              <span>Launch Super Admin Hub</span>
-            </Link>
-            <Link
-              to="/superadmin/dashboard"
-              className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-white dark:bg-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-700 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-zinc-700 text-xs font-bold shadow-sm transition-all"
-            >
-              <Building2 size={16} className="text-indigo-600" />
-              <span>Onboard Institute & Trials</span>
+              <KeyRound size={14} /> Configure Roles &amp; Perms
             </Link>
           </div>
+
+          {/* Pillar 3: Multi-Tenant Trials & Quotas */}
+          <div className="p-4 sm:p-5 rounded-2xl border border-amber-200/80 dark:border-amber-900/40 bg-white/80 dark:bg-zinc-800/80 flex flex-col justify-between shadow-sm hover:shadow-md transition-shadow">
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+                  <Building2 size={20} />
+                </div>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                  Trials &amp; Quotas
+                </span>
+              </div>
+              <h3 className="font-bold text-sm text-slate-900 dark:text-white mb-1">
+                Multi-Tenant Institutes &amp; Telemetry
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mb-3 leading-relaxed">
+                Onboard pilot institutes with 7-30 day trial bounds, monitor real-time teacher and student enrollments, and track AI token telemetry.
+              </p>
+              <div className="space-y-1.5 text-[11px] text-slate-600 dark:text-slate-300 mb-4 font-medium">
+                <div className="flex items-center gap-1.5">
+                  <Users size={12} className="text-blue-500" />
+                  <span>Teacher &amp; student seat limit enforcement</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Sparkles size={12} className="text-amber-500" />
+                  <span>Live prompt/completion token consumption</span>
+                </div>
+              </div>
+            </div>
+            <Link
+              to="/superadmin?tab=infrastructure"
+              className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white text-xs font-bold transition-all shadow-sm"
+            >
+              <Building2 size={14} /> Manage Institutes &amp; Trials
+            </Link>
+          </div>
+
         </div>
       </div>
 

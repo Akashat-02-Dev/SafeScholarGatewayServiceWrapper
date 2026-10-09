@@ -204,3 +204,41 @@ func (s *PermissionService) ValidateCodesExist(ctx context.Context, codes []stri
 	}
 	return nil
 }
+
+func (s *PermissionService) Create(ctx context.Context, name, description, module string) error {
+	if s.pool == nil {
+		return errors.New("permission service not configured")
+	}
+	n := strings.ToUpper(strings.TrimSpace(name))
+	if n == "" {
+		return errors.New("permission name required")
+	}
+	m := strings.ToLower(strings.TrimSpace(module))
+	if m == "" {
+		m = "custom"
+	}
+	_, err := s.pool.Exec(ctx, `
+insert into permissions(name, description, module)
+values ($1, nullif($2,''), $3)
+on conflict (name) do update set description=excluded.description, module=excluded.module`,
+		n, strings.TrimSpace(description), m,
+	)
+	return err
+}
+
+func (s *PermissionService) Delete(ctx context.Context, name string) error {
+	if s.pool == nil {
+		return errors.New("permission service not configured")
+	}
+	n := strings.ToUpper(strings.TrimSpace(name))
+	if n == "" {
+		return errors.New("permission name required")
+	}
+	for _, imm := range s.ImmutableDefinitions() {
+		if imm.Name == n {
+			return errors.New("immutable system permission cannot be deleted")
+		}
+	}
+	_, err := s.pool.Exec(ctx, `delete from permissions where name=$1`, n)
+	return err
+}

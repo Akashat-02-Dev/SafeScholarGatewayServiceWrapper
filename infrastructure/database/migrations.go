@@ -760,5 +760,80 @@ end
 $$;
 `,
 		},
+		{
+			Name: "007_plugins_and_resilience_governance",
+			SQL: `
+create table if not exists system_plugins (
+  plugin_id varchar(64) primary key,
+  name text not null,
+  category varchar(64) not null,
+  version varchar(32) not null default '1.0.0',
+  description text,
+  enabled boolean not null default true,
+  target_service varchar(64) not null default 'ai-orchestrator',
+  endpoint_prefix text not null,
+  required_permission varchar(64),
+  failure_threshold integer not null default 3,
+  timeout_seconds integer not null default 20,
+  cooldown_seconds integer not null default 30,
+  fallback_mode varchar(64) not null default 'graceful_fallback',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists tenant_plugin_overrides (
+  institution_id uuid not null references institutions(institution_id) on delete cascade,
+  plugin_id varchar(64) not null references system_plugins(plugin_id) on delete cascade,
+  enabled boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  primary key(institution_id, plugin_id)
+);
+
+alter table system_plugins enable row level security;
+do $$
+begin
+  if not exists(select 1 from pg_policies where schemaname='public' and tablename='system_plugins' and policyname='system_plugins_access') then
+    create policy system_plugins_access on system_plugins using (true);
+  end if;
+end
+$$;
+
+alter table tenant_plugin_overrides enable row level security;
+do $$
+begin
+  if not exists(select 1 from pg_policies where schemaname='public' and tablename='tenant_plugin_overrides' and policyname='tenant_plugin_overrides_access') then
+    create policy tenant_plugin_overrides_access on tenant_plugin_overrides using (true);
+  end if;
+end
+$$;
+
+insert into system_plugins (plugin_id, name, category, version, description, enabled, target_service, endpoint_prefix, required_permission, failure_threshold, timeout_seconds, cooldown_seconds, fallback_mode)
+values
+  ('lesson_planner', 'AI Lesson Planner', 'ai_education', '1.0.0', 'Australian curriculum aligned lesson planning engine for Prep to Year 5', true, 'ai-orchestrator', '/api/v1/ai/educator/lesson-planner', 'GENERATE_LESSON_PLAN', 3, 25, 30, 'graceful_fallback'),
+  ('socratic_tutor', 'Socratic AI Tutor', 'ai_education', '1.0.0', 'Interactive Socratic teaching dialog with Australian student guardrails', true, 'ai-orchestrator', '/api/v1/ai/student/socratic-tutor', 'EXECUTE_AI_TUTOR', 3, 20, 30, 'graceful_fallback'),
+  ('quiz_me', 'Quiz Me Interactive', 'ai_education', '1.0.0', 'Real-time adaptive curriculum mastery quiz generator with immediate feedback', true, 'ai-orchestrator', '/api/v1/ai/student/quiz-me', 'EXECUTE_AI_TUTOR', 3, 20, 30, 'graceful_fallback'),
+  ('quiz_generator', 'Quiz & Assessment Generator', 'ai_education', '1.0.0', 'Diagnostic and formative quiz creation with scoring rubric options', true, 'ai-orchestrator', '/api/v1/ai/student/quiz-generator', 'EXECUTE_AI_TUTOR', 3, 25, 30, 'graceful_fallback'),
+  ('writing_feedback', 'Writing Feedback Assessor', 'ai_education', '1.0.0', 'Detailed formative rubric evaluation of student written submissions', true, 'ai-orchestrator', '/api/v1/ai/student/writing-feedback', 'EXECUTE_AI_TUTOR', 3, 25, 30, 'graceful_fallback'),
+  ('text_leveler', 'Lexile & Text Leveler', 'ai_education', '1.0.0', 'Differentiates complex texts to student reading levels across Year levels', true, 'ai-orchestrator', '/api/v1/ai/educator/leveler', 'USE_TEXT_LEVELER', 3, 20, 30, 'graceful_fallback'),
+  ('video_question_maker', 'Video Assessment Generator', 'ai_education', '1.0.0', 'Generates time-stamped comprehension questions from video materials', true, 'ai-orchestrator', '/api/v1/ai/educator/video-question-maker', 'USE_VIDEO_ASSESSOR', 3, 30, 30, 'graceful_fallback'),
+  ('iep_generator', 'IEP & Rubric Generator', 'ai_education', '1.0.0', 'Individualized Education Plan generator with scaffolding and adjustments', true, 'ai-orchestrator', '/api/v1/ai/educator/iep-generator', 'GENERATE_IEP_RUBRIC', 3, 30, 30, 'graceful_fallback'),
+  ('report_card_generator', 'Report Card Comment Composer', 'ai_education', '1.0.0', 'Synthesizes formative grades into curriculum-compliant report card comments', true, 'ai-orchestrator', '/api/v1/ai/educator/report-card', 'GENERATE_LESSON_PLAN', 3, 25, 30, 'graceful_fallback'),
+  ('ismg_rubric_generator', 'ISMG Assessment Rubric', 'ai_education', '1.0.0', 'Instrument-Specific Marking Guide rubric generator for Australian standards', true, 'ai-orchestrator', '/api/v1/ai/educator/ismg-rubric', 'GENERATE_LESSON_PLAN', 3, 25, 30, 'graceful_fallback'),
+  ('worksheet_generator', 'Printable Worksheet Builder', 'ai_education', '1.0.0', 'Generates differentiated printable classroom exercises and worksheets', true, 'ai-orchestrator', '/api/v1/ai/educator/worksheet-generator', 'GENERATE_LESSON_PLAN', 3, 25, 30, 'graceful_fallback'),
+  ('assessment_generator', 'Curriculum Assessment Creator', 'ai_education', '1.0.0', 'Formal formative and summative assessment generation with answer keys', true, 'ai-orchestrator', '/api/v1/ai/educator/assessment-generator', 'GENERATE_LESSON_PLAN', 3, 30, 30, 'graceful_fallback'),
+  ('district_knowledge_bot', 'District Knowledge Assistant', 'ai_education', '1.0.0', 'RAG assistant grounded in district curriculum documents and policies', true, 'ai-orchestrator', '/api/v1/ai/educator/district-knowledge-bot', 'GENERATE_LESSON_PLAN', 3, 25, 30, 'graceful_fallback'),
+  ('character_bot', 'Historical Character Persona', 'ai_education', '1.0.0', 'Immersive roleplay with historical figures and literary characters', true, 'ai-orchestrator', '/api/v1/ai/student/character-bot', 'EXECUTE_AI_TUTOR', 3, 20, 30, 'graceful_fallback'),
+  ('custom_bot', 'Custom AI Bot Studio', 'ai_education', '1.0.0', 'Educator-created targeted learning and subject tutor personas', true, 'ai-orchestrator', '/api/v1/ai/student/custom-bot', 'EXECUTE_AI_TUTOR', 3, 20, 30, 'graceful_fallback'),
+  ('speech_audio', 'Speech & Audio Processing', 'ai_education', '1.0.0', 'Audio transcription and sovereign voice synthesis engine', true, 'ai-orchestrator', '/api/v1/audio/transcribe', 'EXECUTE_AI_TUTOR', 3, 30, 30, 'graceful_fallback'),
+  ('rag_ingestion', 'District Curriculum Vector Ingestion', 'integration', '1.0.0', 'Processes and vectorizes district curriculum guidelines and lesson plans', true, 'ai-orchestrator', '/api/v1/rag/ingest', 'MANAGE_DISTRICT_AI_KNOWLEDGE', 3, 40, 30, 'fail_fast'),
+  ('worksheet_service', 'Worksheet Microservice Proxy', 'microservice', '1.0.0', 'Dedicated backend microservice for worksheet persistence and tracking', true, 'worksheet', '/api/worksheet/', 'VIEW_WORKSHEET', 3, 15, 30, 'fail_fast'),
+  ('assessment_service', 'Assessment Microservice Proxy', 'microservice', '1.0.0', 'Dedicated backend microservice for formal student exam assessment submissions', true, 'assessment', '/api/assessment/', 'VIEW_ASSESSMENT', 3, 15, 30, 'fail_fast'),
+  ('moderation_service', 'AI Safety Moderation Microservice', 'microservice', '1.0.0', 'Real-time profanity, PII scrubbing and content moderation proxy', true, 'moderation', '/api/moderation/', 'MODERATE_CONTENT', 3, 10, 30, 'graceful_fallback'),
+  ('lms_integration', 'LMS OneRoster Export Service', 'integration', '1.0.0', 'Canvas, Moodle, and Blackboard gradebook and roster synchronization', true, 'lms-integration', '/api/v1/lms/export', 'GENERATE_LESSON_PLAN', 3, 25, 30, 'fail_fast'),
+  ('live_oversight', 'Live Classroom Oversight & Freeze', 'governance', '1.0.0', 'Real-time WebSocket telemetry stream and emergency student session freeze control', true, 'internal', '/api/v1/admin/oversight/stream', 'GENERATE_LESSON_PLAN', 3, 15, 30, 'fail_fast')
+on conflict (plugin_id) do nothing;
+`,
+		},
 	}
 }

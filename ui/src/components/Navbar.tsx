@@ -4,8 +4,6 @@ import { useRoleFilter } from '../services/roleFilterContext'
 import { motion } from 'framer-motion'
 import { LogOut, UserRound, Shield } from 'lucide-react'
 import { ThemeToggle } from './ThemeToggle'
-import { RoleFilterBar } from './RoleFilterBar'
-
 export function Navbar() {
   const { status, me, logout } = useAuth()
   const { isSuperAdmin } = useRoleFilter()
@@ -22,18 +20,15 @@ export function Navbar() {
           </Link>
         </motion.div>
 
-        <div className="hidden md:flex items-center">
-          <RoleFilterBar />
-        </div>
 
         {isSuperAdmin && (
           <Link
             to="/superadmin"
-            className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-600 text-white text-xs font-bold shadow-sm hover:shadow-md transition-all shrink-0"
-            title="Open Super Admin Hub: Onboard Institutes, Manage Quotas & AI Usage"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:to-orange-700 text-white text-xs font-bold shadow-sm hover:shadow-md hover:scale-[1.02] transition-all shrink-0"
+            title="Open Super Admin Enterprise Console (Resilience Mesh, Roles, Trials)"
           >
             <Shield size={14} />
-            <span className="hidden sm:inline">Super Admin</span>
+            <span className="hidden sm:inline">Super Admin Console</span>
           </Link>
         )}
 
