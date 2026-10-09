@@ -13,8 +13,9 @@ import { useAuth } from '../../services/authService'
 import { apiFetch } from '../../services/apiClient'
 import { 
   listPlugins, togglePlugin, updatePluginConfig, resetCircuit, 
-  setTenantOverride, probePluginHealth, 
-  type PluginView, type UpdatePluginConfigRequest, type HealthProbeResult 
+  setTenantOverride, probePluginHealth, createPlugin, updatePlugin, deletePlugin,
+  type PluginView, type UpdatePluginConfigRequest, type HealthProbeResult,
+  type CreatePluginRequest, type UpdatePluginRequest, type PluginCategory
 } from '../../services/pluginService'
 import { 
   listRoles, createRole, updateRole, deleteRole, assignPermission, 
@@ -121,6 +122,40 @@ export function SuperAdminDashboard() {
   const [cfgTimeoutSeconds, setCfgTimeoutSeconds] = useState(20)
   const [cfgCooldownSeconds, setCfgCooldownSeconds] = useState(30)
   const [cfgFallbackMode, setCfgFallbackMode] = useState('graceful_fallback')
+
+  // Custom Feature Creation State
+  const [showCreatePluginModal, setShowCreatePluginModal] = useState(false)
+  const [newPluginId, setNewPluginId] = useState('')
+  const [newPluginName, setNewPluginName] = useState('')
+  const [newPluginDesc, setNewPluginDesc] = useState('')
+  const [newPluginCategory, setNewPluginCategory] = useState<PluginCategory>('custom')
+  const [newPluginEndpointPrefix, setNewPluginEndpointPrefix] = useState('')
+  const [newPluginTargetService, setNewPluginTargetService] = useState('')
+  const [newPluginTargetUrl, setNewPluginTargetUrl] = useState('')
+  const [newPluginRequiredPerm, setNewPluginRequiredPerm] = useState('')
+  const [newPluginFailureThreshold, setNewPluginFailureThreshold] = useState(3)
+  const [newPluginTimeoutSeconds, setNewPluginTimeoutSeconds] = useState(20)
+  const [newPluginCooldownSeconds, setNewPluginCooldownSeconds] = useState(30)
+  const [newPluginFallbackMode, setNewPluginFallbackMode] = useState('graceful_fallback')
+  const [newPluginCustomFallback, setNewPluginCustomFallback] = useState('')
+
+  // Custom Feature Editing State
+  const [editingCustomPlugin, setEditingCustomPlugin] = useState<PluginView | null>(null)
+  const [editCustomName, setEditCustomName] = useState('')
+  const [editCustomDesc, setEditCustomDesc] = useState('')
+  const [editCustomCategory, setEditCustomCategory] = useState<PluginCategory>('custom')
+  const [editCustomEndpointPrefix, setEditCustomEndpointPrefix] = useState('')
+  const [editCustomTargetService, setEditCustomTargetService] = useState('')
+  const [editCustomTargetUrl, setEditCustomTargetUrl] = useState('')
+  const [editCustomRequiredPerm, setEditCustomRequiredPerm] = useState('')
+  const [editCustomFailureThreshold, setEditCustomFailureThreshold] = useState(3)
+  const [editCustomTimeoutSeconds, setEditCustomTimeoutSeconds] = useState(20)
+  const [editCustomCooldownSeconds, setEditCustomCooldownSeconds] = useState(30)
+  const [editCustomFallbackMode, setEditCustomFallbackMode] = useState('graceful_fallback')
+  const [editCustomFallbackPayload, setEditCustomFallbackPayload] = useState('')
+
+  // Custom Feature Deletion State
+  const [deletingPlugin, setDeletingPlugin] = useState<PluginView | null>(null)
 
   // Data states - Roles & Permissions
   const [rolesList, setRolesList] = useState<RoleSummary[]>([])
@@ -394,6 +429,126 @@ export function SuperAdminDashboard() {
       void loadData()
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Failed to update plugin configuration')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  // --- CUSTOM FEATURE PLUGIN LIFECYCLE HANDLERS ---
+  function openCustomPluginEdit(plugin: PluginView) {
+    setEditingCustomPlugin(plugin)
+    setEditCustomName(plugin.name)
+    setEditCustomDesc(plugin.description || '')
+    setEditCustomCategory(plugin.category)
+    setEditCustomEndpointPrefix(plugin.endpointPrefix || '')
+    setEditCustomTargetService(plugin.targetService || '')
+    setEditCustomTargetUrl(plugin.targetUrl || '')
+    setEditCustomRequiredPerm(plugin.requiredPermission || '')
+    setEditCustomFailureThreshold(plugin.failureThreshold || 3)
+    setEditCustomTimeoutSeconds(plugin.timeoutSeconds || 20)
+    setEditCustomCooldownSeconds(plugin.cooldownSeconds || 30)
+    setEditCustomFallbackMode(plugin.fallbackMode || 'graceful_fallback')
+    setEditCustomFallbackPayload(plugin.customFallbackPayload || '')
+  }
+
+  async function handleCreatePlugin(e: React.FormEvent) {
+    e.preventDefault()
+    if (!newPluginName.trim() || !newPluginEndpointPrefix.trim()) {
+      setErr('Feature Name and Endpoint Prefix are required.')
+      return
+    }
+    setIsSubmitting(true)
+    setErr(null)
+    setOk(null)
+    try {
+      const slug = newPluginId.trim() || newPluginName.toLowerCase().replace(/[^a-z0-9_]/g, '_').replace(/^_+|_+$/g, '')
+      const req: CreatePluginRequest = {
+        id: slug,
+        name: newPluginName.trim(),
+        category: newPluginCategory,
+        description: newPluginDesc.trim(),
+        endpointPrefix: newPluginEndpointPrefix.trim(),
+        targetService: newPluginTargetService.trim() || slug,
+        targetUrl: newPluginTargetUrl.trim(),
+        requiredPermission: newPluginRequiredPerm.trim(),
+        failureThreshold: newPluginFailureThreshold,
+        timeoutSeconds: newPluginTimeoutSeconds,
+        cooldownSeconds: newPluginCooldownSeconds,
+        fallbackMode: newPluginFallbackMode,
+        customFallbackPayload: newPluginCustomFallback.trim(),
+        enabled: true
+      }
+      await createPlugin(accessToken, req)
+      setOk(`Custom Feature Plugin "${newPluginName}" created with dedicated circuit breaker and live dynamic routing!`)
+      setShowCreatePluginModal(false)
+      // Reset form
+      setNewPluginId('')
+      setNewPluginName('')
+      setNewPluginDesc('')
+      setNewPluginCategory('custom')
+      setNewPluginEndpointPrefix('')
+      setNewPluginTargetService('')
+      setNewPluginTargetUrl('')
+      setNewPluginRequiredPerm('')
+      setNewPluginCustomFallback('')
+      void loadData()
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Failed to create feature plugin')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  async function handleSaveCustomPlugin(e: React.FormEvent) {
+    e.preventDefault()
+    if (!editingCustomPlugin) return
+    setIsSubmitting(true)
+    setErr(null)
+    setOk(null)
+    try {
+      const req: UpdatePluginRequest = {
+        pluginId: editingCustomPlugin.id,
+        name: editCustomName.trim(),
+        category: editCustomCategory,
+        description: editCustomDesc.trim(),
+        endpointPrefix: editCustomEndpointPrefix.trim(),
+        targetService: editCustomTargetService.trim(),
+        targetUrl: editCustomTargetUrl.trim(),
+        requiredPermission: editCustomRequiredPerm.trim(),
+        failureThreshold: editCustomFailureThreshold,
+        timeoutSeconds: editCustomTimeoutSeconds,
+        cooldownSeconds: editCustomCooldownSeconds,
+        fallbackMode: editCustomFallbackMode,
+        customFallbackPayload: editCustomFallbackPayload.trim()
+      }
+      await updatePlugin(accessToken, req)
+      setOk(`Feature Plugin "${editCustomName}" updated successfully.`)
+      setEditingCustomPlugin(null)
+      void loadData()
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Failed to update feature plugin')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  async function handleConfirmDeletePlugin() {
+    if (!deletingPlugin) return
+    if (deletingPlugin.isSystem) {
+      setErr('System core plugins cannot be deleted as they are essential to system architecture.')
+      setDeletingPlugin(null)
+      return
+    }
+    setIsSubmitting(true)
+    setErr(null)
+    setOk(null)
+    try {
+      await deletePlugin(accessToken, deletingPlugin.id)
+      setOk(`Feature Plugin "${deletingPlugin.name}" deleted and removed from the dynamic route mesh.`)
+      setDeletingPlugin(null)
+      void loadData()
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Failed to delete feature plugin')
     } finally {
       setIsSubmitting(false)
     }
@@ -1021,6 +1176,28 @@ export function SuperAdminDashboard() {
           {/* ======================================================== */}
           {activeTab === 'plugins' && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.25 }}>
+              {/* Header & Create Plugin Action */}
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                <div>
+                  <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <Cpu size={20} className="text-indigo-500" />
+                    <span>Core Plugins &amp; Resilience Mesh</span>
+                  </h3>
+                  <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
+                    Manage fault-tolerant microservices, tune circuit breaker thresholds, and dynamically create custom educational features with live route registration.
+                  </p>
+                </div>
+
+                <div className="inline-flex items-center gap-2">
+                  <button
+                    onClick={() => setShowCreatePluginModal(true)}
+                    className="inline-flex items-center gap-2 px-4 py-2 text-xs sm:text-sm font-semibold rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-md transition-all"
+                  >
+                    <Plus size={16} /> Create Feature Plugin
+                  </button>
+                </div>
+              </div>
+
               {/* Resilience Health KPIs */}
               <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3 mb-6">
                 <div className="rounded-2xl bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 p-3.5 shadow-sm">
@@ -1090,6 +1267,7 @@ export function SuperAdminDashboard() {
                 <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-thin">
                   {[
                     { id: 'all', label: 'All Modules' },
+                    { id: 'custom', label: 'Custom Features' },
                     { id: 'ai_education', label: 'AI Workspace' },
                     { id: 'microservice', label: 'Microservices' },
                     { id: 'integration', label: 'Integration' },
@@ -1173,12 +1351,23 @@ export function SuperAdminDashboard() {
                       }`}
                     >
                       <div>
-                        {/* Header: Name, Category, Circuit Badge */}
+                        {/* Header: Name, Badges, Circuit Badge */}
                         <div className="flex items-start justify-between gap-2 mb-2">
                           <div>
-                            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-slate-400">
-                              {plugin.category.replace('_', ' ')}
-                            </span>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-slate-400">
+                                {plugin.category.replace('_', ' ')}
+                              </span>
+                              {plugin.isSystem ? (
+                                <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300">
+                                  System Core
+                                </span>
+                              ) : (
+                                <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-850">
+                                  Custom Feature
+                                </span>
+                              )}
+                            </div>
                             <h4 className="text-base font-bold text-slate-900 dark:text-white mt-1.5 flex items-center gap-1.5">
                               <span>{plugin.name}</span>
                               {plugin.tenantOverride !== undefined && (
@@ -1217,14 +1406,20 @@ export function SuperAdminDashboard() {
                         {/* Technical Metadata */}
                         <div className="grid grid-cols-2 gap-2 p-2.5 rounded-xl bg-slate-50 dark:bg-zinc-800/60 text-[11px] mb-4">
                           <div>
-                            <span className="text-slate-400 block text-[10px]">Target Service:</span>
-                            <span className="font-mono font-semibold text-slate-700 dark:text-slate-200 truncate block">
-                              {plugin.targetService}
+                            <span className="text-slate-400 block text-[10px]">Endpoint Ingress:</span>
+                            <span className="font-mono font-semibold text-slate-700 dark:text-slate-200 truncate block" title={plugin.endpointPrefix}>
+                              {plugin.endpointPrefix || 'N/A'}
                             </span>
                           </div>
                           <div>
-                            <span className="text-slate-400 block text-[10px]">Permission:</span>
-                            <span className="font-mono font-semibold text-indigo-600 dark:text-indigo-400 truncate block">
+                            <span className="text-slate-400 block text-[10px]">Target Service / URL:</span>
+                            <span className="font-mono font-semibold text-slate-700 dark:text-slate-200 truncate block" title={plugin.targetUrl || plugin.targetService}>
+                              {plugin.targetUrl || plugin.targetService}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-slate-400 block text-[10px]">Permission Scope:</span>
+                            <span className="font-mono font-semibold text-indigo-600 dark:text-indigo-400 truncate block" title={plugin.requiredPermission}>
                               {plugin.requiredPermission || 'Public'}
                             </span>
                           </div>
@@ -1234,10 +1429,15 @@ export function SuperAdminDashboard() {
                               {plugin.failureThreshold} errors ({plugin.timeoutSeconds}s t/o)
                             </span>
                           </div>
-                          <div>
-                            <span className="text-slate-400 block text-[10px]">Fallback Mode:</span>
-                            <span className="font-semibold text-slate-700 dark:text-slate-200 capitalize">
-                              {plugin.fallbackMode.replace('_', ' ')}
+                          <div className="col-span-2">
+                            <span className="text-slate-400 block text-[10px]">Fallback Strategy:</span>
+                            <span className="font-semibold text-slate-700 dark:text-slate-200 capitalize flex items-center justify-between">
+                              <span>{plugin.fallbackMode.replace('_', ' ')}</span>
+                              {plugin.customFallbackPayload && (
+                                <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300">
+                                  Custom Payload Active
+                                </span>
+                              )}
                             </span>
                           </div>
                         </div>
@@ -1298,14 +1498,34 @@ export function SuperAdminDashboard() {
                             <Activity size={13} className={isProbing === plugin.id ? 'animate-spin' : ''} />
                           </button>
 
-                          {/* Configure Resilience */}
-                          <button
-                            onClick={() => openPluginConfig(plugin)}
-                            title="Configure Fault-Tolerance &amp; Fallbacks"
-                            className="p-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/60 dark:text-indigo-300 transition-colors"
-                          >
-                            <Settings2 size={13} />
-                          </button>
+                          {/* If custom plugin: Edit & Delete buttons */}
+                          {!plugin.isSystem ? (
+                            <>
+                              <button
+                                onClick={() => openCustomPluginEdit(plugin)}
+                                title="Edit Custom Feature Parameters &amp; Ingress"
+                                className="p-2 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-700 dark:bg-purple-950/50 dark:hover:bg-purple-900/60 dark:text-purple-300 transition-colors"
+                              >
+                                <Edit3 size={13} />
+                              </button>
+                              <button
+                                onClick={() => setDeletingPlugin(plugin)}
+                                title="Delete Custom Feature Plugin"
+                                className="p-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:hover:bg-rose-900/60 dark:text-rose-300 transition-colors"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </>
+                          ) : (
+                            /* Core System Plugin: Configure Circuit Breaker Resilience */
+                            <button
+                              onClick={() => openPluginConfig(plugin)}
+                              title="Configure Fault-Tolerance &amp; Fallbacks"
+                              className="p-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-950/50 dark:hover:bg-indigo-900/60 dark:text-indigo-300 transition-colors"
+                            >
+                              <Settings2 size={13} />
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1493,6 +1713,555 @@ export function SuperAdminDashboard() {
 
         </div>
       </div>
+
+      {/* ======================================================== */}
+      {/* MODAL: Create New Custom Feature Plugin                  */}
+      {/* ======================================================== */}
+      <AnimatePresence>
+        {showCreatePluginModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-2xl bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-zinc-800 overflow-hidden"
+            >
+              <div className="p-6 border-b border-slate-200 dark:border-zinc-800 flex justify-between items-center">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400">
+                    <Cpu size={20} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg text-slate-900 dark:text-white">Create Custom Feature Plugin</h3>
+                    <p className="text-xs text-slate-500">Deploy dynamic educational features with isolated circuit breakers and zero downtime.</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowCreatePluginModal(false)}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <form onSubmit={handleCreatePlugin} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                      Feature Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Adaptive Math Assessment Engine"
+                      value={newPluginName}
+                      onChange={e => {
+                        setNewPluginName(e.target.value)
+                        if (!newPluginId) {
+                          setNewPluginId(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '_').replace(/^_+|_+$/g, ''))
+                        }
+                      }}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                      Plugin Identifier (Slug) *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. adaptive_math_assessment"
+                      value={newPluginId}
+                      onChange={e => setNewPluginId(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                      Category *
+                    </label>
+                    <select
+                      value={newPluginCategory}
+                      onChange={e => setNewPluginCategory(e.target.value as PluginCategory)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    >
+                      <option value="custom">Custom Feature</option>
+                      <option value="ai_education">AI Workspace</option>
+                      <option value="microservice">Microservice</option>
+                      <option value="integration">Integration</option>
+                      <option value="governance">Governance</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                      Endpoint Prefix (Dynamic Ingress Route) *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. /api/v1/ai/custom/adaptive-math"
+                      value={newPluginEndpointPrefix}
+                      onChange={e => setNewPluginEndpointPrefix(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                      Target Microservice / Host ID
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. math-engine or ai-service"
+                      value={newPluginTargetService}
+                      onChange={e => setNewPluginTargetService(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                      Target URL / Upstream Route (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. http://127.0.0.1:8085 or http://math-engine:8080"
+                      value={newPluginTargetUrl}
+                      onChange={e => setNewPluginTargetUrl(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                    Required Permission Scope
+                  </label>
+                  <select
+                    value={newPluginRequiredPerm}
+                    onChange={e => setNewPluginRequiredPerm(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
+                  >
+                    <option value="">Public / Authenticated Default</option>
+                    {permissionsList.map(p => (
+                      <option key={p.name} value={p.name}>
+                        {p.name} ({p.module || 'general'})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                    Description &amp; Educational Objective
+                  </label>
+                  <textarea
+                    rows={2}
+                    placeholder="Describe how this feature assists Australian teachers or students..."
+                    value={newPluginDesc}
+                    onChange={e => setNewPluginDesc(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+
+                {/* Resilience Isolation Configuration Section */}
+                <div className="p-4 rounded-2xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200/60 dark:border-indigo-800/60 space-y-3">
+                  <div className="text-xs font-bold text-indigo-900 dark:text-indigo-200 flex items-center gap-1.5">
+                    <Shield size={14} className="text-indigo-500" />
+                    <span>Fault Isolation &amp; Circuit Breaker Architecture</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
+                        Trip Threshold ({newPluginFailureThreshold} errs)
+                      </label>
+                      <input
+                        type="range"
+                        min="1"
+                        max="10"
+                        value={newPluginFailureThreshold}
+                        onChange={e => setNewPluginFailureThreshold(Number(e.target.value))}
+                        className="w-full accent-indigo-600"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
+                        Timeout ({newPluginTimeoutSeconds}s)
+                      </label>
+                      <input
+                        type="range"
+                        min="2"
+                        max="60"
+                        value={newPluginTimeoutSeconds}
+                        onChange={e => setNewPluginTimeoutSeconds(Number(e.target.value))}
+                        className="w-full accent-indigo-600"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
+                        Cooldown ({newPluginCooldownSeconds}s)
+                      </label>
+                      <input
+                        type="range"
+                        min="10"
+                        max="120"
+                        value={newPluginCooldownSeconds}
+                        onChange={e => setNewPluginCooldownSeconds(Number(e.target.value))}
+                        className="w-full accent-indigo-600"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
+                        Fallback Strategy
+                      </label>
+                      <select
+                        value={newPluginFallbackMode}
+                        onChange={e => setNewPluginFallbackMode(e.target.value)}
+                        className="w-full px-3 py-1.5 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      >
+                        <option value="graceful_fallback">Graceful Educational Fallback</option>
+                        <option value="offline_template">Offline Template Delivery</option>
+                        <option value="fail_fast">Fail-Fast (503 Service Unavailable)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
+                        Custom Fallback JSON (Optional)
+                      </label>
+                      <textarea
+                        rows={2}
+                        placeholder='{"status": "degraded", "content": "Sample offline response"}'
+                        value={newPluginCustomFallback}
+                        onChange={e => setNewPluginCustomFallback(e.target.value)}
+                        className="w-full px-3 py-1 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-4 flex justify-end gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setShowCreatePluginModal(false)}
+                    className="px-4 py-2 text-sm font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-700 dark:text-slate-300"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="px-5 py-2 text-sm font-semibold rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-md transition-all"
+                  >
+                    {isSubmitting ? 'Registering Feature...' : 'Register & Deploy Feature'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ======================================================== */}
+      {/* MODAL: Edit Custom Feature Plugin                        */}
+      {/* ======================================================== */}
+      <AnimatePresence>
+        {editingCustomPlugin && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-2xl bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-zinc-800 overflow-hidden"
+            >
+              <div className="p-6 border-b border-slate-200 dark:border-zinc-800 flex justify-between items-center">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded-xl bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400">
+                    <Edit3 size={20} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg text-slate-900 dark:text-white">Edit Feature Plugin: {editingCustomPlugin.name}</h3>
+                    <p className="text-xs text-slate-500 font-mono mt-0.5">ID: {editingCustomPlugin.id}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setEditingCustomPlugin(null)}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveCustomPlugin} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                      Feature Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={editCustomName}
+                      onChange={e => setEditCustomName(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                      Category *
+                    </label>
+                    <select
+                      value={editCustomCategory}
+                      onChange={e => setEditCustomCategory(e.target.value as PluginCategory)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    >
+                      <option value="custom">Custom Feature</option>
+                      <option value="ai_education">AI Workspace</option>
+                      <option value="microservice">Microservice</option>
+                      <option value="integration">Integration</option>
+                      <option value="governance">Governance</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                      Endpoint Prefix (Dynamic Ingress Route) *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={editCustomEndpointPrefix}
+                      onChange={e => setEditCustomEndpointPrefix(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                      Target Microservice / Host ID
+                    </label>
+                    <input
+                      type="text"
+                      value={editCustomTargetService}
+                      onChange={e => setEditCustomTargetService(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                      Target URL / Upstream Route (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={editCustomTargetUrl}
+                      onChange={e => setEditCustomTargetUrl(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                      Required Permission Scope
+                    </label>
+                    <select
+                      value={editCustomRequiredPerm}
+                      onChange={e => setEditCustomRequiredPerm(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
+                    >
+                      <option value="">Public / Authenticated Default</option>
+                      {permissionsList.map(p => (
+                        <option key={p.name} value={p.name}>
+                          {p.name} ({p.module || 'general'})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                    Description &amp; Educational Objective
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={editCustomDesc}
+                    onChange={e => setEditCustomDesc(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                </div>
+
+                {/* Resilience Isolation Configuration Section */}
+                <div className="p-4 rounded-2xl bg-purple-50/50 dark:bg-purple-950/20 border border-purple-200/60 dark:border-purple-800/60 space-y-3">
+                  <div className="text-xs font-bold text-purple-900 dark:text-purple-200 flex items-center gap-1.5">
+                    <Shield size={14} className="text-purple-500" />
+                    <span>Fault Isolation &amp; Circuit Breaker Settings</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
+                        Trip Threshold ({editCustomFailureThreshold} errs)
+                      </label>
+                      <input
+                        type="range"
+                        min="1"
+                        max="10"
+                        value={editCustomFailureThreshold}
+                        onChange={e => setEditCustomFailureThreshold(Number(e.target.value))}
+                        className="w-full accent-purple-600"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
+                        Timeout ({editCustomTimeoutSeconds}s)
+                      </label>
+                      <input
+                        type="range"
+                        min="2"
+                        max="60"
+                        value={editCustomTimeoutSeconds}
+                        onChange={e => setEditCustomTimeoutSeconds(Number(e.target.value))}
+                        className="w-full accent-purple-600"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
+                        Cooldown ({editCustomCooldownSeconds}s)
+                      </label>
+                      <input
+                        type="range"
+                        min="10"
+                        max="120"
+                        value={editCustomCooldownSeconds}
+                        onChange={e => setEditCustomCooldownSeconds(Number(e.target.value))}
+                        className="w-full accent-purple-600"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
+                        Fallback Strategy
+                      </label>
+                      <select
+                        value={editCustomFallbackMode}
+                        onChange={e => setEditCustomFallbackMode(e.target.value)}
+                        className="w-full px-3 py-1.5 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      >
+                        <option value="graceful_fallback">Graceful Educational Fallback</option>
+                        <option value="offline_template">Offline Template Delivery</option>
+                        <option value="fail_fast">Fail-Fast (503 Service Unavailable)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
+                        Custom Fallback JSON
+                      </label>
+                      <textarea
+                        rows={2}
+                        placeholder='{"status": "degraded", "content": "Sample offline response"}'
+                        value={editCustomFallbackPayload}
+                        onChange={e => setEditCustomFallbackPayload(e.target.value)}
+                        className="w-full px-3 py-1 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-4 flex justify-end gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setEditingCustomPlugin(null)}
+                    className="px-4 py-2 text-sm font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-700 dark:text-slate-300"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="px-5 py-2 text-sm font-semibold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-md transition-all"
+                  >
+                    {isSubmitting ? 'Saving Changes...' : 'Save Changes'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ======================================================== */}
+      {/* MODAL: Delete Feature Plugin Confirmation                */}
+      {/* ======================================================== */}
+      <AnimatePresence>
+        {deletingPlugin && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-md bg-white dark:bg-zinc-900 rounded-3xl shadow-2xl border border-rose-200 dark:border-rose-900/60 overflow-hidden"
+            >
+              <div className="p-6 border-b border-slate-200 dark:border-zinc-800 flex items-center gap-3">
+                <div className="p-2.5 rounded-2xl bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400">
+                  <AlertTriangle size={22} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-base text-slate-900 dark:text-white">Delete Feature Plugin?</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">This action will unregister the dynamic route.</p>
+                </div>
+              </div>
+
+              <div className="p-6 space-y-3">
+                <p className="text-sm text-slate-600 dark:text-slate-300">
+                  Are you sure you want to permanently delete <strong className="text-slate-900 dark:text-white font-semibold">"{deletingPlugin.name}"</strong> (<span className="font-mono text-xs text-slate-500">{deletingPlugin.id}</span>)?
+                </p>
+                <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/30 text-rose-800 dark:text-rose-200 text-xs">
+                  The dynamic gateway route <code className="font-mono font-bold">{deletingPlugin.endpointPrefix}</code> and its isolated circuit breaker will be immediately dismantled.
+                </div>
+              </div>
+
+              <div className="p-6 bg-slate-50 dark:bg-zinc-850/50 border-t border-slate-200 dark:border-zinc-800 flex justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setDeletingPlugin(null)}
+                  className="px-4 py-2 text-sm font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-700 dark:text-slate-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={isSubmitting}
+                  onClick={() => void handleConfirmDeletePlugin()}
+                  className="px-5 py-2 text-sm font-semibold rounded-xl bg-rose-600 hover:bg-rose-700 text-white shadow-md transition-all"
+                >
+                  {isSubmitting ? 'Deleting...' : 'Delete Feature'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* ======================================================== */}
       {/* MODAL: Configure Plugin Resilience & Fault Tolerance      */}

@@ -2,6 +2,7 @@ package plugins
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -204,6 +205,7 @@ func (r *PluginRegistry) initDefaults() {
 	for _, d := range defaults {
 		plugin := d
 		plugin.Normalize()
+		plugin.IsSystem = true
 		plugin.CircuitBreaker = NewCircuitBreaker(plugin.FailureThreshold, plugin.CooldownSeconds)
 		plugin.CreatedAt = time.Now()
 		plugin.UpdatedAt = time.Now()
@@ -218,9 +220,17 @@ func (r *PluginRegistry) LoadFromDatabase(ctx context.Context) error {
 
 	rows, err := r.pool.Query(ctx, `
 select plugin_id, name, category, version, coalesce(description,''), enabled, target_service,
-       endpoint_prefix, coalesce(required_permission,''), failure_threshold, timeout_seconds,
-       cooldown_seconds, fallback_mode, created_at, updated_at
+       coalesce(target_url, ''), endpoint_prefix, coalesce(required_permission,''), failure_threshold, timeout_seconds,
+       cooldown_seconds, fallback_mode, coalesce(custom_fallback_payload, ''), coalesce(is_system, false), created_at, updated_at
 from system_plugins`)
+	if err != nil {
+		// Fallback to legacy query if migration 008 columns are not yet present
+		rows, err = r.pool.Query(ctx, `
+select plugin_id, name, category, version, coalesce(description,''), enabled, target_service,
+       '' as target_url, endpoint_prefix, coalesce(required_permission,''), failure_threshold, timeout_seconds,
+       cooldown_seconds, fallback_mode, '' as custom_fallback_payload, true as is_system, created_at, updated_at
+from system_plugins`)
+	}
 	if err != nil {
 		r.logger.Warn("Failed to query system_plugins, continuing with in-memory defaults", "error", err)
 		return nil
@@ -235,9 +245,9 @@ from system_plugins`)
 		var cat string
 		if err := rows.Scan(
 			&p.ID, &p.Name, &cat, &p.Version, &p.Description, &p.Enabled,
-			&p.TargetService, &p.EndpointPrefix, &p.RequiredPermission,
+			&p.TargetService, &p.TargetURL, &p.EndpointPrefix, &p.RequiredPermission,
 			&p.FailureThreshold, &p.TimeoutSeconds, &p.CooldownSeconds,
-			&p.FallbackMode, &p.CreatedAt, &p.UpdatedAt,
+			&p.FallbackMode, &p.CustomFallbackPayload, &p.IsSystem, &p.CreatedAt, &p.UpdatedAt,
 		); err != nil {
 			continue
 		}
@@ -248,10 +258,16 @@ from system_plugins`)
 			existing.Name = p.Name
 			existing.Description = p.Description
 			existing.Enabled = p.Enabled
+			existing.IsSystem = p.IsSystem
+			existing.TargetService = p.TargetService
+			existing.TargetURL = p.TargetURL
+			existing.EndpointPrefix = p.EndpointPrefix
+			existing.RequiredPermission = p.RequiredPermission
 			existing.FailureThreshold = p.FailureThreshold
 			existing.TimeoutSeconds = p.TimeoutSeconds
 			existing.CooldownSeconds = p.CooldownSeconds
 			existing.FallbackMode = p.FallbackMode
+			existing.CustomFallbackPayload = p.CustomFallbackPayload
 			existing.UpdatedAt = p.UpdatedAt
 			existing.CircuitBreaker.UpdateParams(p.FailureThreshold, p.CooldownSeconds)
 		} else {
@@ -345,6 +361,13 @@ func (r *PluginRegistry) ExecuteWithResilience(
 	if !allowed {
 		r.logger.Warn("Circuit breaker OPEN for plugin", "plugin_id", pID, "state", circuitState)
 		if plugin.FallbackMode == "graceful_fallback" {
+			if plugin.CustomFallbackPayload != "" {
+				var parsed any
+				if json.Unmarshal([]byte(plugin.CustomFallbackPayload), &parsed) == nil {
+					return parsed, true, nil
+				}
+				return map[string]any{"fallback": plugin.CustomFallbackPayload, "status": "degraded"}, true, nil
+			}
 			fallbackRes, ok := GenerateGracefulFallback(pID, fallbackParams)
 			if ok {
 				return fallbackRes, true, nil
@@ -368,6 +391,13 @@ func (r *PluginRegistry) ExecuteWithResilience(
 
 		// Graceful degradation: Check if fallback is enabled
 		if plugin.FallbackMode == "graceful_fallback" {
+			if plugin.CustomFallbackPayload != "" {
+				var parsed any
+				if json.Unmarshal([]byte(plugin.CustomFallbackPayload), &parsed) == nil {
+					return parsed, true, nil
+				}
+				return map[string]any{"fallback": plugin.CustomFallbackPayload, "status": "degraded"}, true, nil
+			}
 			fallbackRes, ok := GenerateGracefulFallback(pID, fallbackParams)
 			if ok {
 				r.logger.Info("Returning resilient educational fallback for plugin", "plugin_id", pID)
@@ -413,30 +443,33 @@ func (r *PluginRegistry) ListPlugins(institutionID string) []PluginView {
 		}
 
 		out = append(out, PluginView{
-			ID:                  p.ID,
-			Name:                p.Name,
-			Category:            p.Category,
-			Version:             p.Version,
-			Description:         p.Description,
-			Enabled:             p.Enabled,
-			Status:              status,
-			TargetService:       p.TargetService,
-			EndpointPrefix:      p.EndpointPrefix,
-			RequiredPermission: p.RequiredPermission,
-			FailureThreshold:    p.FailureThreshold,
-			TimeoutSeconds:      p.TimeoutSeconds,
-			CooldownSeconds:     p.CooldownSeconds,
-			FallbackMode:        p.FallbackMode,
-			CircuitState:        stats.State,
-			ConsecutiveFailures: stats.ConsecutiveFailures,
-			TotalRequests:       stats.TotalRequests,
-			TotalFailures:       stats.TotalFailures,
-			TotalSuccesses:      stats.TotalSuccesses,
-			LastFailureTime:     stats.LastFailureTime,
-			LastSuccessTime:     stats.LastSuccessTime,
-			LastStateChange:     stats.LastStateChange,
-			AvgLatencyMs:        stats.AvgLatencyMs,
-			TenantOverride:      tenantOverride,
+			ID:                     p.ID,
+			Name:                   p.Name,
+			Category:               p.Category,
+			Version:                p.Version,
+			Description:            p.Description,
+			Enabled:                p.Enabled,
+			IsSystem:               p.IsSystem,
+			Status:                 status,
+			TargetService:          p.TargetService,
+			TargetURL:              p.TargetURL,
+			EndpointPrefix:         p.EndpointPrefix,
+			RequiredPermission:    p.RequiredPermission,
+			FailureThreshold:       p.FailureThreshold,
+			TimeoutSeconds:         p.TimeoutSeconds,
+			CooldownSeconds:        p.CooldownSeconds,
+			FallbackMode:           p.FallbackMode,
+			CustomFallbackPayload:  p.CustomFallbackPayload,
+			CircuitState:           stats.State,
+			ConsecutiveFailures:    stats.ConsecutiveFailures,
+			TotalRequests:          stats.TotalRequests,
+			TotalFailures:          stats.TotalFailures,
+			TotalSuccesses:         stats.TotalSuccesses,
+			LastFailureTime:        stats.LastFailureTime,
+			LastSuccessTime:        stats.LastSuccessTime,
+			LastStateChange:        stats.LastStateChange,
+			AvgLatencyMs:           stats.AvgLatencyMs,
+			TenantOverride:         tenantOverride,
 		})
 	}
 
@@ -552,4 +585,220 @@ on conflict (institution_id, plugin_id) do update set enabled=excluded.enabled, 
 	}
 
 	return nil
+}
+
+func (r *PluginRegistry) CreatePlugin(ctx context.Context, req CreatePluginRequest) (*Plugin, error) {
+	pID := strings.ToLower(strings.TrimSpace(req.ID))
+	if pID == "" {
+		slug := strings.ToLower(strings.ReplaceAll(strings.TrimSpace(req.Name), " ", "_"))
+		pID = slug
+	}
+	if pID == "" {
+		return nil, errors.New("plugin ID or Name is required")
+	}
+	if strings.TrimSpace(req.Name) == "" {
+		return nil, errors.New("plugin Name is required")
+	}
+	if strings.TrimSpace(req.EndpointPrefix) == "" {
+		return nil, errors.New("endpointPrefix is required")
+	}
+
+	p := Plugin{
+		ID:                    pID,
+		Name:                  req.Name,
+		Category:              req.Category,
+		Version:               req.Version,
+		Description:           req.Description,
+		Enabled:               req.Enabled,
+		IsSystem:              false,
+		TargetService:         req.TargetService,
+		TargetURL:             req.TargetURL,
+		EndpointPrefix:        req.EndpointPrefix,
+		RequiredPermission:   req.RequiredPermission,
+		FailureThreshold:      req.FailureThreshold,
+		TimeoutSeconds:        req.TimeoutSeconds,
+		CooldownSeconds:       req.CooldownSeconds,
+		FallbackMode:          req.FallbackMode,
+		CustomFallbackPayload: req.CustomFallbackPayload,
+		CreatedAt:             time.Now(),
+		UpdatedAt:             time.Now(),
+	}
+	p.Normalize()
+	p.CircuitBreaker = NewCircuitBreaker(p.FailureThreshold, p.CooldownSeconds)
+
+	r.mu.Lock()
+	if _, exists := r.plugins[p.ID]; exists {
+		r.mu.Unlock()
+		return nil, fmt.Errorf("plugin '%s' already exists", p.ID)
+	}
+	r.plugins[p.ID] = &p
+	r.mu.Unlock()
+
+	if r.pool != nil {
+		_, err := r.pool.Exec(ctx, `
+insert into system_plugins (
+  plugin_id, name, category, version, description, enabled, is_system,
+  target_service, target_url, endpoint_prefix, required_permission,
+  failure_threshold, timeout_seconds, cooldown_seconds, fallback_mode, custom_fallback_payload,
+  created_at, updated_at
+) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, now(), now())
+on conflict (plugin_id) do update set
+  name=excluded.name, description=excluded.description, enabled=excluded.enabled,
+  target_service=excluded.target_service, target_url=excluded.target_url, endpoint_prefix=excluded.endpoint_prefix,
+  required_permission=excluded.required_permission, failure_threshold=excluded.failure_threshold,
+  timeout_seconds=excluded.timeout_seconds, cooldown_seconds=excluded.cooldown_seconds,
+  fallback_mode=excluded.fallback_mode, custom_fallback_payload=excluded.custom_fallback_payload,
+  updated_at=now()`,
+			p.ID, p.Name, string(p.Category), p.Version, p.Description, p.Enabled, false,
+			p.TargetService, p.TargetURL, p.EndpointPrefix, p.RequiredPermission,
+			p.FailureThreshold, p.TimeoutSeconds, p.CooldownSeconds, p.FallbackMode, p.CustomFallbackPayload,
+		)
+		if err != nil {
+			r.logger.Error("Failed to persist new plugin in db", "plugin_id", p.ID, "error", err)
+			return nil, err
+		}
+
+		if p.RequiredPermission != "" {
+			_, _ = r.pool.Exec(ctx, `
+insert into permissions (code, description, immutable)
+values ($1, $2, false)
+on conflict (code) do nothing`,
+				p.RequiredPermission, fmt.Sprintf("Access to custom feature %s", p.Name),
+			)
+		}
+	}
+
+	return &p, nil
+}
+
+func (r *PluginRegistry) UpdatePlugin(ctx context.Context, req UpdatePluginRequest) error {
+	pID := strings.ToLower(strings.TrimSpace(req.PluginID))
+	if pID == "" {
+		return errors.New("pluginId is required")
+	}
+
+	r.mu.Lock()
+	p, exists := r.plugins[pID]
+	if !exists {
+		r.mu.Unlock()
+		return ErrPluginNotFound
+	}
+
+	if req.Name != "" {
+		p.Name = strings.TrimSpace(req.Name)
+	}
+	if req.Category != "" {
+		p.Category = req.Category
+	}
+	if req.Version != "" {
+		p.Version = strings.TrimSpace(req.Version)
+	}
+	p.Description = strings.TrimSpace(req.Description)
+	p.Enabled = req.Enabled
+	if req.TargetService != "" {
+		p.TargetService = strings.ToLower(strings.TrimSpace(req.TargetService))
+	}
+	p.TargetURL = strings.TrimSpace(req.TargetURL)
+	if req.EndpointPrefix != "" {
+		p.EndpointPrefix = strings.TrimSpace(req.EndpointPrefix)
+	}
+	p.RequiredPermission = strings.ToUpper(strings.TrimSpace(req.RequiredPermission))
+	if req.FailureThreshold > 0 {
+		p.FailureThreshold = req.FailureThreshold
+	}
+	if req.TimeoutSeconds > 0 {
+		p.TimeoutSeconds = req.TimeoutSeconds
+	}
+	if req.CooldownSeconds > 0 {
+		p.CooldownSeconds = req.CooldownSeconds
+	}
+	if req.FallbackMode != "" {
+		p.FallbackMode = strings.ToLower(strings.TrimSpace(req.FallbackMode))
+	}
+	p.CustomFallbackPayload = strings.TrimSpace(req.CustomFallbackPayload)
+	p.UpdatedAt = time.Now()
+	p.CircuitBreaker.UpdateParams(p.FailureThreshold, p.CooldownSeconds)
+	r.mu.Unlock()
+
+	if r.pool != nil {
+		_, err := r.pool.Exec(ctx, `
+update system_plugins set
+  name=$1, category=$2, version=$3, description=$4, enabled=$5,
+  target_service=$6, target_url=$7, endpoint_prefix=$8, required_permission=$9,
+  failure_threshold=$10, timeout_seconds=$11, cooldown_seconds=$12, fallback_mode=$13,
+  custom_fallback_payload=$14, updated_at=now()
+where plugin_id=$15`,
+			p.Name, string(p.Category), p.Version, p.Description, p.Enabled,
+			p.TargetService, p.TargetURL, p.EndpointPrefix, p.RequiredPermission,
+			p.FailureThreshold, p.TimeoutSeconds, p.CooldownSeconds, p.FallbackMode,
+			p.CustomFallbackPayload, pID,
+		)
+		if err != nil {
+			r.logger.Error("Failed to update plugin in db", "plugin_id", pID, "error", err)
+			return err
+		}
+
+		if p.RequiredPermission != "" {
+			_, _ = r.pool.Exec(ctx, `
+insert into permissions (code, description, immutable)
+values ($1, $2, false)
+on conflict (code) do nothing`,
+				p.RequiredPermission, fmt.Sprintf("Access to custom feature %s", p.Name),
+			)
+		}
+	}
+	return nil
+}
+
+func (r *PluginRegistry) DeletePlugin(ctx context.Context, pluginID string) error {
+	pID := strings.ToLower(strings.TrimSpace(pluginID))
+	if pID == "" {
+		return errors.New("pluginId is required")
+	}
+
+	r.mu.Lock()
+	p, exists := r.plugins[pID]
+	if !exists {
+		r.mu.Unlock()
+		return ErrPluginNotFound
+	}
+	if p.IsSystem {
+		r.mu.Unlock()
+		return errors.New("core system feature plugins cannot be deleted; you may disable them instead")
+	}
+
+	delete(r.plugins, pID)
+	r.mu.Unlock()
+
+	if r.pool != nil {
+		_, _ = r.pool.Exec(ctx, `delete from tenant_plugin_overrides where plugin_id=$1`, pID)
+		_, err := r.pool.Exec(ctx, `delete from system_plugins where plugin_id=$1`, pID)
+		if err != nil {
+			r.logger.Error("Failed to delete plugin from db", "plugin_id", pID, "error", err)
+			return err
+		}
+	}
+	return nil
+}
+
+func (r *PluginRegistry) MatchPluginEndpoint(path string) (*Plugin, bool) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	var bestMatch *Plugin
+	var longestPrefix int
+
+	for _, p := range r.plugins {
+		if p.EndpointPrefix != "" && strings.HasPrefix(path, p.EndpointPrefix) {
+			if len(p.EndpointPrefix) > longestPrefix {
+				longestPrefix = len(p.EndpointPrefix)
+				bestMatch = p
+			}
+		}
+	}
+
+	if bestMatch != nil {
+		return bestMatch, true
+	}
+	return nil, false
 }

@@ -93,3 +93,92 @@ func TestPluginRegistry_TenantOverride(t *testing.T) {
 		t.Fatalf("expected quiz_me to remain enabled for tenant-beta")
 	}
 }
+
+func TestPluginRegistry_CustomFeatureCreationAndLifecycle(t *testing.T) {
+	registry := NewPluginRegistry(nil, nil)
+	ctx := context.Background()
+
+	// 1. Create a custom feature dynamically
+	createReq := CreatePluginRequest{
+		ID:                    "naplan_writing_evaluator",
+		Name:                  "NAPLAN Writing Evaluator",
+		Category:              CategoryCustom,
+		Version:               "1.0.0",
+		Description:           "Automated NAPLAN 10-criterion writing analysis",
+		Enabled:               true,
+		TargetService:         "ai-orchestrator",
+		EndpointPrefix:        "/api/v1/ai/custom/naplan-eval",
+		RequiredPermission:   "EVALUATE_NAPLAN_WRITING",
+		FailureThreshold:      2,
+		TimeoutSeconds:        15,
+		CooldownSeconds:       30,
+		FallbackMode:          "graceful_fallback",
+		CustomFallbackPayload: `{"status":"degraded","naplan_criteria":{"ideas":"scaffolded","grammar":"baseline"}}`,
+	}
+
+	p, err := registry.CreatePlugin(ctx, createReq)
+	if err != nil {
+		t.Fatalf("CreatePlugin failed: %v", err)
+	}
+	if p.ID != "naplan_writing_evaluator" || p.IsSystem {
+		t.Fatalf("unexpected plugin state: id=%s, isSystem=%v", p.ID, p.IsSystem)
+	}
+
+	// 2. Test endpoint matching
+	matched, ok := registry.MatchPluginEndpoint("/api/v1/ai/custom/naplan-eval/submit")
+	if !ok || matched.ID != "naplan_writing_evaluator" {
+		t.Fatalf("MatchPluginEndpoint failed: got %v, ok=%v", matched, ok)
+	}
+
+	// 3. Test resilient execution with custom fallback payload
+	failingCall := func(ctx context.Context) (any, error) {
+		return nil, errors.New("upstream custom engine timeout")
+	}
+
+	res, isFallback, err := registry.ExecuteWithResilience(
+		ctx,
+		"naplan_writing_evaluator",
+		"tenant-custom",
+		failingCall,
+		nil,
+	)
+	if err != nil || !isFallback {
+		t.Fatalf("expected custom fallback on failure, err=%v, isFallback=%v", err, isFallback)
+	}
+	parsedMap, ok := res.(map[string]any)
+	if !ok || parsedMap["status"] != "degraded" {
+		t.Fatalf("expected parsed custom fallback payload, got: %v", res)
+	}
+
+	// 4. Disallow deleting core system plugins
+	err = registry.DeletePlugin(ctx, "lesson_planner")
+	if err == nil {
+		t.Fatalf("expected error when attempting to delete core system plugin, got nil")
+	}
+
+	// 5. Update custom plugin
+	updateReq := UpdatePluginRequest{
+		PluginID:         "naplan_writing_evaluator",
+		Name:             "NAPLAN Writing Evaluator Pro",
+		FailureThreshold: 5,
+		TimeoutSeconds:   25,
+	}
+	err = registry.UpdatePlugin(ctx, updateReq)
+	if err != nil {
+		t.Fatalf("UpdatePlugin failed: %v", err)
+	}
+	updated, ok := registry.GetPlugin("naplan_writing_evaluator")
+	if !ok || updated.Name != "NAPLAN Writing Evaluator Pro" || updated.FailureThreshold != 5 {
+		t.Fatalf("unexpected updated plugin state: %v", updated)
+	}
+
+	// 6. Delete custom plugin
+	err = registry.DeletePlugin(ctx, "naplan_writing_evaluator")
+	if err != nil {
+		t.Fatalf("DeletePlugin failed: %v", err)
+	}
+	_, ok = registry.GetPlugin("naplan_writing_evaluator")
+	if ok {
+		t.Fatalf("expected custom plugin to be deleted from registry")
+	}
+}

@@ -80,6 +80,9 @@ func Routes() []Route {
 
 		// Super Admin Plugin & Feature Resilience Mesh Endpoints
 		{Method: http.MethodGet, PathPrefix: "/api/v1/admin/plugins", AuthRequired: true, RequiredPermission: "SUPER_ADMIN"},
+		{Method: http.MethodPost, PathPrefix: "/api/v1/admin/plugins/create", AuthRequired: true, RequiredPermission: "SUPER_ADMIN"},
+		{Method: http.MethodPost, PathPrefix: "/api/v1/admin/plugins/update", AuthRequired: true, RequiredPermission: "SUPER_ADMIN"},
+		{Method: http.MethodPost, PathPrefix: "/api/v1/admin/plugins/delete", AuthRequired: true, RequiredPermission: "SUPER_ADMIN"},
 		{Method: http.MethodPost, PathPrefix: "/api/v1/admin/plugins/toggle", AuthRequired: true, RequiredPermission: "SUPER_ADMIN"},
 		{Method: http.MethodPost, PathPrefix: "/api/v1/admin/plugins/config", AuthRequired: true, RequiredPermission: "SUPER_ADMIN"},
 		{Method: http.MethodPost, PathPrefix: "/api/v1/admin/plugins/reset-circuit", AuthRequired: true, RequiredPermission: "SUPER_ADMIN"},

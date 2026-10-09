@@ -1,6 +1,6 @@
 import { apiFetch } from './apiClient'
 
-export type PluginCategory = 'core' | 'ai_education' | 'microservice' | 'governance' | 'integration'
+export type PluginCategory = 'core' | 'ai_education' | 'microservice' | 'governance' | 'integration' | 'custom'
 export type PluginStatus = 'active' | 'degraded' | 'circuit_open' | 'disabled'
 export type CircuitState = 'CLOSED' | 'OPEN' | 'HALF_OPEN'
 
@@ -11,14 +11,17 @@ export interface PluginView {
   version: string
   description: string
   enabled: boolean
+  isSystem?: boolean
   status: PluginStatus
   targetService: string
+  targetUrl?: string
   endpointPrefix: string
   requiredPermission: string
   failureThreshold: number
   timeoutSeconds: number
   cooldownSeconds: number
   fallbackMode: string
+  customFallbackPayload?: string
   circuitState: CircuitState
   consecutiveFailures: number
   totalRequests: number
@@ -29,6 +32,42 @@ export interface PluginView {
   lastStateChange: string
   avgLatencyMs: number
   tenantOverride?: boolean
+}
+
+export interface CreatePluginRequest {
+  id: string
+  name: string
+  category: PluginCategory
+  version?: string
+  description?: string
+  enabled?: boolean
+  targetService?: string
+  targetUrl?: string
+  endpointPrefix: string
+  requiredPermission?: string
+  failureThreshold?: number
+  timeoutSeconds?: number
+  cooldownSeconds?: number
+  fallbackMode?: string
+  customFallbackPayload?: string
+}
+
+export interface UpdatePluginRequest {
+  pluginId: string
+  name?: string
+  category?: PluginCategory
+  version?: string
+  description?: string
+  enabled?: boolean
+  targetService?: string
+  targetUrl?: string
+  endpointPrefix?: string
+  requiredPermission?: string
+  failureThreshold?: number
+  timeoutSeconds?: number
+  cooldownSeconds?: number
+  fallbackMode?: string
+  customFallbackPayload?: string
 }
 
 export interface UpdatePluginConfigRequest {
@@ -53,6 +92,30 @@ export async function listPlugins(accessToken: string, institutionId?: string) {
   return apiFetch<{ plugins: PluginView[] }>(`/api/v1/admin/plugins${query}`, {
     method: 'GET',
     accessToken,
+  })
+}
+
+export async function createPlugin(accessToken: string, req: CreatePluginRequest) {
+  return apiFetch<{ message: string; plugin: PluginView }>('/api/v1/admin/plugins/create', {
+    method: 'POST',
+    accessToken,
+    body: req,
+  })
+}
+
+export async function updatePlugin(accessToken: string, req: UpdatePluginRequest) {
+  return apiFetch<{ message: string }>('/api/v1/admin/plugins/update', {
+    method: 'POST',
+    accessToken,
+    body: req,
+  })
+}
+
+export async function deletePlugin(accessToken: string, pluginId: string) {
+  return apiFetch<{ message: string; pluginId: string }>('/api/v1/admin/plugins/delete', {
+    method: 'POST',
+    accessToken,
+    body: { pluginId },
   })
 }
 

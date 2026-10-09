@@ -1,10 +1,12 @@
 package gateway
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -262,6 +264,12 @@ func (r *Router) serve(w http.ResponseWriter, req *http.Request) {
 		r.handleProxy(w, req, route)
 		return
 	default:
+		if r.pluginRegistry != nil {
+			if dynamicPlugin, ok := r.pluginRegistry.MatchPluginEndpoint(req.URL.Path); ok {
+				r.handleDynamicPluginRequest(w, req, dynamicPlugin)
+				return
+			}
+		}
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
@@ -1428,8 +1436,214 @@ func (r *Router) handleAdminPlugins(w http.ResponseWriter, req *http.Request, pr
 		})
 		return
 
+	case "/api/v1/admin/plugins/create":
+		if req.Method != http.MethodPost {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		var cp plugins.CreatePluginRequest
+		if err := json.NewDecoder(req.Body).Decode(&cp); err != nil {
+			security.WriteJSONError(w, http.StatusBadRequest, "invalid request body: "+err.Error())
+			return
+		}
+		created, err := r.pluginRegistry.CreatePlugin(req.Context(), cp)
+		if err != nil {
+			security.WriteJSONError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		writeJSON(w, http.StatusCreated, map[string]any{
+			"message": "Custom feature plugin created successfully",
+			"plugin":  created,
+		})
+		return
+
+	case "/api/v1/admin/plugins/update":
+		if req.Method != http.MethodPost {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		var up plugins.UpdatePluginRequest
+		if err := json.NewDecoder(req.Body).Decode(&up); err != nil {
+			security.WriteJSONError(w, http.StatusBadRequest, "invalid request body: "+err.Error())
+			return
+		}
+		if err := r.pluginRegistry.UpdatePlugin(req.Context(), up); err != nil {
+			security.WriteJSONError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"message": "Feature plugin updated successfully"})
+		return
+
+	case "/api/v1/admin/plugins/delete":
+		if req.Method != http.MethodPost && req.Method != http.MethodDelete {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		var dp plugins.DeletePluginRequest
+		if req.Body != nil {
+			_ = json.NewDecoder(req.Body).Decode(&dp)
+		}
+		if dp.PluginID == "" {
+			dp.PluginID = req.URL.Query().Get("pluginId")
+		}
+		if err := r.pluginRegistry.DeletePlugin(req.Context(), dp.PluginID); err != nil {
+			security.WriteJSONError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{
+			"message":  "Custom feature plugin deleted successfully",
+			"pluginId": dp.PluginID,
+		})
+		return
+
 	default:
 		w.WriteHeader(http.StatusNotFound)
 	}
+}
+
+func (r *Router) handleDynamicPluginRequest(w http.ResponseWriter, req *http.Request, plugin *plugins.Plugin) {
+	uc := middleware.UserContextFromContext(req.Context())
+
+	// 1. Check required permission if configured
+	if plugin.RequiredPermission != "" {
+		hasAccess := uc.IsSysAdmin
+		if !hasAccess {
+			for _, r := range uc.Roles {
+				rLower := strings.ToLower(strings.TrimSpace(r))
+				if rLower == "sys_admin" || rLower == "super_admin" || rLower == "superadmin" || rLower == "sysadmin" {
+					hasAccess = true
+					break
+				}
+			}
+		}
+		if !hasAccess {
+			for _, p := range uc.Permissions {
+				if strings.EqualFold(p, plugin.RequiredPermission) || strings.EqualFold(p, "SUPER_ADMIN") {
+					hasAccess = true
+					break
+				}
+			}
+		}
+		if !hasAccess {
+			security.WriteJSONError(w, http.StatusForbidden, fmt.Sprintf("Forbidden: requires permission '%s'", plugin.RequiredPermission))
+			return
+		}
+	}
+
+	// 2. Read request body safely
+	var bodyBytes []byte
+	if req.Body != nil {
+		var err error
+		bodyBytes, err = io.ReadAll(req.Body)
+		if err != nil {
+			security.WriteJSONError(w, http.StatusBadRequest, "failed to read request body")
+			return
+		}
+		req.Body = io.NopCloser(bytes.NewBuffer(bodyBytes))
+	}
+
+	// 3. Execute with circuit breaker & timeout protection
+	res, isFallback, err := r.pluginRegistry.ExecuteWithResilience(
+		req.Context(),
+		plugin.ID,
+		uc.InstitutionID,
+		func(execCtx context.Context) (any, error) {
+			targetURL := plugin.TargetURL
+			if targetURL == "" {
+				resolved, err := r.registry.Resolve(execCtx, plugin.TargetService)
+				if err != nil {
+					return nil, fmt.Errorf("service registry cannot resolve '%s': %w", plugin.TargetService, err)
+				}
+				targetURL = resolved + req.URL.Path
+				if req.URL.RawQuery != "" {
+					targetURL += "?" + req.URL.RawQuery
+				}
+			}
+
+			proxyReq, err := http.NewRequestWithContext(execCtx, req.Method, targetURL, bytes.NewReader(bodyBytes))
+			if err != nil {
+				return nil, err
+			}
+			for k, v := range req.Header {
+				proxyReq.Header[k] = v
+			}
+			proxyReq.Header.Set("X-Forwarded-For", req.RemoteAddr)
+			if uc.UserID != "" {
+				proxyReq.Header.Set("X-User-Id", uc.UserID)
+				proxyReq.Header.Set("X-Institution-Id", uc.InstitutionID)
+			}
+
+			timeoutSecs := plugin.TimeoutSeconds
+			if timeoutSecs <= 0 {
+				timeoutSecs = 20
+			}
+			client := &http.Client{Timeout: time.Duration(timeoutSecs) * time.Second}
+			resp, err := client.Do(proxyReq)
+			if err != nil {
+				return nil, err
+			}
+			defer resp.Body.Close()
+
+			respBody, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, err
+			}
+
+			if resp.StatusCode >= 500 {
+				return nil, fmt.Errorf("upstream returned server error: %d", resp.StatusCode)
+			}
+
+			return map[string]any{
+				"statusCode":  resp.StatusCode,
+				"contentType": resp.Header.Get("Content-Type"),
+				"body":        respBody,
+			}, nil
+		},
+		map[string]interface{}{"path": req.URL.Path},
+	)
+
+	if isFallback {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("X-Resilience-Fallback", "true")
+		w.Header().Set("X-Plugin-ID", plugin.ID)
+		w.WriteHeader(http.StatusOK)
+		if str, ok := res.(string); ok {
+			w.Write([]byte(str))
+		} else {
+			_ = json.NewEncoder(w).Encode(res)
+		}
+		return
+	}
+
+	if err != nil {
+		if errors.Is(err, plugins.ErrCircuitOpen) {
+			security.WriteJSONError(w, http.StatusServiceUnavailable, err.Error())
+		} else if errors.Is(err, plugins.ErrPluginDisabled) {
+			security.WriteJSONError(w, http.StatusForbidden, err.Error())
+		} else {
+			security.WriteJSONError(w, http.StatusBadGateway, fmt.Sprintf("Upstream failure in feature '%s': %v", plugin.ID, err))
+		}
+		return
+	}
+
+	// Successful proxy response
+	if proxyMap, ok := res.(map[string]any); ok {
+		if ct, ok := proxyMap["contentType"].(string); ok && ct != "" {
+			w.Header().Set("Content-Type", ct)
+		} else {
+			w.Header().Set("Content-Type", "application/json")
+		}
+		statusCode := http.StatusOK
+		if sc, ok := proxyMap["statusCode"].(int); ok && sc > 0 {
+			statusCode = sc
+		}
+		w.WriteHeader(statusCode)
+		if b, ok := proxyMap["body"].([]byte); ok {
+			w.Write(b)
+		}
+		return
+	}
+
+	writeJSON(w, http.StatusOK, res)
 }
 

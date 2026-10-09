@@ -835,5 +835,22 @@ values
 on conflict (plugin_id) do nothing;
 `,
 		},
+		{
+			Name: "008_custom_plugin_extensibility",
+			SQL: `
+alter table system_plugins add column if not exists is_system boolean not null default false;
+alter table system_plugins add column if not exists custom_fallback_payload text;
+alter table system_plugins add column if not exists target_url text;
+
+update system_plugins set is_system = true where plugin_id in (
+  'lesson_planner', 'socratic_tutor', 'quiz_me', 'quiz_generator', 'writing_feedback',
+  'text_leveler', 'video_question_maker', 'iep_generator', 'report_card_generator',
+  'ismg_rubric_generator', 'worksheet_generator', 'assessment_generator',
+  'district_knowledge_bot', 'character_bot', 'custom_bot', 'speech_audio',
+  'rag_ingestion', 'worksheet_service', 'assessment_service', 'moderation_service',
+  'lms_integration', 'live_oversight'
+);
+`,
+		},
 	}
 }
