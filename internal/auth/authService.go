@@ -132,14 +132,21 @@ limit 1`, e).Scan(&userID, &institutionID, &passwordHash, &firstName, &lastName,
 		}
 		institutionID = instID
 	}
-	if strings.ToLower(strings.TrimSpace(status)) != "active" {
-		_ = s.recordFailure(ctx, e, ip)
-		return LoginResult{}, errors.New("invalid credentials")
-	}
 	ok, err := security.VerifyPassword(passwordHash, password)
 	if err != nil || !ok {
 		_ = s.recordFailure(ctx, e, ip)
 		return LoginResult{}, errors.New("invalid credentials")
+	}
+	st := strings.ToLower(strings.TrimSpace(status))
+	if st == "pending" {
+		return LoginResult{}, errors.New("account pending approval by administrator")
+	}
+	if st == "rejected" {
+		return LoginResult{}, errors.New("account registration has been rejected")
+	}
+	if st != "active" {
+		_ = s.recordFailure(ctx, e, ip)
+		return LoginResult{}, errors.New("account is disabled or locked")
 	}
 
 	if _, err := tx.Exec(ctx, `update users set last_login=now(), updated_at=now() where user_id = nullif($1,'')::uuid`, userID); err != nil {
@@ -531,23 +538,112 @@ type UserSummary struct {
 }
 
 type ApprovalRequestSummary struct {
-	RequestID     string `json:"requestId"`
-	UserID        string `json:"userId"`
-	Email         string `json:"email"`
-	FirstName     string `json:"firstName"`
-	LastName      string `json:"lastName"`
-	RequestedRole string `json:"requestedRole"`
-	Status        string `json:"status"`
-	CreatedAt     string `json:"createdAt"`
+	RequestID       string         `json:"requestId"`
+	InstitutionID   string         `json:"institutionId"`
+	InstitutionName string         `json:"institutionName,omitempty"`
+	UserID          string         `json:"userId"`
+	Email           string         `json:"email"`
+	FirstName       string         `json:"firstName"`
+	LastName        string         `json:"lastName"`
+	RequestedRole   string         `json:"requestedRole"`
+	RequestType     string         `json:"requestType"`
+	Status          string         `json:"status"`
+	Metadata        map[string]any `json:"metadata"`
+	RejectionReason string         `json:"rejectionReason,omitempty"`
+	CreatedAt       string         `json:"createdAt"`
+	ReviewedAt      string         `json:"reviewedAt,omitempty"`
 }
 
-func (s *AuthService) RegisterUser(ctx context.Context, email, password, firstName, lastName, requestedRole string) error {
+type RegisterRequest struct {
+	Role             string `json:"role"` // "student", "teacher", "institute_management"
+	Email            string `json:"email"`
+	Password         string `json:"password"`
+	FirstName        string `json:"firstName"`
+	LastName         string `json:"lastName"`
+	InstitutionID    string `json:"institutionId,omitempty"`
+	AcademicYear     string `json:"academicYear,omitempty"`
+	StudentIDNumber  string `json:"studentIdNumber,omitempty"`
+	Department       string `json:"department,omitempty"`
+	EmployeeID       string `json:"employeeId,omitempty"`
+	Designation      string `json:"designation,omitempty"`
+	InstituteName    string `json:"instituteName,omitempty"`
+	Domain           string `json:"domain,omitempty"`
+	InstituteType    string `json:"instituteType,omitempty"`
+	RegistrationCode string `json:"registrationCode,omitempty"`
+	Phone            string `json:"phone,omitempty"`
+	Address          string `json:"address,omitempty"`
+}
+
+type PublicInstitution struct {
+	InstitutionID string `json:"institutionId"`
+	Name          string `json:"name"`
+	Domain        string `json:"domain,omitempty"`
+	InstituteType string `json:"instituteType,omitempty"`
+}
+
+func (s *AuthService) ListPublicInstitutions(ctx context.Context) ([]PublicInstitution, error) {
+	if s.pool == nil {
+		return nil, errors.New("database pool unavailable")
+	}
+	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{AccessMode: pgx.ReadOnly})
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = tx.Rollback(context.Background()) }()
+
+	if err := database.ApplyAppContext(ctx, tx, database.AppContext{AllowLogin: true}); err != nil {
+		return nil, err
+	}
+
+	rows, err := tx.Query(ctx, `
+		select institution_id::text, name, coalesce(domain, ''), coalesce(institute_type, '')
+		from institutions
+		where status = 'active'
+		order by name asc
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var list []PublicInstitution
+	for rows.Next() {
+		var pi PublicInstitution
+		if err := rows.Scan(&pi.InstitutionID, &pi.Name, &pi.Domain, &pi.InstituteType); err != nil {
+			return nil, err
+		}
+		list = append(list, pi)
+	}
+	return list, tx.Commit(ctx)
+}
+
+func (s *AuthService) Register(ctx context.Context, req RegisterRequest, ip net.IP, userAgent, correlationID string) error {
 	if s.pool == nil {
 		return errors.New("auth service pool not configured")
 	}
-	e := strings.ToLower(strings.TrimSpace(email))
-	if e == "" || password == "" {
-		return errors.New("email and password required")
+
+	role := strings.ToLower(strings.TrimSpace(req.Role))
+	if role == "" {
+		return errors.New("role is required")
+	}
+	if role == "institution_admin" || role == "institution" || role == "institute" {
+		role = "institute_management"
+	}
+	if role != "student" && role != "teacher" && role != "institute_management" {
+		return errors.New("invalid role selected; must be student, teacher, or institute_management")
+	}
+
+	email := strings.ToLower(strings.TrimSpace(req.Email))
+	if email == "" {
+		return errors.New("email is required")
+	}
+	if len(email) > 255 || !strings.Contains(email, "@") {
+		return errors.New("invalid email address")
+	}
+
+	password := req.Password
+	if strings.TrimSpace(password) == "" {
+		return errors.New("password is required")
 	}
 	if err := s.passwordPolicy.Validate(password); err != nil {
 		return err
@@ -568,7 +664,7 @@ func (s *AuthService) RegisterUser(ctx context.Context, email, password, firstNa
 	}
 
 	var exists bool
-	err = tx.QueryRow(ctx, `select exists(select 1 from users where lower(email)=lower($1))`, e).Scan(&exists)
+	err = tx.QueryRow(ctx, `select exists(select 1 from users where lower(email)=lower($1))`, email).Scan(&exists)
 	if err != nil {
 		return err
 	}
@@ -576,37 +672,194 @@ func (s *AuthService) RegisterUser(ctx context.Context, email, password, firstNa
 		return errors.New("user already exists")
 	}
 
-	instID, err := ensureDefaultInstitution(ctx, tx)
-	if err != nil {
-		return err
+	fn := strings.TrimSpace(req.FirstName)
+	ln := strings.TrimSpace(req.LastName)
+
+	if role == "institute_management" {
+		instName := strings.TrimSpace(req.InstituteName)
+		if instName == "" {
+			return errors.New("institute name is required")
+		}
+		if fn == "" || ln == "" {
+			return errors.New("first name and last name of the institute administrator are required")
+		}
+
+		domain := strings.ToLower(strings.TrimSpace(req.Domain))
+		if domain == "" {
+			slug := strings.ToLower(strings.ReplaceAll(instName, " ", "-"))
+			domain = slug + ".safescholar.net"
+		}
+
+		instType := strings.TrimSpace(req.InstituteType)
+		if instType == "" {
+			instType = "School / College"
+		}
+
+		var instID string
+		err = tx.QueryRow(ctx, `
+			insert into institutions(name, domain, status, is_trial, trial_status, max_teachers, max_students, institute_type, registration_code, contact_phone, address, created_at, updated_at)
+			values ($1, $2, 'pending', true, 'pending', 15, 200, nullif($3,''), nullif($4,''), nullif($5,''), nullif($6,''), now(), now())
+			returning institution_id::text
+		`, instName, domain, instType, strings.TrimSpace(req.RegistrationCode), strings.TrimSpace(req.Phone), strings.TrimSpace(req.Address)).Scan(&instID)
+		if err != nil {
+			return fmt.Errorf("failed to register institution: %w", err)
+		}
+
+		var newUserID string
+		err = tx.QueryRow(ctx, `
+			insert into users(institution_id, email, password_hash, first_name, last_name, status, is_sys_admin, created_at)
+			values ($1::uuid, $2, $3, nullif($4,''), nullif($5,''), 'pending', false, now())
+			returning user_id::text
+		`, instID, email, hash, fn, ln).Scan(&newUserID)
+		if err != nil {
+			return fmt.Errorf("failed to register admin user: %w", err)
+		}
+
+		metaJSON, _ := json.Marshal(map[string]any{
+			"institute_name":    instName,
+			"domain":            domain,
+			"institute_type":    instType,
+			"registration_code": strings.TrimSpace(req.RegistrationCode),
+			"contact_phone":     strings.TrimSpace(req.Phone),
+			"address":           strings.TrimSpace(req.Address),
+			"admin_name":        fn + " " + ln,
+			"admin_email":       email,
+		})
+
+		_, err = tx.Exec(ctx, `
+			insert into institution_approval_requests(institution_id, user_id, requested_role, request_type, status, metadata, created_at)
+			values ($1::uuid, $2::uuid, 'institution_admin', 'INSTITUTION', 'PENDING', $3::jsonb, now())
+		`, instID, newUserID, metaJSON)
+		if err != nil {
+			return err
+		}
+
+		if err := tx.Commit(ctx); err != nil {
+			return err
+		}
+
+		if s.auditLogger != nil {
+			ipStr := ""
+			if ip != nil {
+				ipStr = ip.String()
+			}
+			_ = s.auditLogger.Log(ctx, security.AuditEvent{
+				UserID:     newUserID,
+				Action:     "SIGNUP_INSTITUTE_REQUEST",
+				Resource:   "institution",
+				ResourceID: instID,
+				IPAddress:  ipStr,
+				CreatedAt:  time.Now().UTC(),
+				Metadata: map[string]any{
+					"institute_name": instName,
+					"correlationId":  correlationID,
+					"email":          email,
+				},
+			})
+		}
+		return nil
 	}
+
+	// Student or Teacher registration flow
+	if fn == "" || ln == "" {
+		return errors.New("first name and last name are required")
+	}
+	instID := strings.TrimSpace(req.InstitutionID)
+	if instID == "" {
+		return errors.New("institution selection is required")
+	}
+
+	var instExists bool
+	var instName string
+	err = tx.QueryRow(ctx, `select exists(select 1 from institutions where institution_id=nullif($1,'')::uuid and status='active'), coalesce(name,'') from institutions where institution_id=nullif($1,'')::uuid group by name`, instID).Scan(&instExists, &instName)
+	if err != nil || !instExists {
+		return errors.New("invalid or inactive institution selected")
+	}
+
+	meta := map[string]any{
+		"institution_name": instName,
+	}
+
+	if role == "student" {
+		ay := strings.TrimSpace(req.AcademicYear)
+		if ay == "" {
+			return errors.New("academic year / grade is required for student registration")
+		}
+		meta["academic_year"] = ay
+		if strings.TrimSpace(req.StudentIDNumber) != "" {
+			meta["student_id_number"] = strings.TrimSpace(req.StudentIDNumber)
+		}
+		if strings.TrimSpace(req.Department) != "" {
+			meta["department"] = strings.TrimSpace(req.Department)
+		}
+	} else if role == "teacher" {
+		dept := strings.TrimSpace(req.Department)
+		if dept == "" {
+			return errors.New("department or subject is required for teacher registration")
+		}
+		meta["department"] = dept
+		if strings.TrimSpace(req.EmployeeID) != "" {
+			meta["employee_id"] = strings.TrimSpace(req.EmployeeID)
+		}
+		if strings.TrimSpace(req.Designation) != "" {
+			meta["designation"] = strings.TrimSpace(req.Designation)
+		}
+	}
+
+	metaJSON, _ := json.Marshal(meta)
 
 	var newUserID string
 	err = tx.QueryRow(ctx, `
-		insert into users(institution_id, email, password_hash, first_name, last_name, status, is_sys_admin, created_at)
-		values (nullif($1,'')::uuid, $2, $3, nullif($4,''), nullif($5,''), 'pending', false, now())
-		returning user_id::text`,
-		instID, e, hash, firstName, lastName,
-	).Scan(&newUserID)
+		insert into users(institution_id, email, password_hash, first_name, last_name, status, is_sys_admin, metadata, created_at)
+		values ($1::uuid, $2, $3, nullif($4,''), nullif($5,''), 'pending', false, $6::jsonb, now())
+		returning user_id::text
+	`, instID, email, hash, fn, ln, metaJSON).Scan(&newUserID)
 	if err != nil {
 		return err
-	}
-
-	roleName := strings.TrimSpace(requestedRole)
-	if roleName == "" {
-		roleName = "teacher"
 	}
 
 	_, err = tx.Exec(ctx, `
-		insert into institution_approval_requests(institution_id, user_id, requested_role, status, created_at)
-		values (nullif($1,'')::uuid, nullif($2,'')::uuid, $3, 'PENDING', now())`,
-		instID, newUserID, roleName,
-	)
+		insert into institution_approval_requests(institution_id, user_id, requested_role, request_type, status, metadata, created_at)
+		values ($1::uuid, $2::uuid, $3, 'USER', 'PENDING', $4::jsonb, now())
+	`, instID, newUserID, role, metaJSON)
 	if err != nil {
 		return err
 	}
 
-	return tx.Commit(ctx)
+	if err := tx.Commit(ctx); err != nil {
+		return err
+	}
+
+	if s.auditLogger != nil {
+		ipStr := ""
+		if ip != nil {
+			ipStr = ip.String()
+		}
+		_ = s.auditLogger.Log(ctx, security.AuditEvent{
+			UserID:     newUserID,
+			Action:     "SIGNUP_USER_REQUEST",
+			Resource:   "user",
+			ResourceID: newUserID,
+			IPAddress:  ipStr,
+			CreatedAt:  time.Now().UTC(),
+			Metadata: map[string]any{
+				"requestedRole": role,
+				"institutionId": instID,
+				"correlationId": correlationID,
+			},
+		})
+	}
+	return nil
+}
+
+func (s *AuthService) RegisterUser(ctx context.Context, email, password, firstName, lastName, requestedRole string) error {
+	return s.Register(ctx, RegisterRequest{
+		Role:      requestedRole,
+		Email:     email,
+		Password:  password,
+		FirstName: firstName,
+		LastName:  lastName,
+	}, nil, "", "")
 }
 
 func (s *AuthService) ListUsers(ctx context.Context) ([]UserSummary, error) {
@@ -656,18 +909,18 @@ func (s *AuthService) ListUsers(ctx context.Context) ([]UserSummary, error) {
 	return users, tx.Commit(ctx)
 }
 
-func (s *AuthService) ApproveUser(ctx context.Context, userID, status, roleID string) error {
+func (s *AuthService) ApproveUser(ctx context.Context, reviewerUserID, reviewerInstitutionID string, isSysAdmin bool, targetUserID, status, roleID, rejectionReason string) error {
 	if s.pool == nil {
 		return errors.New("auth service pool not configured")
 	}
-	uid := strings.TrimSpace(userID)
+	uid := strings.TrimSpace(targetUserID)
 	st := strings.ToLower(strings.TrimSpace(status))
 	rid := strings.TrimSpace(roleID)
 	if uid == "" || st == "" {
 		return errors.New("userId and status required")
 	}
 	if st != "active" && st != "rejected" && st != "isolated" {
-		return errors.New("invalid status value")
+		return errors.New("invalid status value: must be active, rejected, or isolated")
 	}
 
 	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{})
@@ -681,10 +934,17 @@ func (s *AuthService) ApproveUser(ctx context.Context, userID, status, roleID st
 	}
 
 	var currentStatus string
-	var inst string
-	err = tx.QueryRow(ctx, `select status, coalesce(institution_id::text,'') from users where user_id=nullif($1,'')::uuid`, uid).Scan(&currentStatus, &inst)
+	var userInst string
+	err = tx.QueryRow(ctx, `select status, coalesce(institution_id::text,'') from users where user_id=nullif($1,'')::uuid`, uid).Scan(&currentStatus, &userInst)
 	if err != nil {
-		return err
+		return fmt.Errorf("user not found: %w", err)
+	}
+
+	// Multi-tenant isolation enforcement: non-superadmins can ONLY authorize users within their own institution
+	if !isSysAdmin {
+		if strings.TrimSpace(reviewerInstitutionID) == "" || strings.TrimSpace(userInst) != strings.TrimSpace(reviewerInstitutionID) {
+			return errors.New("forbidden: cannot authorize or reject users outside your institution")
+		}
 	}
 
 	_, err = tx.Exec(ctx, `update users set status=$1, updated_at=now() where user_id=nullif($2,'')::uuid`, st, uid)
@@ -692,25 +952,47 @@ func (s *AuthService) ApproveUser(ctx context.Context, userID, status, roleID st
 		return err
 	}
 
-	// If status is approved ('active') and a roleID is provided, assign that role to the user
-	if st == "active" && rid != "" {
-		var roleExists bool
-		err = tx.QueryRow(ctx, `select exists(select 1 from roles where role_id=nullif($1,'')::uuid)`, rid).Scan(&roleExists)
-		if err != nil {
-			return err
-		}
-		if !roleExists {
-			return errors.New("role not found")
+	// Fetch requested role from pending request if roleID is not explicitly provided
+	var requestedRole string
+	_ = tx.QueryRow(ctx, `
+		select requested_role from institution_approval_requests 
+		where user_id=nullif($1,'')::uuid and status='PENDING' 
+		order by created_at desc limit 1
+	`, uid).Scan(&requestedRole)
+
+	// If status is approved ('active'), assign appropriate role
+	if st == "active" {
+		targetRoleID := rid
+		if targetRoleID == "" && requestedRole != "" {
+			// Find existing role matching requested_role
+			_ = tx.QueryRow(ctx, `
+				select role_id::text from roles 
+				where (institution_id = nullif($1,'')::uuid or institution_id is null) 
+				  and lower(name) = lower($2)
+				order by (institution_id is not null) desc
+				limit 1
+			`, userInst, requestedRole).Scan(&targetRoleID)
+
+			// If still empty, create it
+			if targetRoleID == "" {
+				_ = tx.QueryRow(ctx, `
+					insert into roles(institution_id, name, description, is_system_role, created_at)
+					values (nullif($1,'')::uuid, lower($2), initcap($2) || ' Role', false, now())
+					returning role_id::text
+				`, userInst, requestedRole).Scan(&targetRoleID)
+			}
 		}
 
-		_, err = tx.Exec(ctx, `
-			insert into user_roles(user_id, role_id)
-			values (nullif($1,'')::uuid, nullif($2,'')::uuid)
-			on conflict (user_id, role_id) do nothing`,
-			uid, rid,
-		)
-		if err != nil {
-			return err
+		if targetRoleID != "" {
+			_, err = tx.Exec(ctx, `
+				insert into user_roles(user_id, role_id)
+				values (nullif($1,'')::uuid, nullif($2,'')::uuid)
+				on conflict (user_id, role_id) do nothing`,
+				uid, targetRoleID,
+			)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -724,11 +1006,37 @@ func (s *AuthService) ApproveUser(ctx context.Context, userID, status, roleID st
 	}
 	_, _ = tx.Exec(ctx, `
 		update institution_approval_requests
-		set status=$1, updated_at=now()
-		where user_id=nullif($2,'')::uuid and status='PENDING'
-	`, reqStatus, uid)
+		set status=$1, rejection_reason=nullif($2,''), reviewed_by=nullif($3,'')::uuid, reviewed_at=now(), updated_at=now()
+		where user_id=nullif($4,'')::uuid and status='PENDING'
+	`, reqStatus, strings.TrimSpace(rejectionReason), nullIfEmpty(reviewerUserID), uid)
 
-	return tx.Commit(ctx)
+	if err := tx.Commit(ctx); err != nil {
+		return err
+	}
+
+	if s.auditLogger != nil {
+		_ = s.auditLogger.Log(ctx, security.AuditEvent{
+			UserID:     reviewerUserID,
+			Action:     "USER_APPROVAL_DECISION",
+			Resource:   "user",
+			ResourceID: uid,
+			CreatedAt:  time.Now().UTC(),
+			Metadata: map[string]any{
+				"decision":      st,
+				"reason":        rejectionReason,
+				"institutionId": userInst,
+			},
+		})
+	}
+	return nil
+}
+
+func nullIfEmpty(s string) any {
+	t := strings.TrimSpace(s)
+	if t == "" {
+		return nil
+	}
+	return t
 }
 
 func (s *AuthService) GetApprovalRequests(ctx context.Context, institutionID string) ([]ApprovalRequestSummary, error) {
@@ -741,15 +1049,31 @@ func (s *AuthService) GetApprovalRequests(ctx context.Context, institutionID str
 	}
 	defer func() { _ = tx.Rollback(context.Background()) }()
 
-	if err := database.ApplyAppContext(ctx, tx, database.AppContext{InstitutionID: institutionID}); err != nil {
+	if err := database.ApplyAppContext(ctx, tx, database.AppContext{InstitutionID: institutionID, AllowLogin: true}); err != nil {
 		return nil, err
 	}
 
 	rows, err := tx.Query(ctx, `
-		select r.request_id::text, r.user_id::text, u.email, coalesce(u.first_name,''), coalesce(u.last_name,''), r.requested_role, r.status, r.created_at
+		select 
+			r.request_id::text, 
+			coalesce(r.institution_id::text, ''), 
+			coalesce(i.name, ''),
+			r.user_id::text, 
+			u.email, 
+			coalesce(u.first_name,''), 
+			coalesce(u.last_name,''), 
+			r.requested_role, 
+			coalesce(r.request_type, 'USER'),
+			r.status, 
+			coalesce(r.metadata, '{}'::jsonb),
+			coalesce(r.rejection_reason, ''),
+			r.created_at,
+			r.reviewed_at
 		from institution_approval_requests r
 		join users u on r.user_id = u.user_id
+		left join institutions i on r.institution_id = i.institution_id
 		where r.institution_id = nullif($1,'')::uuid
+		  and coalesce(r.request_type, 'USER') = 'USER'
 		order by r.created_at desc
 	`, institutionID)
 	if err != nil {
@@ -761,13 +1085,269 @@ func (s *AuthService) GetApprovalRequests(ctx context.Context, institutionID str
 	for rows.Next() {
 		var r ApprovalRequestSummary
 		var createdAt time.Time
-		if err := rows.Scan(&r.RequestID, &r.UserID, &r.Email, &r.FirstName, &r.LastName, &r.RequestedRole, &r.Status, &createdAt); err != nil {
+		var reviewedAt *time.Time
+		var rawMeta []byte
+		if err := rows.Scan(&r.RequestID, &r.InstitutionID, &r.InstitutionName, &r.UserID, &r.Email, &r.FirstName, &r.LastName, &r.RequestedRole, &r.RequestType, &r.Status, &rawMeta, &r.RejectionReason, &createdAt, &reviewedAt); err != nil {
 			return nil, err
 		}
 		r.CreatedAt = createdAt.Format(time.RFC3339)
+		if reviewedAt != nil {
+			r.ReviewedAt = reviewedAt.Format(time.RFC3339)
+		}
+		if len(rawMeta) > 0 {
+			_ = json.Unmarshal(rawMeta, &r.Metadata)
+		}
+		if r.Metadata == nil {
+			r.Metadata = make(map[string]any)
+		}
 		reqs = append(reqs, r)
 	}
 	return reqs, tx.Commit(ctx)
+}
+
+func (s *AuthService) ListInstitutionRequests(ctx context.Context, isSysAdmin bool) ([]ApprovalRequestSummary, error) {
+	if !isSysAdmin {
+		return nil, errors.New("forbidden: super admin access required")
+	}
+	if s.pool == nil {
+		return nil, errors.New("auth pool not configured")
+	}
+	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{AccessMode: pgx.ReadOnly})
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = tx.Rollback(context.Background()) }()
+
+	if err := database.ApplyAppContext(ctx, tx, database.AppContext{AllowLogin: true}); err != nil {
+		return nil, err
+	}
+
+	rows, err := tx.Query(ctx, `
+		select 
+			r.request_id::text, 
+			coalesce(r.institution_id::text, ''), 
+			coalesce(i.name, ''),
+			r.user_id::text, 
+			u.email, 
+			coalesce(u.first_name,''), 
+			coalesce(u.last_name,''), 
+			r.requested_role, 
+			coalesce(r.request_type, 'INSTITUTION'),
+			r.status, 
+			coalesce(r.metadata, '{}'::jsonb),
+			coalesce(r.rejection_reason, ''),
+			r.created_at,
+			r.reviewed_at
+		from institution_approval_requests r
+		join users u on r.user_id = u.user_id
+		left join institutions i on r.institution_id = i.institution_id
+		where coalesce(r.request_type, 'USER') = 'INSTITUTION'
+		order by r.created_at desc
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var reqs []ApprovalRequestSummary
+	for rows.Next() {
+		var r ApprovalRequestSummary
+		var createdAt time.Time
+		var reviewedAt *time.Time
+		var rawMeta []byte
+		if err := rows.Scan(&r.RequestID, &r.InstitutionID, &r.InstitutionName, &r.UserID, &r.Email, &r.FirstName, &r.LastName, &r.RequestedRole, &r.RequestType, &r.Status, &rawMeta, &r.RejectionReason, &createdAt, &reviewedAt); err != nil {
+			return nil, err
+		}
+		r.CreatedAt = createdAt.Format(time.RFC3339)
+		if reviewedAt != nil {
+			r.ReviewedAt = reviewedAt.Format(time.RFC3339)
+		}
+		if len(rawMeta) > 0 {
+			_ = json.Unmarshal(rawMeta, &r.Metadata)
+		}
+		if r.Metadata == nil {
+			r.Metadata = make(map[string]any)
+		}
+		reqs = append(reqs, r)
+	}
+	return reqs, tx.Commit(ctx)
+}
+
+func (s *AuthService) ReviewInstitutionRequest(ctx context.Context, isSysAdmin bool, reviewerUserID, requestID, decision, rejectionReason string) error {
+	if !isSysAdmin {
+		return errors.New("forbidden: super admin access required")
+	}
+	if s.pool == nil {
+		return errors.New("database pool unavailable")
+	}
+
+	rid := strings.TrimSpace(requestID)
+	dec := strings.ToLower(strings.TrimSpace(decision))
+	if rid == "" || (dec != "approve" && dec != "reject") {
+		return errors.New("valid requestId and decision ('approve' or 'reject') required")
+	}
+
+	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback(context.Background()) }()
+
+	if err := database.ApplyAppContext(ctx, tx, database.AppContext{AllowLogin: true}); err != nil {
+		return err
+	}
+
+	var instID string
+	var userID string
+	var currentStatus string
+	err = tx.QueryRow(ctx, `
+		select institution_id::text, user_id::text, status
+		from institution_approval_requests
+		where request_id = nullif($1,'')::uuid
+	`, rid).Scan(&instID, &userID, &currentStatus)
+	if err != nil {
+		return fmt.Errorf("institution request not found: %w", err)
+	}
+	if currentStatus != "PENDING" {
+		return fmt.Errorf("request has already been %s", currentStatus)
+	}
+
+	now := time.Now().UTC()
+	trialEnds := now.AddDate(0, 0, 30)
+
+	if dec == "approve" {
+		_, err = tx.Exec(ctx, `
+			update institutions
+			set status='active', trial_status='active', trial_starts_at=$1, trial_ends_at=$2, updated_at=now()
+			where institution_id = nullif($3,'')::uuid
+		`, now, trialEnds, instID)
+		if err != nil {
+			return fmt.Errorf("failed to activate institution: %w", err)
+		}
+
+		_, err = tx.Exec(ctx, `
+			update users
+			set status='active', updated_at=now()
+			where user_id = nullif($1,'')::uuid
+		`, userID)
+		if err != nil {
+			return fmt.Errorf("failed to activate admin user: %w", err)
+		}
+
+		// Ensure default admin role for this institution
+		var roleID string
+		err = tx.QueryRow(ctx, `
+			select role_id::text from roles 
+			where institution_id = nullif($1,'')::uuid and lower(name) in ('admin', 'institution_admin')
+			limit 1
+		`, instID).Scan(&roleID)
+		if err != nil {
+			// Create institution admin role
+			err = tx.QueryRow(ctx, `
+				insert into roles(institution_id, name, description, is_system_role, created_at)
+				values (nullif($1,'')::uuid, 'admin', 'Institution Administrator', false, now())
+				returning role_id::text
+			`, instID).Scan(&roleID)
+			if err != nil {
+				return fmt.Errorf("failed to create admin role: %w", err)
+			}
+		}
+
+		// Assign admin role to user
+		_, err = tx.Exec(ctx, `
+			insert into user_roles(user_id, role_id)
+			values (nullif($1,'')::uuid, nullif($2,'')::uuid)
+			on conflict (user_id, role_id) do nothing
+		`, userID, roleID)
+		if err != nil {
+			return fmt.Errorf("failed to assign admin role: %w", err)
+		}
+
+		// Seed core administrative permissions to this role
+		_, _ = tx.Exec(ctx, `
+			insert into role_permissions(role_id, permission_id)
+			select nullif($1,'')::uuid, permission_id 
+			from permissions 
+			where name in ('MANAGE_USERS', 'MANAGE_LOCAL_ROLES', 'EXECUTE_AI_TUTOR', 'GENERATE_LESSON_PLAN', 'USE_TEXT_LEVELER', 'USE_VIDEO_ASSESSOR', 'GENERATE_IEP_RUBRIC', 'MANAGE_DISTRICT_AI_KNOWLEDGE')
+			on conflict do nothing
+		`, roleID)
+
+		// Update request
+		_, err = tx.Exec(ctx, `
+			update institution_approval_requests
+			set status='APPROVED', reviewed_by=nullif($1,'')::uuid, reviewed_at=now(), updated_at=now()
+			where request_id = nullif($2,'')::uuid
+		`, nullIfEmpty(reviewerUserID), rid)
+		if err != nil {
+			return err
+		}
+
+		if err := tx.Commit(ctx); err != nil {
+			return err
+		}
+
+		if s.auditLogger != nil {
+			_ = s.auditLogger.Log(ctx, security.AuditEvent{
+				UserID:     reviewerUserID,
+				Action:     "APPROVE_INSTITUTION",
+				Resource:   "institution",
+				ResourceID: instID,
+				CreatedAt:  time.Now().UTC(),
+				Metadata: map[string]any{
+					"requestId": rid,
+					"userId":    userID,
+				},
+			})
+		}
+		return nil
+	}
+
+	// Reject decision
+	_, err = tx.Exec(ctx, `
+		update institutions
+		set status='rejected', trial_status='rejected', updated_at=now()
+		where institution_id = nullif($1,'')::uuid
+	`, instID)
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(ctx, `
+		update users
+		set status='rejected', updated_at=now()
+		where user_id = nullif($1,'')::uuid
+	`, userID)
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec(ctx, `
+		update institution_approval_requests
+		set status='REJECTED', rejection_reason=nullif($1,''), reviewed_by=nullif($2,'')::uuid, reviewed_at=now(), updated_at=now()
+		where request_id = nullif($3,'')::uuid
+	`, strings.TrimSpace(rejectionReason), nullIfEmpty(reviewerUserID), rid)
+	if err != nil {
+		return err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return err
+	}
+
+	if s.auditLogger != nil {
+		_ = s.auditLogger.Log(ctx, security.AuditEvent{
+			UserID:     reviewerUserID,
+			Action:     "REJECT_INSTITUTION",
+			Resource:   "institution",
+			ResourceID: instID,
+			CreatedAt:  time.Now().UTC(),
+			Metadata: map[string]any{
+				"requestId": rid,
+				"reason":    rejectionReason,
+			},
+		})
+	}
+	return nil
 }
 
 func (s *AuthService) GetDashboardMetrics(ctx context.Context, userID, institutionID string, roles []string, isSysAdmin bool) (map[string]any, error) {

@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useSearchParams } from 'react-router-dom'
 import { 
   Shield, Building2, Activity, CheckCircle2, 
-  HardDrive, AlertCircle, RefreshCw,
+  HardDrive, RefreshCw,
   Clock, Plus, Play, Pause, Sliders, Trash2,
   Users, GraduationCap, X, Calendar, Sparkles,
   Cpu, Layers, Zap, Server, Settings2, Edit3,
@@ -20,7 +20,8 @@ import {
 import { 
   listRoles, createRole, updateRole, deleteRole, assignPermission, 
   unassignPermission, listAllPermissions, createCustomPermission, deleteCustomPermission,
-  type RoleSummary, type PermissionItem 
+  listInstitutionRequests, reviewInstitutionRequest,
+  type RoleSummary, type PermissionItem, type ApprovalRequest 
 } from '../../services/roleService'
 
 interface TelemetryRow {
@@ -31,15 +32,6 @@ interface TelemetryRow {
   totalRequests: number
   promptTokens: number
   completionTokens: number
-}
-
-interface OnboardingTicket {
-  ticketId: string
-  districtName: string
-  contactEmail: string
-  requestedSubdomain: string
-  status: 'PENDING' | 'APPROVED'
-  createdAt: string
 }
 
 export interface TrialInstitute {
@@ -89,24 +81,9 @@ export function SuperAdminDashboard() {
   // Data states - Infrastructure & Trials
   const [telemetry, setTelemetry] = useState<TelemetryRow[]>([])
   const [trials, setTrials] = useState<TrialInstitute[]>([])
-  const [onboarding, setOnboarding] = useState<OnboardingTicket[]>([
-    {
-      ticketId: 't1',
-      districtName: 'Chicago Public Schools',
-      contactEmail: 'admin@cps.edu',
-      requestedSubdomain: 'cps.safescholar.net',
-      status: 'PENDING',
-      createdAt: new Date().toISOString()
-    },
-    {
-      ticketId: 't2',
-      districtName: 'Austin Independent School District',
-      contactEmail: 'it@austinisd.org',
-      requestedSubdomain: 'austinisd.safescholar.net',
-      status: 'PENDING',
-      createdAt: new Date(Date.now() - 86400000).toISOString()
-    }
-  ])
+  const [institutionRequests, setInstitutionRequests] = useState<ApprovalRequest[]>([])
+  const [rejectingInstReq, setRejectingInstReq] = useState<ApprovalRequest | null>(null)
+  const [instRejectionReason, setInstRejectionReason] = useState('')
 
   // Data states - Plugins & Resilience
   const [pluginsList, setPluginsList] = useState<PluginView[]>([])
@@ -209,7 +186,7 @@ export function SuperAdminDashboard() {
     setIsLoading(true)
     setErr(null)
     try {
-      const [metricsRes, trialsRes, pluginsRes, rolesRes, permsRes] = await Promise.allSettled([
+      const [metricsRes, trialsRes, pluginsRes, rolesRes, permsRes, instReqsRes] = await Promise.allSettled([
         apiFetch<{ telemetry?: TelemetryRow[] }>('/api/v1/dashboard/metrics', {
           method: 'GET',
           accessToken
@@ -220,7 +197,8 @@ export function SuperAdminDashboard() {
         }),
         listPlugins(accessToken, selectedTenantForOverride),
         listRoles(accessToken),
-        listAllPermissions(accessToken)
+        listAllPermissions(accessToken),
+        listInstitutionRequests(accessToken)
       ])
 
       if (metricsRes.status === 'fulfilled') {
@@ -238,10 +216,27 @@ export function SuperAdminDashboard() {
       if (permsRes.status === 'fulfilled') {
         setPermissionsList(permsRes.value.permissions || [])
       }
+      if (instReqsRes.status === 'fulfilled') {
+        setInstitutionRequests(instReqsRes.value.requests || [])
+      }
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Failed to load console data')
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  async function handleReviewInstitution(requestId: string, decision: 'approve' | 'reject', rejectionReason?: string) {
+    setErr(null)
+    setOk(null)
+    try {
+      await reviewInstitutionRequest(accessToken, requestId, decision, rejectionReason)
+      setOk(`Institution request ${decision === 'approve' ? 'authorized and activated' : 'rejected'} successfully.`)
+      setRejectingInstReq(null)
+      setInstRejectionReason('')
+      void loadData()
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : `Failed to ${decision} institution request`)
     }
   }
 
@@ -1068,54 +1063,132 @@ export function SuperAdminDashboard() {
                 )}
               </div>
 
-              {/* Pending Tenant Requests */}
+              {/* Pending Tenant & Institution Requests */}
               <div className="mt-8 sm:mt-10 pt-6 sm:pt-8 border-t border-slate-200 dark:border-zinc-800">
-                <h3 className="text-sm sm:text-base font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider mb-4 flex items-center gap-2">
-                  <AlertCircle size={18} className="text-amber-500" /> Pending Tenant Requests
-                </h3>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm sm:text-base font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-2">
+                    <Building2 size={18} className="text-indigo-500" /> Pending Institution Onboarding Requests
+                  </h3>
+                  <span className="text-xs px-2.5 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 font-bold">
+                    {institutionRequests.filter(r => r.status === 'PENDING').length} Pending Review
+                  </span>
+                </div>
                 
-                {onboarding.length === 0 ? (
+                {institutionRequests.filter(r => r.status === 'PENDING').length === 0 ? (
                   <div className="p-6 sm:p-8 rounded-2xl bg-slate-50 dark:bg-zinc-800/50 border border-slate-200 dark:border-zinc-700 text-center text-slate-500 font-medium">
-                    No pending tenant activation tickets.
+                    No pending campus onboarding requests. All institution registrations are processed.
                   </div>
                 ) : (
                   <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-zinc-700 bg-white/50 dark:bg-zinc-800/50 backdrop-blur-xl">
-                    <table className="w-full text-sm text-left whitespace-nowrap min-w-[650px]">
+                    <table className="w-full text-sm text-left whitespace-nowrap min-w-[750px]">
                       <thead className="text-xs text-slate-500 dark:text-slate-400 uppercase bg-slate-50/80 dark:bg-zinc-900/80">
                         <tr>
-                          <th className="px-4 sm:px-6 py-3 sm:py-4 font-semibold">School District Name</th>
-                          <th className="px-4 sm:px-6 py-3 sm:py-4 font-semibold">Contact Domain Address</th>
-                          <th className="px-4 sm:px-6 py-3 sm:py-4 font-semibold text-center">Requested Subdomain</th>
-                          <th className="px-4 sm:px-6 py-3 sm:py-4 font-semibold text-center">Requested Date</th>
-                          <th className="px-4 sm:px-6 py-3 sm:py-4"></th>
+                          <th className="px-4 sm:px-6 py-3 sm:py-4 font-semibold">Institution Name & Type</th>
+                          <th className="px-4 sm:px-6 py-3 sm:py-4 font-semibold">Admin Contact & Email</th>
+                          <th className="px-4 sm:px-6 py-3 sm:py-4 font-semibold text-center">Domain / Code</th>
+                          <th className="px-4 sm:px-6 py-3 sm:py-4 font-semibold text-center">Submission Date</th>
+                          <th className="px-4 sm:px-6 py-3 sm:py-4 text-right">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-200 dark:divide-zinc-700">
-                        {onboarding.map(ticket => (
-                          <tr key={ticket.ticketId} className="hover:bg-slate-50/50 dark:hover:bg-zinc-700/30 transition-colors">
-                            <td className="px-4 sm:px-6 py-3 sm:py-4 font-bold text-slate-900 dark:text-slate-100">{ticket.districtName}</td>
-                            <td className="px-4 sm:px-6 py-3 sm:py-4 text-slate-600 dark:text-slate-300">{ticket.contactEmail}</td>
-                            <td className="px-4 sm:px-6 py-3 sm:py-4 text-center font-mono text-blue-600 dark:text-blue-400">
-                              {ticket.requestedSubdomain}
-                            </td>
-                            <td className="px-4 sm:px-6 py-3 sm:py-4 text-center text-slate-500 dark:text-slate-400">
-                              {new Date(ticket.createdAt).toLocaleDateString()}
-                            </td>
-                            <td className="px-4 sm:px-6 py-3 sm:py-4 text-right">
-                              <button
-                                onClick={() => {
-                                  setOnboarding(prev => prev.filter(t => t.ticketId !== ticket.ticketId))
-                                  setOk(`Authorized ticket for ${ticket.districtName}. You can now provision it under the Trial Console.`)
-                                }}
-                                className="inline-flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition-colors"
-                              >
-                                <Building2 size={14} /> Authorize
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
+                        {institutionRequests.filter(r => r.status === 'PENDING').map(ticket => {
+                          const meta = ticket.metadata || {}
+                          const instTitle = meta.institute_name || ticket.institutionName || 'Unnamed Institution'
+                          const instType = meta.institute_type || 'Educational Institute'
+                          const adminName = meta.admin_name || `${ticket.firstName} ${ticket.lastName}`.trim() || 'Admin'
+                          return (
+                            <tr key={ticket.requestId} className="hover:bg-slate-50/50 dark:hover:bg-zinc-700/30 transition-colors">
+                              <td className="px-4 sm:px-6 py-3 sm:py-4">
+                                <div className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                                  <Building2 size={15} className="text-indigo-600 dark:text-indigo-400 shrink-0" />
+                                  {instTitle}
+                                </div>
+                                <div className="text-xs text-indigo-600 dark:text-indigo-400 font-medium mt-0.5">
+                                  {instType}
+                                </div>
+                              </td>
+                              <td className="px-4 sm:px-6 py-3 sm:py-4">
+                                <div className="font-medium text-slate-800 dark:text-slate-200">{adminName}</div>
+                                <div className="text-xs text-slate-500 dark:text-slate-400">{ticket.email}</div>
+                              </td>
+                              <td className="px-4 sm:px-6 py-3 sm:py-4 text-center">
+                                <div className="font-mono text-xs text-blue-600 dark:text-blue-400">
+                                  {meta.domain || 'Auto-generated'}
+                                </div>
+                                {meta.registration_code && (
+                                  <div className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+                                    Reg: {meta.registration_code}
+                                  </div>
+                                )}
+                              </td>
+                              <td className="px-4 sm:px-6 py-3 sm:py-4 text-center text-slate-500 dark:text-slate-400 text-xs">
+                                {new Date(ticket.createdAt).toLocaleDateString()}
+                              </td>
+                              <td className="px-4 sm:px-6 py-3 sm:py-4 text-right">
+                                <div className="inline-flex items-center gap-2">
+                                  <button
+                                    onClick={() => void handleReviewInstitution(ticket.requestId, 'approve')}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition-colors"
+                                  >
+                                    <CheckCircle2 size={14} /> Authorize & Activate
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setRejectingInstReq(ticket)
+                                      setInstRejectionReason('')
+                                    }}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 border border-red-200 dark:border-red-900/50 transition-colors"
+                                  >
+                                    <X size={14} /> Reject
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          )
+                        })}
                       </tbody>
                     </table>
+                  </div>
+                )}
+
+                {/* Institution Rejection Modal */}
+                {rejectingInstReq && (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                    <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-6 max-w-md w-full shadow-2xl">
+                      <h4 className="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                        <X size={18} className="text-red-500" /> Reject Institution Registration
+                      </h4>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                        Are you sure you want to reject the institutional registration for{' '}
+                        <strong>{rejectingInstReq.metadata?.institute_name || rejectingInstReq.institutionName || rejectingInstReq.email}</strong>?
+                      </p>
+                      <div className="mt-4 flex flex-col gap-1.5">
+                        <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                          Rejection Audit Note (Optional)
+                        </label>
+                        <textarea
+                          rows={3}
+                          value={instRejectionReason}
+                          onChange={(e) => setInstRejectionReason(e.target.value)}
+                          placeholder="e.g. Unverified academic credentials or non-accredited domain"
+                          className="w-full text-xs p-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-slate-100 outline-none focus:border-red-500"
+                        />
+                      </div>
+                      <div className="mt-5 flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => setRejectingInstReq(null)}
+                          className="px-3.5 py-2 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded-xl transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={() => void handleReviewInstitution(rejectingInstReq.requestId, 'reject', instRejectionReason)}
+                          className="px-4 py-2 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors shadow-sm"
+                        >
+                          Confirm Rejection
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>

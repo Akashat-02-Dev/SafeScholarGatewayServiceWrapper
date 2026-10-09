@@ -852,5 +852,32 @@ update system_plugins set is_system = true where plugin_id in (
 );
 `,
 		},
+		{
+			Name: "009_signup_approval_revamp",
+			SQL: `
+alter table institution_approval_requests add column if not exists request_type varchar(50) not null default 'USER';
+alter table institution_approval_requests add column if not exists metadata jsonb not null default '{}'::jsonb;
+alter table institution_approval_requests add column if not exists rejection_reason text;
+alter table institution_approval_requests add column if not exists reviewed_at timestamptz;
+
+create index if not exists idx_approval_requests_type_status on institution_approval_requests(request_type, status);
+create index if not exists idx_approval_requests_inst_status on institution_approval_requests(institution_id, status);
+
+alter table users add column if not exists metadata jsonb not null default '{}'::jsonb;
+
+alter table institutions add column if not exists institute_type varchar(100);
+alter table institutions add column if not exists registration_code varchar(100);
+alter table institutions add column if not exists contact_phone varchar(50);
+alter table institutions add column if not exists address text;
+
+drop policy if exists approval_requests_isolation on institution_approval_requests;
+create policy approval_requests_isolation on institution_approval_requests using (
+  current_setting('app.allow_login', true) = 'true'
+  or institution_id::text = current_setting('app.institution_id', true)
+  or current_setting('app.is_sys_admin', true) = 'true'
+);
+`,
+		},
 	}
 }
+

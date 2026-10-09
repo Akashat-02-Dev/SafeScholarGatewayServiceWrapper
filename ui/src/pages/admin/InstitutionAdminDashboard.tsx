@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { 
   Building2, Users, CheckCircle2, ShieldAlert, Sparkles, 
-  UserCheck, UserX, ToggleLeft, ToggleRight 
+  UserCheck, UserX, ToggleLeft, ToggleRight, GraduationCap, Briefcase, Calendar, Hash 
 } from 'lucide-react'
 import { useAuth } from '../../services/authService'
 import { 
@@ -34,7 +34,8 @@ export function InstitutionAdminDashboard() {
   const [err, setErr] = useState<string | null>(null)
   const [ok, setOk] = useState<string | null>(null)
   const [, setIsLoading] = useState(true)
-
+  const [rejectingReq, setRejectingReq] = useState<ApprovalRequest | null>(null)
+  const [rejectionReason, setRejectionReason] = useState('')
 
   async function loadData() {
     if (!accessToken) return
@@ -50,12 +51,8 @@ export function InstitutionAdminDashboard() {
       setRoles(roleData.roles || [])
       setUsers(userData.users || [])
 
-      // Simulated active permission mappings grid based on local tenant bounds
-      // We populate role permission lists.
-      // (In production, the backend returns role permissions via listRoles/permissions endpoints)
       const initialMappings: Record<string, string[]> = {}
       roleData.roles.forEach(r => {
-        // Teacher defaults
         if (r.name.toLowerCase() === 'teacher') {
           initialMappings[r.roleId] = ['GENERATE_LESSON_PLAN', 'USE_TEXT_LEVELER', 'USE_VIDEO_ASSESSOR', 'GENERATE_IEP_RUBRIC']
         } else if (r.name.toLowerCase() === 'student') {
@@ -81,7 +78,6 @@ export function InstitutionAdminDashboard() {
     setErr(null)
     setOk(null)
     try {
-      // Find a role corresponding to the requested role or default to teacher
       const matchedRole = roles.find(r => r.name.toLowerCase() === req.requestedRole.toLowerCase())
       const roleId = matchedRole?.roleId || (roles.length > 0 ? roles[0].roleId : undefined)
       
@@ -93,12 +89,15 @@ export function InstitutionAdminDashboard() {
     }
   }
 
-  async function handleReject(req: ApprovalRequest) {
+  async function handleConfirmReject() {
+    if (!rejectingReq) return
     setErr(null)
     setOk(null)
     try {
-      await approveUser(accessToken, req.userId, 'rejected')
-      setOk(`Registration request for ${req.email} has been rejected.`)
+      await approveUser(accessToken, rejectingReq.userId, 'rejected', undefined, rejectionReason)
+      setOk(`Registration request for ${rejectingReq.email} has been rejected.`)
+      setRejectingReq(null)
+      setRejectionReason('')
       void loadData()
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'rejection failed')
@@ -215,45 +214,138 @@ export function InstitutionAdminDashboard() {
                   <thead className="text-xs text-slate-500 dark:text-slate-400 uppercase bg-slate-50/80 dark:bg-zinc-900/80">
                     <tr>
                       <th className="px-6 py-4 font-semibold">Candidate</th>
-                      <th className="px-6 py-4 font-semibold">Email Address</th>
-                      <th className="px-6 py-4 font-semibold text-center">Requested Profile</th>
+                      <th className="px-6 py-4 font-semibold text-center">Profile / Role</th>
+                      <th className="px-6 py-4 font-semibold">Details & Credentials</th>
                       <th className="px-6 py-4 font-semibold text-center">Request Date</th>
-                      <th className="px-6 py-4"></th>
+                      <th className="px-6 py-4 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200 dark:divide-zinc-700">
-                    {pendingRequests.map(req => (
-                      <tr key={req.requestId} className="hover:bg-slate-50/50 dark:hover:bg-zinc-700/30 transition-colors">
-                        <td className="px-6 py-4 font-medium text-slate-900 dark:text-slate-100">
-                          {req.firstName} {req.lastName}
-                        </td>
-                        <td className="px-6 py-4 text-slate-600 dark:text-slate-300">{req.email}</td>
-                        <td className="px-6 py-4 text-center">
-                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 capitalize">
-                            {req.requestedRole}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-center text-slate-500 dark:text-slate-400">
-                          {new Date(req.createdAt).toLocaleDateString()}
-                        </td>
-                        <td className="px-6 py-4 flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => void handleApprove(req)}
-                            className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg shadow-sm transition-colors"
-                          >
-                            <UserCheck size={14} /> Approve
-                          </button>
-                          <button
-                            onClick={() => void handleReject(req)}
-                            className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-lg transition-colors"
-                          >
-                            <UserX size={14} /> Reject
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                    {pendingRequests.map(req => {
+                      const isStudent = req.requestedRole.toLowerCase() === 'student'
+                      const meta = req.metadata || {}
+                      return (
+                        <tr key={req.requestId} className="hover:bg-slate-50/50 dark:hover:bg-zinc-700/30 transition-colors">
+                          <td className="px-6 py-4">
+                            <div className="font-semibold text-slate-900 dark:text-slate-100">
+                              {req.firstName} {req.lastName}
+                            </div>
+                            <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{req.email}</div>
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
+                              isStudent 
+                                ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' 
+                                : 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300'
+                            }`}>
+                              {isStudent ? <GraduationCap size={13} /> : <Briefcase size={13} />}
+                              {isStudent ? 'Student' : 'Teacher'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex flex-col gap-1 text-xs">
+                              {isStudent ? (
+                                <>
+                                  {meta.academic_year && (
+                                    <span className="flex items-center gap-1 text-slate-700 dark:text-slate-300">
+                                      <Calendar size={12} className="text-blue-500" /> Year: <strong>{meta.academic_year}</strong>
+                                    </span>
+                                  )}
+                                  {meta.student_id_number && (
+                                    <span className="flex items-center gap-1 text-slate-500">
+                                      <Hash size={12} /> ID: {meta.student_id_number}
+                                    </span>
+                                  )}
+                                  {meta.department && (
+                                    <span className="text-slate-500">Dept: {meta.department}</span>
+                                  )}
+                                </>
+                              ) : (
+                                <>
+                                  {meta.department && (
+                                    <span className="text-slate-700 dark:text-slate-300 font-medium">
+                                      Subject: {meta.department}
+                                    </span>
+                                  )}
+                                  {meta.employee_id && (
+                                    <span className="flex items-center gap-1 text-slate-500">
+                                      <Hash size={12} /> Staff ID: {meta.employee_id}
+                                    </span>
+                                  )}
+                                  {meta.designation && (
+                                    <span className="text-slate-500">{meta.designation}</span>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-center text-xs text-slate-500 dark:text-slate-400">
+                            {new Date(req.createdAt).toLocaleDateString()}
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                onClick={() => void handleApprove(req)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg shadow-sm transition-colors"
+                              >
+                                <UserCheck size={14} /> Authorize
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setRejectingReq(req)
+                                  setRejectionReason('')
+                                }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-lg transition-colors"
+                              >
+                                <UserX size={14} /> Reject
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
+              </div>
+            )}
+
+            {/* Rejection Modal */}
+            {rejectingReq && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-2xl p-6 max-w-md w-full shadow-2xl">
+                  <h4 className="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                    <UserX size={18} className="text-red-500" /> Reject Access Request
+                  </h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                    Are you sure you want to reject the registration request for <strong>{rejectingReq.email}</strong>?
+                  </p>
+                  <div className="mt-4 flex flex-col gap-1.5">
+                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                      Reason for Rejection (Optional)
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={rejectionReason}
+                      onChange={(e) => setRejectionReason(e.target.value)}
+                      placeholder="e.g. Ineligible enrollment details or unverified student ID"
+                      className="w-full text-xs p-2.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-slate-100 outline-none focus:border-red-500"
+                    />
+                  </div>
+                  <div className="mt-5 flex items-center justify-end gap-2">
+                    <button
+                      onClick={() => setRejectingReq(null)}
+                      className="px-3.5 py-2 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded-xl transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => void handleConfirmReject()}
+                      className="px-4 py-2 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-colors shadow-sm"
+                    >
+                      Confirm Rejection
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
           </div>

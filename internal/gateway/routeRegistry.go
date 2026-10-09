@@ -38,6 +38,7 @@ func Routes() []Route {
 		{Method: http.MethodGet, PathPrefix: "/healthz", AuthRequired: false},
 
 		{Method: http.MethodPost, PathPrefix: "/api/auth/register", AuthRequired: false},
+		{Method: http.MethodGet, PathPrefix: "/api/auth/institutions", AuthRequired: false},
 		{Method: http.MethodPost, PathPrefix: "/api/auth/login", AuthRequired: false},
 		{Method: http.MethodPost, PathPrefix: "/api/auth/forgot-password", AuthRequired: false},
 		{Method: http.MethodPost, PathPrefix: "/api/auth/reset-password", AuthRequired: false},
@@ -73,10 +74,12 @@ func Routes() []Route {
 		{Method: http.MethodPost, PathPrefix: "/api/admin/permissions", AuthRequired: true, RequiredPermission: "SUPER_ADMIN"},
 		{Method: http.MethodPost, PathPrefix: "/api/admin/permissions/delete", AuthRequired: true, RequiredPermission: "SUPER_ADMIN"},
 
-		// Super Admin Trial Governance Endpoints
+		// Super Admin Trial & Institution Governance Endpoints
 		{Method: http.MethodGet, PathPrefix: "/api/v1/admin/trials", AuthRequired: true, RequiredPermission: "SUPER_ADMIN"},
 		{Method: http.MethodPost, PathPrefix: "/api/v1/admin/trials/onboard", AuthRequired: true, RequiredPermission: "SUPER_ADMIN"},
 		{Method: http.MethodPost, PathPrefix: "/api/v1/admin/trials/toggle", AuthRequired: true, RequiredPermission: "SUPER_ADMIN"},
+		{Method: http.MethodGet, PathPrefix: "/api/v1/admin/institution-requests", AuthRequired: true, RequiredPermission: "SUPER_ADMIN"},
+		{Method: http.MethodPost, PathPrefix: "/api/v1/admin/institution-requests/review", AuthRequired: true, RequiredPermission: "SUPER_ADMIN"},
 
 		// Super Admin Plugin & Feature Resilience Mesh Endpoints
 		{Method: http.MethodGet, PathPrefix: "/api/v1/admin/plugins", AuthRequired: true, RequiredPermission: "SUPER_ADMIN"},

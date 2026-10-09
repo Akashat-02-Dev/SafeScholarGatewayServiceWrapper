@@ -151,6 +151,9 @@ func (r *Router) serve(w http.ResponseWriter, req *http.Request) {
 	case route.PathPrefix == "/api/auth/register":
 		r.handleRegister(w, req)
 		return
+	case route.PathPrefix == "/api/auth/institutions":
+		r.handleListPublicInstitutions(w, req)
+		return
 	case route.PathPrefix == "/api/auth/login":
 		r.handleLogin(w, req)
 		return
@@ -392,6 +395,12 @@ func (r *Router) handleLogin(w http.ResponseWriter, req *http.Request) {
 	refreshTTL := 30 * 24 * time.Hour
 	result, err := r.authSvc.Login(req.Context(), lr.Email, lr.Password, ip, req.UserAgent(), middleware.CorrelationIDFromContext(req.Context()), accessTTL, refreshTTL)
 	if err != nil {
+		msg := err.Error()
+		low := strings.ToLower(msg)
+		if strings.Contains(low, "pending") || strings.Contains(low, "rejected") || strings.Contains(low, "disabled") || strings.Contains(low, "locked") {
+			security.WriteJSONError(w, http.StatusForbidden, msg)
+			return
+		}
 		security.WriteJSONError(w, http.StatusUnauthorized, "invalid credentials")
 		return
 	}
@@ -717,6 +726,20 @@ func (r *Router) handleAdmin(w http.ResponseWriter, req *http.Request, prefix st
 		}
 		r.handleToggleTrial(w, req)
 		return
+	case "/api/v1/admin/institution-requests":
+		if req.Method != http.MethodGet {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		r.handleListInstitutionRequests(w, req)
+		return
+	case "/api/v1/admin/institution-requests/review":
+		if req.Method != http.MethodPost {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		r.handleReviewInstitutionRequest(w, req)
+		return
 	case "/api/admin/roles/update":
 		if req.Method != http.MethodPost {
 			w.WriteHeader(http.StatusMethodNotAllowed)
@@ -855,39 +878,50 @@ func (r *Router) handleGetApprovalRequests(w http.ResponseWriter, req *http.Requ
 	writeJSON(w, http.StatusOK, map[string]any{"requests": reqs})
 }
 
-type registerRequest struct {
-	Email         string `json:"email"`
-	Password      string `json:"password"`
-	FirstName     string `json:"firstName"`
-	LastName      string `json:"lastName"`
-	RequestedRole string `json:"requestedRole"`
-}
-
 func (r *Router) handleRegister(w http.ResponseWriter, req *http.Request) {
 	if r.authSvc == nil {
 		w.WriteHeader(http.StatusServiceUnavailable)
 		return
 	}
-	var rr registerRequest
+	var rr auth.RegisterRequest
 	if err := json.NewDecoder(req.Body).Decode(&rr); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	err := r.authSvc.RegisterUser(req.Context(), rr.Email, rr.Password, rr.FirstName, rr.LastName, rr.RequestedRole)
+	ip := middleware.ClientIP(req)
+	ua := req.UserAgent()
+	cid := middleware.CorrelationIDFromContext(req.Context())
+	err := r.authSvc.Register(req.Context(), rr, ip, ua, cid)
 	if err != nil {
 		msg := strings.ToLower(strings.TrimSpace(err.Error()))
 		if strings.Contains(msg, "exists") {
 			writeJSON(w, http.StatusConflict, map[string]any{"error": "user already exists"})
 			return
 		}
-		if strings.Contains(msg, "required") || strings.Contains(msg, "password") {
+		if strings.Contains(msg, "required") || strings.Contains(msg, "password") || strings.Contains(msg, "invalid") || strings.Contains(msg, "must be") {
 			writeJSON(w, http.StatusBadRequest, map[string]any{"error": err.Error()})
 			return
 		}
-		w.WriteHeader(http.StatusInternalServerError)
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
 		return
 	}
-	writeJSON(w, http.StatusCreated, map[string]any{"status": "pending_approval"})
+	writeJSON(w, http.StatusCreated, map[string]any{
+		"status":  "pending_approval",
+		"message": "Account registration submitted successfully. It will be reviewed by the appropriate administrator.",
+	})
+}
+
+func (r *Router) handleListPublicInstitutions(w http.ResponseWriter, req *http.Request) {
+	if r.authSvc == nil {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		return
+	}
+	insts, err := r.authSvc.ListPublicInstitutions(req.Context())
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"institutions": insts})
 }
 
 func (r *Router) handleListUsers(w http.ResponseWriter, req *http.Request) {
@@ -907,6 +941,7 @@ type approveUserRequest struct {
 	UserID string `json:"userId"`
 	Status string `json:"status"`
 	RoleID string `json:"roleId"`
+	Reason string `json:"reason,omitempty"`
 }
 
 func (r *Router) handleApproveUser(w http.ResponseWriter, req *http.Request) {
@@ -925,21 +960,72 @@ func (r *Router) handleApproveUser(w http.ResponseWriter, req *http.Request) {
 			return
 		}
 	}
-	err := r.authSvc.ApproveUser(req.Context(), ar.UserID, ar.Status, ar.RoleID)
+	uc := middleware.UserContextFromContext(req.Context())
+	err := r.authSvc.ApproveUser(req.Context(), uc.UserID, uc.InstitutionID, uc.IsSysAdmin, ar.UserID, ar.Status, ar.RoleID, ar.Reason)
 	if err != nil {
 		msg := strings.ToLower(strings.TrimSpace(err.Error()))
 		if strings.Contains(msg, "not found") || strings.Contains(msg, "unknown") {
 			writeJSON(w, http.StatusNotFound, map[string]any{"error": err.Error()})
 			return
 		}
+		if strings.Contains(msg, "forbidden") {
+			writeJSON(w, http.StatusForbidden, map[string]any{"error": err.Error()})
+			return
+		}
 		if strings.Contains(msg, "invalid") || strings.Contains(msg, "required") {
 			writeJSON(w, http.StatusBadRequest, map[string]any{"error": err.Error()})
 			return
 		}
-		w.WriteHeader(http.StatusInternalServerError)
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (r *Router) handleListInstitutionRequests(w http.ResponseWriter, req *http.Request) {
+	if r.authSvc == nil {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		return
+	}
+	uc := middleware.UserContextFromContext(req.Context())
+	if !uc.IsSysAdmin {
+		security.WriteJSONError(w, http.StatusForbidden, "super admin access required")
+		return
+	}
+	reqs, err := r.authSvc.ListInstitutionRequests(req.Context(), uc.IsSysAdmin)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"requests": reqs})
+}
+
+type reviewInstitutionPayload struct {
+	RequestID       string `json:"requestId"`
+	Decision        string `json:"decision"`
+	RejectionReason string `json:"rejectionReason,omitempty"`
+}
+
+func (r *Router) handleReviewInstitutionRequest(w http.ResponseWriter, req *http.Request) {
+	if r.authSvc == nil {
+		w.WriteHeader(http.StatusServiceUnavailable)
+		return
+	}
+	uc := middleware.UserContextFromContext(req.Context())
+	if !uc.IsSysAdmin {
+		security.WriteJSONError(w, http.StatusForbidden, "super admin access required")
+		return
+	}
+	var rip reviewInstitutionPayload
+	if err := json.NewDecoder(req.Body).Decode(&rip); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "invalid request body"})
+		return
+	}
+	if err := r.authSvc.ReviewInstitutionRequest(req.Context(), uc.IsSysAdmin, uc.UserID, rip.RequestID, rip.Decision, rip.RejectionReason); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"message": "Institution request updated successfully"})
 }
 
 type deleteUserRequest struct {
