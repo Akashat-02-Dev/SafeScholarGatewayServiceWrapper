@@ -820,7 +820,7 @@ func (s *AuthService) Register(ctx context.Context, req RegisterRequest, ip net.
 
 	_, err = tx.Exec(ctx, `
 		insert into institution_approval_requests(institution_id, user_id, requested_role, request_type, status, metadata, created_at)
-		values ($1::uuid, $2::uuid, $3, 'USER', 'PENDING', $4::jsonb, now())
+		values ($1::uuid, $2::uuid, $3, $3, 'PENDING', $4::jsonb, now())
 	`, instID, newUserID, role, metaJSON)
 	if err != nil {
 		return err
@@ -1116,7 +1116,7 @@ func (s *AuthService) GetApprovalRequests(ctx context.Context, institutionID str
 		join users u on r.user_id = u.user_id
 		left join institutions i on r.institution_id = i.institution_id
 		where r.institution_id = nullif($1,'')::uuid
-		  and coalesce(r.request_type, 'USER') = 'USER'
+		  and coalesce(r.request_type, 'USER') != 'INSTITUTION'
 		order by r.created_at desc
 	`, institutionID)
 	if err != nil {
