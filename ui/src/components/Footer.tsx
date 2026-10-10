@@ -56,10 +56,8 @@ export function Footer() {
           
           {/* Brand & Mission Statement Column (4 cols) */}
           <div className="lg:col-span-4 space-y-5">
-            <Link to="/" className="flex items-center gap-3 font-serif font-black text-xl text-slate-900 dark:text-white">
-              <span className="flex items-center justify-center w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-blue-700 text-white shadow-md shadow-blue-500/20 shrink-0">
-                <img className="w-6 h-6 object-contain" src="/main-logo.png" alt="SafeScholar" />
-              </span>
+            <Link to="/" className="flex items-center gap-3 font-serif font-black text-xl text-slate-900 dark:text-white group">
+              <img className="w-10 h-10 object-contain shrink-0 group-hover:scale-105 transition-transform duration-200" src="/main-logo.png" alt="SafeScholar Logo" />
               <div className="flex flex-col leading-none">
                 <span className="text-xl font-bold tracking-tight">SafeScholar</span>
                 <span className="text-[10px] font-semibold text-slate-400 tracking-wider uppercase mt-0.5">Enterprise Education AI</span>

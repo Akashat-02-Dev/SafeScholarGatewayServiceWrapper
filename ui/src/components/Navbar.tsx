@@ -44,6 +44,63 @@ export function Navbar() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  const platformEngines = [
+    {
+      title: 'Lesson Sequences',
+      badge: 'ACARA V9',
+      desc: 'Sequential unit planning with WALT & WILF criteria',
+      to: status === 'authenticated' ? '/educator/lesson-planner' : '/login?mode=register&role=teacher',
+      icon: BookOpen,
+      iconBg: 'bg-blue-50 dark:bg-blue-950/70 text-blue-600 dark:text-blue-400 border border-blue-200/60 dark:border-blue-900/50',
+      hoverText: 'group-hover:text-blue-600 dark:group-hover:text-blue-400',
+    },
+    {
+      title: 'Rubric Matrix',
+      badge: '4-Tier',
+      desc: 'Standards-based achievement level descriptors & grading',
+      to: status === 'authenticated' ? '/educator/rubric-generator' : '/login?mode=register&role=teacher',
+      icon: Award,
+      iconBg: 'bg-indigo-50 dark:bg-indigo-950/70 text-indigo-600 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-900/50',
+      hoverText: 'group-hover:text-indigo-600 dark:group-hover:text-indigo-400',
+    },
+    {
+      title: 'Worksheets Studio',
+      badge: '3-Tier',
+      desc: 'Scaffolded tasks for support, core & extension bands',
+      to: status === 'authenticated' ? '/educator/worksheet-generator' : '/login?mode=register&role=teacher',
+      icon: FileText,
+      iconBg: 'bg-teal-50 dark:bg-teal-950/70 text-teal-600 dark:text-teal-400 border border-teal-200/60 dark:border-teal-900/50',
+      hoverText: 'group-hover:text-teal-600 dark:group-hover:text-teal-400',
+    },
+    {
+      title: 'Socratic Sandbox',
+      badge: 'Anti-Cheating',
+      desc: 'Guided Socratic inquiry preventing direct answer copy-paste',
+      to: status === 'authenticated' ? '/socratic-tutor' : '/login?mode=register&role=student',
+      icon: MessageSquare,
+      iconBg: 'bg-emerald-50 dark:bg-emerald-950/70 text-emerald-600 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-900/50',
+      hoverText: 'group-hover:text-emerald-600 dark:group-hover:text-emerald-400',
+    },
+    {
+      title: 'Lexile Text Leveler',
+      badge: 'Prep-Yr 12',
+      desc: 'Transform passage complexity to match student reading levels',
+      to: status === 'authenticated' ? '/educator/leveler' : '/login?mode=register&role=teacher',
+      icon: Compass,
+      iconBg: 'bg-purple-50 dark:bg-purple-950/70 text-purple-600 dark:text-purple-400 border border-purple-200/60 dark:border-purple-900/50',
+      hoverText: 'group-hover:text-purple-600 dark:group-hover:text-purple-400',
+    },
+    {
+      title: 'Real-Time Moderation',
+      badge: 'Zero-PII',
+      desc: 'Automated student safety guardrails, PII redaction & audits',
+      to: status === 'authenticated' ? (isSuperAdmin ? '/superadmin' : '/admin/moderation') : '/login?mode=register&role=institute_management',
+      icon: ShieldCheck,
+      iconBg: 'bg-rose-50 dark:bg-rose-950/70 text-rose-600 dark:text-rose-400 border border-rose-200/60 dark:border-rose-900/50',
+      hoverText: 'group-hover:text-rose-600 dark:group-hover:text-rose-400',
+    },
+  ]
+
   return (
     <header className="sticky top-0 z-50 w-full bg-white/80 dark:bg-zinc-950/80 backdrop-blur-2xl -webkit-backdrop-filter border-b border-slate-200/80 dark:border-white/[0.08] transition-all">
       <div className="w-full max-w-[1600px] 2xl:max-w-[1720px] mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-4">
@@ -55,9 +112,11 @@ export function Navbar() {
             className="flex items-center gap-2.5 sm:gap-3 group focus:outline-none"
             aria-label="SafeScholar Home"
           >
-            <span className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-blue-700 text-white shadow-md shadow-blue-500/20 group-hover:scale-105 transition-transform shrink-0">
-              <img className="w-5 h-5 sm:w-6 sm:h-6 object-contain" src="/main-logo.png" alt="SafeScholar" />
-            </span>
+            <img 
+              className="w-9 h-9 sm:w-10 sm:h-10 object-contain group-hover:scale-105 transition-transform duration-200 shrink-0" 
+              src="/main-logo.png" 
+              alt="SafeScholar Logo" 
+            />
             <div className="flex flex-col leading-none">
               <div className="flex items-center gap-1.5">
                 <span className="font-serif font-black text-lg sm:text-xl text-slate-900 dark:text-white tracking-tight">
@@ -105,7 +164,7 @@ export function Navbar() {
                   className="absolute top-full left-0 mt-2 w-80 p-3 rounded-2xl bg-white/95 dark:bg-zinc-900/95 backdrop-blur-2xl border border-slate-200/80 dark:border-zinc-800 shadow-2xl z-50 space-y-1"
                 >
                   <Link
-                    to="/login?mode=register&role=teacher"
+                    to={status === 'authenticated' ? '/educator/lesson-planner' : '/login?mode=register&role=teacher'}
                     className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-zinc-800/80 transition-colors group"
                   >
                     <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 mt-0.5">
@@ -122,7 +181,7 @@ export function Navbar() {
                   </Link>
 
                   <Link
-                    to="/login?mode=register&role=student"
+                    to={status === 'authenticated' ? '/socratic-tutor' : '/login?mode=register&role=student'}
                     className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-zinc-800/80 transition-colors group"
                   >
                     <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
@@ -139,7 +198,7 @@ export function Navbar() {
                   </Link>
 
                   <Link
-                    to="/login?mode=register&role=institute_management"
+                    to={status === 'authenticated' ? (isSuperAdmin ? '/superadmin' : '/admin/dashboard') : '/login?mode=register&role=institute_management'}
                     className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-zinc-800/80 transition-colors group"
                   >
                     <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 mt-0.5">
@@ -184,73 +243,68 @@ export function Navbar() {
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: 6, scale: 0.98 }}
                   transition={{ duration: 0.18 }}
-                  className="absolute top-full left-0 mt-2 w-88 p-3 rounded-2xl bg-white/95 dark:bg-zinc-900/95 backdrop-blur-2xl border border-slate-200/80 dark:border-zinc-800 shadow-2xl z-50 grid grid-cols-2 gap-1.5"
+                  className="absolute top-full left-0 mt-2 w-[540px] xl:w-[580px] p-3.5 rounded-2xl bg-white/95 dark:bg-zinc-900/95 backdrop-blur-2xl border border-slate-200/80 dark:border-zinc-800 shadow-2xl z-50"
                 >
-                  <Link
-                    to="/login"
-                    className="p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-zinc-800/80 transition-colors group flex items-start gap-2.5"
-                  >
-                    <BookOpen size={16} className="text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
-                    <div>
-                      <div className="font-bold text-slate-900 dark:text-white text-xs">Lesson Sequences</div>
-                      <div className="text-[10px] text-slate-400">ACARA V9 aligned</div>
+                  {/* Category Header */}
+                  <div className="flex items-center justify-between px-2 pb-2.5 mb-2 border-b border-slate-100 dark:border-zinc-800/80">
+                    <div className="flex items-center gap-1.5">
+                      <Sparkles size={13} className="text-blue-600 dark:text-blue-400" />
+                      <span className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                        Curriculum & Safety Engines
+                      </span>
                     </div>
-                  </Link>
+                    <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/70 px-2 py-0.5 rounded-full border border-blue-200/60 dark:border-blue-800/50">
+                      6 Core Tools
+                    </span>
+                  </div>
 
-                  <Link
-                    to="/login"
-                    className="p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-zinc-800/80 transition-colors group flex items-start gap-2.5"
-                  >
-                    <Award size={16} className="text-indigo-600 dark:text-indigo-400 mt-0.5 shrink-0" />
-                    <div>
-                      <div className="font-bold text-slate-900 dark:text-white text-xs">Rubric Matrix</div>
-                      <div className="text-[10px] text-slate-400">4-Tier criteria</div>
-                    </div>
-                  </Link>
+                  {/* 2-Column Grid */}
+                  <div className="grid grid-cols-2 gap-2">
+                    {platformEngines.map((item) => {
+                      const Icon = item.icon
+                      return (
+                        <Link
+                          key={item.title}
+                          to={item.to}
+                          onClick={() => setPlatformOpen(false)}
+                          className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-slate-100/80 dark:hover:bg-zinc-800/70 border border-transparent hover:border-slate-200/70 dark:hover:border-zinc-700/60 transition-all group"
+                        >
+                          <div className={`w-9 h-9 rounded-xl ${item.iconBg} flex items-center justify-center shrink-0 mt-0.5 shadow-sm transition-transform group-hover:scale-105`}>
+                            <Icon size={17} />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center justify-between gap-1">
+                              <span className={`font-bold text-slate-900 dark:text-white text-xs ${item.hoverText} transition-colors truncate`}>
+                                {item.title}
+                              </span>
+                              <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-slate-400 shrink-0">
+                                {item.badge}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug mt-0.5 line-clamp-2 font-normal">
+                              {item.desc}
+                            </p>
+                          </div>
+                        </Link>
+                      )
+                    })}
+                  </div>
 
-                  <Link
-                    to="/login"
-                    className="p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-zinc-800/80 transition-colors group flex items-start gap-2.5"
-                  >
-                    <FileText size={16} className="text-teal-600 dark:text-teal-400 mt-0.5 shrink-0" />
-                    <div>
-                      <div className="font-bold text-slate-900 dark:text-white text-xs">Worksheets</div>
-                      <div className="text-[10px] text-slate-400">3-tier scaffolding</div>
+                  {/* Footer Strip */}
+                  <div className="mt-2.5 pt-2.5 border-t border-slate-100 dark:border-zinc-800/80 flex items-center justify-between px-2 text-[11px]">
+                    <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 font-medium">
+                      <CheckCircle2 size={13} className="text-emerald-500 shrink-0" />
+                      <span>Mapped to ACARA V9 Australian Standards</span>
                     </div>
-                  </Link>
-
-                  <Link
-                    to="/login"
-                    className="p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-zinc-800/80 transition-colors group flex items-start gap-2.5"
-                  >
-                    <MessageSquare size={16} className="text-emerald-600 dark:text-emerald-400 mt-0.5 shrink-0" />
-                    <div>
-                      <div className="font-bold text-slate-900 dark:text-white text-xs">Socratic Sandbox</div>
-                      <div className="text-[10px] text-slate-400">Anti-cheating chat</div>
-                    </div>
-                  </Link>
-
-                  <Link
-                    to="/login"
-                    className="p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-zinc-800/80 transition-colors group flex items-start gap-2.5"
-                  >
-                    <Compass size={16} className="text-purple-600 dark:text-purple-400 mt-0.5 shrink-0" />
-                    <div>
-                      <div className="font-bold text-slate-900 dark:text-white text-xs">Text Leveler</div>
-                      <div className="text-[10px] text-slate-400">Lexile transformer</div>
-                    </div>
-                  </Link>
-
-                  <Link
-                    to="/login"
-                    className="p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-zinc-800/80 transition-colors group flex items-start gap-2.5"
-                  >
-                    <ShieldCheck size={16} className="text-rose-600 dark:text-rose-400 mt-0.5 shrink-0" />
-                    <div>
-                      <div className="font-bold text-slate-900 dark:text-white text-xs">AI Moderation</div>
-                      <div className="text-[10px] text-slate-400">Real-time safety</div>
-                    </div>
-                  </Link>
+                    <a
+                      href="/#interactive-demo"
+                      onClick={() => setPlatformOpen(false)}
+                      className="inline-flex items-center gap-1 font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors group/demo"
+                    >
+                      <span>Live Interactive Demo</span>
+                      <ArrowRight size={11} className="group-hover/demo:translate-x-0.5 transition-transform" />
+                    </a>
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -370,21 +424,24 @@ export function Navbar() {
                 Role Solutions
               </div>
               <Link
-                to="/login?mode=register&role=teacher"
+                to={status === 'authenticated' ? '/educator/lesson-planner' : '/login?mode=register&role=teacher'}
+                onClick={() => setMobileMenuOpen(false)}
                 className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-zinc-800 transition-colors"
               >
                 <GraduationCap size={16} className="text-blue-600" />
                 <span>For Educators (Lesson Planning & Rubrics)</span>
               </Link>
               <Link
-                to="/login?mode=register&role=student"
+                to={status === 'authenticated' ? '/socratic-tutor' : '/login?mode=register&role=student'}
+                onClick={() => setMobileMenuOpen(false)}
                 className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-zinc-800 transition-colors"
               >
                 <Laptop size={16} className="text-emerald-600" />
                 <span>For Students (Safe Socratic Sandbox)</span>
               </Link>
               <Link
-                to="/login?mode=register&role=institute_management"
+                to={status === 'authenticated' ? (isSuperAdmin ? '/superadmin' : '/admin/dashboard') : '/login?mode=register&role=institute_management'}
+                onClick={() => setMobileMenuOpen(false)}
                 className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 hover:bg-indigo-50 dark:hover:bg-zinc-800 transition-colors"
               >
                 <School size={16} className="text-indigo-600" />
@@ -392,9 +449,27 @@ export function Navbar() {
               </Link>
             </div>
 
-            <div className="pt-2 border-t border-slate-100 dark:border-zinc-800/80 space-y-1">
+            <div className="pt-2 border-t border-slate-100 dark:border-zinc-800/80 space-y-1.5">
               <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-3 pb-1">
-                Explore Platform
+                Platform Engines
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 px-1">
+                {platformEngines.map((item) => {
+                  const Icon = item.icon
+                  return (
+                    <Link
+                      key={item.title}
+                      to={item.to}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
+                    >
+                      <div className={`w-7 h-7 rounded-lg ${item.iconBg} flex items-center justify-center shrink-0`}>
+                        <Icon size={14} />
+                      </div>
+                      <span className="truncate">{item.title}</span>
+                    </Link>
+                  )
+                })}
               </div>
               <a
                 href="/#interactive-demo"
@@ -404,7 +479,7 @@ export function Navbar() {
                 <Sparkles size={16} className="text-amber-500" />
                 <span>Live Interactive Demo</span>
               </a>
-              <div className="flex items-center gap-2 px-3 py-2 text-xs text-slate-500">
+              <div className="flex items-center gap-2 px-3 py-1 text-xs text-slate-500">
                 <CheckCircle2 size={14} className="text-emerald-500" />
                 <span>ACARA V9 Australian Standards Mapped</span>
               </div>
