@@ -37,13 +37,133 @@ import { LandingPage } from './pages/LandingPage'
 
 import { useLocation } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
+import { useRoleFilter } from './services/roleFilterContext'
+import { RoleFilterBar } from './components/RoleFilterBar'
+import { GraduationCap, Backpack, Building2, Shield, Sparkles } from 'lucide-react'
 
 function AuthedLayout({ children }: { children: ReactNode }) {
+  const { isSuperAdmin, effectiveRole } = useRoleFilter()
+  const location = useLocation()
+
+  // Detect domain by path
+  const isTeacherPath = location.pathname.startsWith('/educator') || location.pathname.startsWith('/ai')
+  const isStudentPath = location.pathname.startsWith('/student') || location.pathname.startsWith('/socratic-tutor')
+  const isInstitutePath = location.pathname.startsWith('/admin')
+  const isSuperAdminPath = location.pathname.startsWith('/superadmin')
+  const isDashboard = location.pathname === '/dashboard'
+
+  let currentDomain: 'teacher' | 'student' | 'institute' | 'superadmin' | 'all' = 'all'
+  if (isSuperAdminPath) {
+    currentDomain = 'superadmin'
+  } else if (isTeacherPath) {
+    currentDomain = 'teacher'
+  } else if (isStudentPath) {
+    currentDomain = 'student'
+  } else if (isInstitutePath) {
+    currentDomain = 'institute'
+  } else if (isDashboard) {
+    currentDomain = effectiveRole
+  }
+
+  // Domain presentation metadata
+  const domainMeta = {
+    teacher: {
+      label: 'Educator Workspace',
+      badge: 'Teacher Theme (Blue)',
+      sub: 'ACARA v9 Lesson Architecture, Rubrics & Differentiation',
+      icon: GraduationCap,
+      badgeClass: 'bg-blue-100 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800',
+      bannerBg: 'bg-gradient-to-r from-blue-50/90 via-indigo-50/50 to-white/90 dark:from-blue-950/40 dark:via-zinc-900 dark:to-zinc-900 border-blue-200/80 dark:border-blue-900/60',
+      glow: 'bg-[radial-gradient(ellipse_80%_60%_at_50%_-10%,rgba(59,130,246,0.10),rgba(255,255,255,0))] dark:bg-[radial-gradient(ellipse_80%_60%_at_50%_-10%,rgba(37,99,235,0.15),rgba(0,0,0,0))]',
+      textColor: 'text-blue-800 dark:text-blue-300',
+    },
+    student: {
+      label: 'Student Learning Hub',
+      badge: 'Student Theme (Green)',
+      sub: 'Guided Socratic Inquiry, Text Leveler & Writing Studio',
+      icon: Backpack,
+      badgeClass: 'bg-emerald-100 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
+      bannerBg: 'bg-gradient-to-r from-emerald-50/90 via-teal-50/50 to-white/90 dark:from-emerald-950/40 dark:via-zinc-900 dark:to-zinc-900 border-emerald-200/80 dark:border-emerald-900/60',
+      glow: 'bg-[radial-gradient(ellipse_80%_60%_at_50%_-10%,rgba(16,185,129,0.10),rgba(255,255,255,0))] dark:bg-[radial-gradient(ellipse_80%_60%_at_50%_-10%,rgba(5,150,105,0.15),rgba(0,0,0,0))]',
+      textColor: 'text-emerald-800 dark:text-emerald-300',
+    },
+    institute: {
+      label: 'Institute Management Console',
+      badge: 'Institute Theme (Violet/Pink)',
+      sub: 'District RAG Ingestion, Teacher & Student Governance',
+      icon: Building2,
+      badgeClass: 'bg-purple-100 dark:bg-purple-950/70 text-purple-700 dark:text-pink-300 border-purple-200 dark:border-pink-800',
+      bannerBg: 'bg-gradient-to-r from-purple-50/90 via-pink-50/40 to-white/90 dark:from-purple-950/40 dark:via-zinc-900 dark:to-zinc-900 border-purple-200/80 dark:border-pink-900/60',
+      glow: 'bg-[radial-gradient(ellipse_80%_60%_at_50%_-10%,rgba(168,85,247,0.10),rgba(236,72,153,0.06),rgba(255,255,255,0))] dark:bg-[radial-gradient(ellipse_80%_60%_at_50%_-10%,rgba(147,51,234,0.15),rgba(219,39,119,0.08),rgba(0,0,0,0))]',
+      textColor: 'text-purple-800 dark:text-pink-300',
+    },
+    superadmin: {
+      label: 'Super Admin Command Deck',
+      badge: 'Super Admin (Amber)',
+      sub: 'Microservice Resilience Mesh, Custom RBAC & Multi-Tenant Trials',
+      icon: Shield,
+      badgeClass: 'bg-amber-100 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800',
+      bannerBg: 'bg-gradient-to-r from-amber-50/90 via-orange-50/40 to-white/90 dark:from-amber-950/40 dark:via-zinc-900 dark:to-zinc-900 border-amber-200/80 dark:border-amber-900/60',
+      glow: 'bg-[radial-gradient(ellipse_80%_60%_at_50%_-10%,rgba(245,158,11,0.08),rgba(255,255,255,0))] dark:bg-[radial-gradient(ellipse_80%_60%_at_50%_-10%,rgba(217,119,6,0.12),rgba(0,0,0,0))]',
+      textColor: 'text-amber-900 dark:text-amber-300',
+    },
+    all: {
+      label: 'Unified Enterprise Workspace',
+      badge: 'All Roles Access',
+      sub: 'Segregated Access for Teachers, Students & Institute Administration',
+      icon: Sparkles,
+      badgeClass: 'bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-zinc-700',
+      bannerBg: 'bg-white/70 dark:bg-zinc-900/70 border-slate-200/80 dark:border-white/10',
+      glow: 'bg-[radial-gradient(ellipse_80%_60%_at_50%_-10%,rgba(59,130,246,0.05),rgba(16,185,129,0.04),rgba(168,85,247,0.04),rgba(255,255,255,0))] dark:bg-[radial-gradient(ellipse_80%_60%_at_50%_-10%,rgba(37,99,235,0.08),rgba(5,150,105,0.06),rgba(147,51,234,0.06),rgba(0,0,0,0))]',
+      textColor: 'text-slate-800 dark:text-white',
+    },
+  }[currentDomain]
+
+  const Icon = domainMeta.icon
+
   return (
-    <div className="w-full max-w-[1600px] 2xl:max-w-[1720px] mx-auto px-3 sm:px-6 lg:px-8 pb-28 md:pb-12 transition-all">
-      <div className="flex flex-col md:flex-row gap-4 lg:gap-6 relative w-full items-start">
-        <Sidebar />
-        <main className="flex-1 min-w-0 w-full">{children}</main>
+    <div className="relative w-full min-h-screen">
+      {/* Dynamic Ambient Background Glow */}
+      <div className={`fixed inset-0 pointer-events-none -z-10 transition-all duration-500 ${domainMeta.glow}`} />
+
+      <div className="w-full max-w-[1600px] 2xl:max-w-[1720px] mx-auto px-3 sm:px-6 lg:px-8 pb-28 md:pb-12 transition-all">
+        <div className="flex flex-col md:flex-row gap-4 lg:gap-6 relative w-full items-start">
+          <Sidebar />
+          
+          <main className="flex-1 min-w-0 w-full space-y-4">
+            {/* Role Context Bar for Non-Dashboard views */}
+            {!isDashboard && (
+              <div className={`p-3 sm:p-3.5 rounded-2xl border backdrop-blur-xl shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 transition-all ${domainMeta.bannerBg}`}>
+                <div className="flex items-center gap-3">
+                  <div className={`w-8 h-8 rounded-xl ${domainMeta.badgeClass} flex items-center justify-center shrink-0 shadow-sm`}>
+                    <Icon size={16} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs font-black tracking-tight ${domainMeta.textColor}`}>
+                        {domainMeta.label}
+                      </span>
+                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider ${domainMeta.badgeClass}`}>
+                        {domainMeta.badge}
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 font-medium leading-tight">
+                      {domainMeta.sub}
+                    </div>
+                  </div>
+                </div>
+
+                {isSuperAdmin && (
+                  <div className="shrink-0 self-stretch sm:self-auto">
+                    <RoleFilterBar compact />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {children}
+          </main>
+        </div>
       </div>
     </div>
   )

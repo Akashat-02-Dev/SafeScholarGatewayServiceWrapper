@@ -12,7 +12,7 @@ import { ThemeToggle } from './ThemeToggle'
 
 export function Navbar() {
   const { status, me, logout } = useAuth()
-  const { isSuperAdmin } = useRoleFilter()
+  const { isSuperAdmin, effectiveRole, activeTheme } = useRoleFilter()
   const location = useLocation()
 
   // Navigation states
@@ -48,6 +48,8 @@ export function Navbar() {
     {
       title: 'Lesson Sequences',
       badge: 'ACARA V9',
+      roleTag: 'Teacher',
+      roleColor: 'bg-blue-100 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800',
       desc: 'Sequential unit planning with WALT & WILF criteria',
       to: status === 'authenticated' ? '/educator/lesson-planner' : '/login?mode=register&role=teacher',
       icon: BookOpen,
@@ -57,24 +59,30 @@ export function Navbar() {
     {
       title: 'Rubric Matrix',
       badge: '4-Tier',
+      roleTag: 'Teacher',
+      roleColor: 'bg-blue-100 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800',
       desc: 'Standards-based achievement level descriptors & grading',
       to: status === 'authenticated' ? '/educator/rubric-generator' : '/login?mode=register&role=teacher',
       icon: Award,
-      iconBg: 'bg-indigo-50 dark:bg-indigo-950/70 text-indigo-600 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-900/50',
-      hoverText: 'group-hover:text-indigo-600 dark:group-hover:text-indigo-400',
+      iconBg: 'bg-blue-50 dark:bg-blue-950/70 text-blue-600 dark:text-blue-400 border border-blue-200/60 dark:border-blue-900/50',
+      hoverText: 'group-hover:text-blue-600 dark:group-hover:text-blue-400',
     },
     {
       title: 'Worksheets Studio',
       badge: '3-Tier',
+      roleTag: 'Teacher',
+      roleColor: 'bg-blue-100 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800',
       desc: 'Scaffolded tasks for support, core & extension bands',
       to: status === 'authenticated' ? '/educator/worksheet-generator' : '/login?mode=register&role=teacher',
       icon: FileText,
-      iconBg: 'bg-teal-50 dark:bg-teal-950/70 text-teal-600 dark:text-teal-400 border border-teal-200/60 dark:border-teal-900/50',
-      hoverText: 'group-hover:text-teal-600 dark:group-hover:text-teal-400',
+      iconBg: 'bg-blue-50 dark:bg-blue-950/70 text-blue-600 dark:text-blue-400 border border-blue-200/60 dark:border-blue-900/50',
+      hoverText: 'group-hover:text-blue-600 dark:group-hover:text-blue-400',
     },
     {
       title: 'Socratic Sandbox',
       badge: 'Anti-Cheating',
+      roleTag: 'Student',
+      roleColor: 'bg-emerald-100 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
       desc: 'Guided Socratic inquiry preventing direct answer copy-paste',
       to: status === 'authenticated' ? '/socratic-tutor' : '/login?mode=register&role=student',
       icon: MessageSquare,
@@ -84,20 +92,24 @@ export function Navbar() {
     {
       title: 'Lexile Text Leveler',
       badge: 'Prep-Yr 12',
+      roleTag: 'Teacher',
+      roleColor: 'bg-blue-100 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800',
       desc: 'Transform passage complexity to match student reading levels',
       to: status === 'authenticated' ? '/educator/leveler' : '/login?mode=register&role=teacher',
       icon: Compass,
-      iconBg: 'bg-purple-50 dark:bg-purple-950/70 text-purple-600 dark:text-purple-400 border border-purple-200/60 dark:border-purple-900/50',
-      hoverText: 'group-hover:text-purple-600 dark:group-hover:text-purple-400',
+      iconBg: 'bg-blue-50 dark:bg-blue-950/70 text-blue-600 dark:text-blue-400 border border-blue-200/60 dark:border-blue-900/50',
+      hoverText: 'group-hover:text-blue-600 dark:group-hover:text-blue-400',
     },
     {
       title: 'Real-Time Moderation',
       badge: 'Zero-PII',
+      roleTag: 'Institute',
+      roleColor: 'bg-purple-100 dark:bg-purple-950/70 text-purple-700 dark:text-pink-300 border-purple-200 dark:border-pink-800',
       desc: 'Automated student safety guardrails, PII redaction & audits',
       to: status === 'authenticated' ? (isSuperAdmin ? '/superadmin' : '/admin/moderation') : '/login?mode=register&role=institute_management',
       icon: ShieldCheck,
-      iconBg: 'bg-rose-50 dark:bg-rose-950/70 text-rose-600 dark:text-rose-400 border border-rose-200/60 dark:border-rose-900/50',
-      hoverText: 'group-hover:text-rose-600 dark:group-hover:text-rose-400',
+      iconBg: 'bg-purple-50 dark:bg-purple-950/70 text-purple-600 dark:text-pink-400 border border-purple-200/60 dark:border-purple-900/50',
+      hoverText: 'group-hover:text-purple-600 dark:group-hover:text-pink-400',
     },
   ]
 
@@ -165,14 +177,17 @@ export function Navbar() {
                 >
                   <Link
                     to={status === 'authenticated' ? '/educator/lesson-planner' : '/login?mode=register&role=teacher'}
-                    className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-zinc-800/80 transition-colors group"
+                    className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-blue-50/60 dark:hover:bg-blue-950/30 transition-colors group"
                   >
                     <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 mt-0.5">
                       <GraduationCap size={16} />
                     </div>
                     <div>
-                      <div className="font-bold text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors">
-                        For Educators & Faculty
+                      <div className="flex items-center gap-1.5 font-bold text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors">
+                        <span>For Educators & Faculty</span>
+                        <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                          Blue
+                        </span>
                       </div>
                       <div className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug mt-0.5">
                         ACARA lesson sequences, rubrics, tiered worksheets & Lexile transformers.
@@ -182,14 +197,17 @@ export function Navbar() {
 
                   <Link
                     to={status === 'authenticated' ? '/socratic-tutor' : '/login?mode=register&role=student'}
-                    className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-zinc-800/80 transition-colors group"
+                    className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-emerald-50/60 dark:hover:bg-emerald-950/30 transition-colors group"
                   >
                     <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 mt-0.5">
                       <Laptop size={16} />
                     </div>
                     <div>
-                      <div className="font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 transition-colors">
-                        For Students & Learners
+                      <div className="flex items-center gap-1.5 font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 transition-colors">
+                        <span>For Students & Learners</span>
+                        <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                          Green
+                        </span>
                       </div>
                       <div className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug mt-0.5">
                         Guided Socratic AI tutor, NAPLAN writing studio & supervised rooms.
@@ -199,14 +217,17 @@ export function Navbar() {
 
                   <Link
                     to={status === 'authenticated' ? (isSuperAdmin ? '/superadmin' : '/admin/dashboard') : '/login?mode=register&role=institute_management'}
-                    className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-slate-100 dark:hover:bg-zinc-800/80 transition-colors group"
+                    className="flex items-start gap-3 p-2.5 rounded-xl hover:bg-purple-50/60 dark:hover:bg-purple-950/30 transition-colors group"
                   >
-                    <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 mt-0.5">
+                    <div className="w-8 h-8 rounded-lg bg-purple-100 dark:bg-purple-950/80 text-purple-600 dark:text-pink-400 flex items-center justify-center shrink-0 mt-0.5">
                       <School size={16} />
                     </div>
                     <div>
-                      <div className="font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 transition-colors">
-                        For School Districts & IT
+                      <div className="flex items-center gap-1.5 font-bold text-slate-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-pink-400 transition-colors">
+                        <span>For School Districts & IT</span>
+                        <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-pink-300 border border-purple-200 dark:border-pink-800">
+                          Violet
+                        </span>
                       </div>
                       <div className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug mt-0.5">
                         Multi-tenant boundaries, signup gatekeeping & automated content moderation.
@@ -245,7 +266,7 @@ export function Navbar() {
                   transition={{ duration: 0.18 }}
                   className="absolute top-full left-0 mt-2 w-[540px] xl:w-[580px] p-3.5 rounded-2xl bg-white/95 dark:bg-zinc-900/95 backdrop-blur-2xl border border-slate-200/80 dark:border-zinc-800 shadow-2xl z-50"
                 >
-                  {/* Category Header */}
+                  {/* Category Header with Role Themes */}
                   <div className="flex items-center justify-between px-2 pb-2.5 mb-2 border-b border-slate-100 dark:border-zinc-800/80">
                     <div className="flex items-center gap-1.5">
                       <Sparkles size={13} className="text-blue-600 dark:text-blue-400" />
@@ -253,9 +274,20 @@ export function Navbar() {
                         Curriculum & Safety Engines
                       </span>
                     </div>
-                    <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/70 px-2 py-0.5 rounded-full border border-blue-200/60 dark:border-blue-800/50">
-                      6 Core Tools
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="inline-flex items-center gap-1 text-[9px] font-bold text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-950/70 px-1.5 py-0.5 rounded-md border border-blue-200 dark:border-blue-800">
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                        Teacher
+                      </span>
+                      <span className="inline-flex items-center gap-1 text-[9px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/70 px-1.5 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                        Student
+                      </span>
+                      <span className="inline-flex items-center gap-1 text-[9px] font-bold text-purple-700 dark:text-pink-300 bg-purple-100 dark:bg-purple-950/70 px-1.5 py-0.5 rounded-md border border-purple-200 dark:border-pink-800">
+                        <span className="w-1.5 h-1.5 rounded-full bg-fuchsia-500" />
+                        Institute
+                      </span>
+                    </div>
                   </div>
 
                   {/* 2-Column Grid */}
@@ -277,9 +309,14 @@ export function Navbar() {
                               <span className={`font-bold text-slate-900 dark:text-white text-xs ${item.hoverText} transition-colors truncate`}>
                                 {item.title}
                               </span>
-                              <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-slate-400 shrink-0">
-                                {item.badge}
-                              </span>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded border ${item.roleColor}`}>
+                                  {item.roleTag}
+                                </span>
+                                <span className="text-[9px] font-semibold px-1 py-0.2 rounded bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-slate-400">
+                                  {item.badge}
+                                </span>
+                              </div>
                             </div>
                             <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug mt-0.5 line-clamp-2 font-normal">
                               {item.desc}
@@ -343,9 +380,15 @@ export function Navbar() {
 
           {status === 'authenticated' ? (
             <div className="flex items-center gap-2 sm:gap-3">
+              {/* Active Role Indicator Pill */}
+              <div className={`hidden lg:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${activeTheme.badgeClass}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${activeTheme.dotColor}`} />
+                <span>{isSuperAdmin ? 'Super Admin Mode' : effectiveRole === 'institute' ? 'Institute Console' : effectiveRole === 'teacher' ? 'Teacher Suite' : 'Student Portal'}</span>
+              </div>
+
               <Link
                 to="/dashboard"
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 sm:py-2 rounded-full text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-md shadow-blue-500/20 transition-all shrink-0"
+                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 sm:py-2 rounded-full text-xs font-bold text-white bg-gradient-to-r ${activeTheme.gradient} shadow-md transition-all shrink-0 hover:opacity-95`}
               >
                 <span>Dashboard</span>
                 <ArrowRight size={13} />
@@ -353,18 +396,18 @@ export function Navbar() {
 
               <Link
                 to="/profile"
-                className="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-full border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-blue-400 dark:hover:border-blue-500 transition-all shadow-sm group"
+                className={`flex items-center gap-2 px-2.5 sm:px-3 py-1.5 rounded-full border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 ${activeTheme.hoverBorder} transition-all shadow-sm group`}
                 title="View your account profile"
               >
-                <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center font-bold text-[10px] sm:text-xs shrink-0">
+                <div className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-gradient-to-tr ${activeTheme.gradient} text-white flex items-center justify-center font-bold text-[10px] sm:text-xs shrink-0 shadow-sm`}>
                   {((me?.firstName?.[0] || '') + (me?.lastName?.[0] || '')).toUpperCase() || (me?.email?.[0] || 'U').toUpperCase()}
                 </div>
                 <div className="hidden sm:flex flex-col text-left leading-none">
                   <span className="text-xs font-bold text-slate-800 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate max-w-[100px]">
                     {me?.firstName || me?.email?.split('@')[0]}
                   </span>
-                  <span className="text-[9px] text-slate-400 capitalize mt-0.5">
-                    {me?.roles?.[0] || 'Member'}
+                  <span className="text-[9px] font-bold capitalize mt-0.5 truncate text-slate-500 dark:text-slate-400">
+                    {isSuperAdmin ? 'Super Admin' : effectiveRole === 'institute' ? 'Institute Admin' : effectiveRole === 'teacher' ? 'Teacher' : 'Student'}
                   </span>
                 </div>
               </Link>
@@ -426,26 +469,41 @@ export function Navbar() {
               <Link
                 to={status === 'authenticated' ? '/educator/lesson-planner' : '/login?mode=register&role=teacher'}
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-zinc-800 transition-colors"
+                className="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-blue-950/30 transition-colors"
               >
-                <GraduationCap size={16} className="text-blue-600" />
-                <span>For Educators (Lesson Planning & Rubrics)</span>
+                <div className="flex items-center gap-3">
+                  <GraduationCap size={16} className="text-blue-600" />
+                  <span>For Educators (Lesson Planning & Rubrics)</span>
+                </div>
+                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                  Blue
+                </span>
               </Link>
               <Link
                 to={status === 'authenticated' ? '/socratic-tutor' : '/login?mode=register&role=student'}
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-zinc-800 transition-colors"
+                className="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-colors"
               >
-                <Laptop size={16} className="text-emerald-600" />
-                <span>For Students (Safe Socratic Sandbox)</span>
+                <div className="flex items-center gap-3">
+                  <Laptop size={16} className="text-emerald-600" />
+                  <span>For Students (Safe Socratic Sandbox)</span>
+                </div>
+                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
+                  Green
+                </span>
               </Link>
               <Link
                 to={status === 'authenticated' ? (isSuperAdmin ? '/superadmin' : '/admin/dashboard') : '/login?mode=register&role=institute_management'}
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 hover:bg-indigo-50 dark:hover:bg-zinc-800 transition-colors"
+                className="flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-slate-800 dark:text-slate-200 hover:bg-purple-50 dark:hover:bg-purple-950/30 transition-colors"
               >
-                <School size={16} className="text-indigo-600" />
-                <span>For School Districts & Administrators</span>
+                <div className="flex items-center gap-3">
+                  <School size={16} className="text-purple-600 dark:text-pink-400" />
+                  <span>For School Districts & Administrators</span>
+                </div>
+                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-pink-300">
+                  Violet
+                </span>
               </Link>
             </div>
 

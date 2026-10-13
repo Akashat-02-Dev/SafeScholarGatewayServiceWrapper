@@ -204,10 +204,53 @@ export function ProfilePage() {
     }
   }
 
-  const role = profile?.isSysAdmin ? 'Super Admin' : (profile?.roles?.[0] || 'User')
-  const initials = ((profile?.firstName?.[0] || '') + (profile?.lastName?.[0] || '')).toUpperCase() || (profile?.email?.[0] || 'U').toUpperCase()
+  const isSysAdmin = Boolean(profile?.isSysAdmin)
   const isStudent = profile?.roles?.includes('student')
   const isTeacher = profile?.roles?.includes('teacher')
+  const isInstitute = profile?.roles?.some(r => r.includes('admin') || r.includes('institute') || r.includes('management'))
+
+  const roleConfig = isSysAdmin
+    ? {
+        label: 'Super Admin',
+        badgeClass: 'bg-amber-100 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800',
+        avatarGradient: 'from-amber-500 via-orange-500 to-amber-600',
+        dotColor: 'bg-amber-500',
+        heroBorder: 'border-amber-200/80 dark:border-amber-900/60',
+        heroBg: 'bg-gradient-to-br from-amber-50/50 via-white to-amber-50/20 dark:from-zinc-900 dark:via-zinc-900/80 dark:to-amber-950/20',
+        ambientGlow: 'from-amber-400/10 via-orange-500/10 to-amber-500/10',
+      }
+    : isStudent
+    ? {
+        label: 'Student',
+        badgeClass: 'bg-emerald-100 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
+        avatarGradient: 'from-emerald-600 via-teal-600 to-emerald-700',
+        dotColor: 'bg-emerald-500',
+        heroBorder: 'border-emerald-200/80 dark:border-emerald-900/60',
+        heroBg: 'bg-gradient-to-br from-emerald-50/50 via-white to-emerald-50/20 dark:from-zinc-900 dark:via-zinc-900/80 dark:to-emerald-950/20',
+        ambientGlow: 'from-emerald-400/10 via-teal-500/10 to-emerald-500/10',
+      }
+    : isInstitute
+    ? {
+        label: 'Institute Admin',
+        badgeClass: 'bg-purple-100 dark:bg-purple-950/70 text-purple-700 dark:text-pink-300 border-purple-200 dark:border-pink-800',
+        avatarGradient: 'from-purple-600 via-fuchsia-600 to-pink-600',
+        dotColor: 'bg-fuchsia-500',
+        heroBorder: 'border-purple-200/80 dark:border-pink-900/60',
+        heroBg: 'bg-gradient-to-br from-purple-50/50 via-white to-pink-50/20 dark:from-zinc-900 dark:via-zinc-900/80 dark:to-purple-950/20',
+        ambientGlow: 'from-purple-400/10 via-fuchsia-500/10 to-pink-500/10',
+      }
+    : {
+        label: 'Educator / Teacher',
+        badgeClass: 'bg-blue-100 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800',
+        avatarGradient: 'from-blue-600 via-indigo-600 to-blue-700',
+        dotColor: 'bg-blue-500',
+        heroBorder: 'border-blue-200/80 dark:border-blue-900/60',
+        heroBg: 'bg-gradient-to-br from-blue-50/50 via-white to-blue-50/20 dark:from-zinc-900 dark:via-zinc-900/80 dark:to-blue-950/20',
+        ambientGlow: 'from-blue-400/10 via-indigo-500/10 to-blue-500/10',
+      }
+
+  const role = profile?.isSysAdmin ? 'Super Admin' : (profile?.roles?.[0] || roleConfig.label)
+  const initials = ((profile?.firstName?.[0] || '') + (profile?.lastName?.[0] || '')).toUpperCase() || (profile?.email?.[0] || 'U').toUpperCase()
 
   if (loading) {
     return (
@@ -233,13 +276,13 @@ export function ProfilePage() {
 
   return (
     <div className="w-full max-w-5xl mx-auto space-y-6 pb-12">
-      {/* Hero Header Card */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-white via-slate-50/80 to-blue-50/30 dark:from-zinc-900 dark:via-zinc-900/80 dark:to-blue-950/20 border border-slate-200/80 dark:border-zinc-800/80 p-6 sm:p-8 shadow-xl">
-        <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-br from-blue-400/10 via-indigo-500/10 to-violet-500/10 rounded-full blur-3xl -z-10 pointer-events-none" />
+      {/* Hero Header Card with Role Color Theme */}
+      <div className={`relative overflow-hidden rounded-3xl ${roleConfig.heroBg} border-2 ${roleConfig.heroBorder} p-6 sm:p-8 shadow-xl transition-all`}>
+        <div className={`absolute top-0 right-0 w-80 h-80 bg-gradient-to-br ${roleConfig.ambientGlow} rounded-full blur-3xl -z-10 pointer-events-none`} />
         
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5 sm:gap-6">
           <div className="relative">
-            <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-violet-500 text-white flex items-center justify-center font-bold text-2xl sm:text-3xl shadow-lg shadow-indigo-500/20 ring-4 ring-white dark:ring-zinc-800">
+            <div className={`w-20 h-20 sm:w-24 sm:h-24 rounded-3xl bg-gradient-to-tr ${roleConfig.avatarGradient} text-white flex items-center justify-center font-bold text-2xl sm:text-3xl shadow-lg ring-4 ring-white dark:ring-zinc-800`}>
               {initials}
             </div>
             <div className="absolute -bottom-1 -right-1 px-2 py-0.5 rounded-full bg-emerald-500 text-white text-[10px] font-bold flex items-center gap-1 shadow-sm">
@@ -252,7 +295,8 @@ export function ProfilePage() {
               <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100 truncate">
                 {profile.displayName || `${profile.firstName} ${profile.lastName}`.trim() || profile.email}
               </h1>
-              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold tracking-wide uppercase bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900/50">
+              <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold tracking-wide uppercase flex items-center gap-1.5 border ${roleConfig.badgeClass}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${roleConfig.dotColor}`} />
                 {role}
               </span>
             </div>

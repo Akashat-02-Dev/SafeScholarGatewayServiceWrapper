@@ -257,25 +257,33 @@ export function LoginPage() {
             {/* Role Selection Tabs for Sign Up */}
             {!isForgotPassword && isRegister && (
               <div className="flex flex-col gap-3">
-                <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 ml-1">
-                  I am signing up as:
-                </label>
+                <div className="flex items-center justify-between ml-1">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                    I am signing up as:
+                  </label>
+                  <span className="text-[10px] font-semibold text-slate-400">
+                    Role-tailored workspace &amp; colors
+                  </span>
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                   <button
                     type="button"
                     onClick={() => setSignupRole('student')}
                     className={`flex flex-col items-center sm:items-start p-3.5 rounded-2xl border-2 transition-all text-left ${
                       signupRole === 'student'
-                        ? 'border-blue-600 bg-blue-50/70 dark:bg-blue-950/40 text-blue-900 dark:text-blue-100 shadow-sm'
+                        ? 'border-emerald-600 bg-emerald-50/80 dark:bg-emerald-950/40 text-emerald-950 dark:text-emerald-100 shadow-sm shadow-emerald-500/10'
                         : 'border-slate-200/80 dark:border-zinc-800 hover:border-slate-300 dark:hover:border-zinc-700 text-slate-700 dark:text-slate-300 bg-white/40 dark:bg-zinc-800/40'
                     }`}
                   >
-                    <div className="flex items-center gap-2 mb-1">
-                      <GraduationCap size={18} className={signupRole === 'student' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400'} />
-                      <span className="font-bold text-sm">Student</span>
+                    <div className="flex items-center justify-between w-full mb-1">
+                      <div className="flex items-center gap-2">
+                        <GraduationCap size={18} className={signupRole === 'student' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'} />
+                        <span className="font-bold text-sm">Student</span>
+                      </div>
+                      <span className="w-2 h-2 rounded-full bg-emerald-500" />
                     </div>
                     <span className="text-[11px] text-slate-500 dark:text-slate-400 hidden sm:block">
-                      Learning tools, AI tutors & assignments
+                      Green theme • Socratic AI &amp; tests
                     </span>
                   </button>
 
@@ -284,16 +292,19 @@ export function LoginPage() {
                     onClick={() => setSignupRole('teacher')}
                     className={`flex flex-col items-center sm:items-start p-3.5 rounded-2xl border-2 transition-all text-left ${
                       signupRole === 'teacher'
-                        ? 'border-blue-600 bg-blue-50/70 dark:bg-blue-950/40 text-blue-900 dark:text-blue-100 shadow-sm'
+                        ? 'border-blue-600 bg-blue-50/80 dark:bg-blue-950/40 text-blue-950 dark:text-blue-100 shadow-sm shadow-blue-500/10'
                         : 'border-slate-200/80 dark:border-zinc-800 hover:border-slate-300 dark:hover:border-zinc-700 text-slate-700 dark:text-slate-300 bg-white/40 dark:bg-zinc-800/40'
                     }`}
                   >
-                    <div className="flex items-center gap-2 mb-1">
-                      <Briefcase size={18} className={signupRole === 'teacher' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400'} />
-                      <span className="font-bold text-sm">Teacher</span>
+                    <div className="flex items-center justify-between w-full mb-1">
+                      <div className="flex items-center gap-2">
+                        <Briefcase size={18} className={signupRole === 'teacher' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400'} />
+                        <span className="font-bold text-sm">Teacher</span>
+                      </div>
+                      <span className="w-2 h-2 rounded-full bg-blue-500" />
                     </div>
                     <span className="text-[11px] text-slate-500 dark:text-slate-400 hidden sm:block">
-                      Lesson planning, rubrics & grading
+                      Blue theme • Lesson planning &amp; rubrics
                     </span>
                   </button>
 
@@ -302,16 +313,19 @@ export function LoginPage() {
                     onClick={() => setSignupRole('institute_management')}
                     className={`flex flex-col items-center sm:items-start p-3.5 rounded-2xl border-2 transition-all text-left ${
                       signupRole === 'institute_management'
-                        ? 'border-indigo-600 bg-indigo-50/70 dark:bg-indigo-950/40 text-indigo-900 dark:text-indigo-100 shadow-sm'
+                        ? 'border-purple-600 bg-purple-50/80 dark:bg-purple-950/40 text-purple-950 dark:text-purple-100 shadow-sm shadow-purple-500/10'
                         : 'border-slate-200/80 dark:border-zinc-800 hover:border-slate-300 dark:hover:border-zinc-700 text-slate-700 dark:text-slate-300 bg-white/40 dark:bg-zinc-800/40'
                     }`}
                   >
-                    <div className="flex items-center gap-2 mb-1">
-                      <Building2 size={18} className={signupRole === 'institute_management' ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400'} />
-                      <span className="font-bold text-sm">Institute Mgmt</span>
+                    <div className="flex items-center justify-between w-full mb-1">
+                      <div className="flex items-center gap-2">
+                        <Building2 size={18} className={signupRole === 'institute_management' ? 'text-purple-600 dark:text-pink-400' : 'text-slate-400'} />
+                        <span className="font-bold text-sm">Institute Mgmt</span>
+                      </div>
+                      <span className="w-2 h-2 rounded-full bg-fuchsia-500" />
                     </div>
                     <span className="text-[11px] text-slate-500 dark:text-slate-400 hidden sm:block">
-                      Campus onboarding & district admin
+                      Violet theme • Onboarding &amp; district admin
                     </span>
                   </button>
                 </div>
@@ -320,7 +334,13 @@ export function LoginPage() {
 
             {/* Role-Specific Fields */}
             {!isForgotPassword && isRegister && (
-              <div className="flex flex-col gap-4 p-4 rounded-3xl bg-slate-50/60 dark:bg-zinc-800/40 border border-slate-200/70 dark:border-zinc-700/60">
+              <div className={`flex flex-col gap-4 p-4 rounded-3xl border transition-all ${
+                signupRole === 'student'
+                  ? 'bg-emerald-50/40 dark:bg-zinc-800/40 border-emerald-200/80 dark:border-emerald-900/40'
+                  : signupRole === 'teacher'
+                  ? 'bg-blue-50/40 dark:bg-zinc-800/40 border-blue-200/80 dark:border-blue-900/40'
+                  : 'bg-purple-50/40 dark:bg-zinc-800/40 border-purple-200/80 dark:border-pink-900/40'
+              }`}>
                 
                 {/* Name Fields */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -590,11 +610,15 @@ export function LoginPage() {
                 {/* Workflow Governance Badge */}
                 <div className={`p-3 rounded-2xl flex items-start gap-2.5 text-xs ${
                   signupRole === 'institute_management'
-                    ? 'bg-indigo-100/60 dark:bg-indigo-950/60 text-indigo-900 dark:text-indigo-200 border border-indigo-200/80 dark:border-indigo-800/60'
-                    : 'bg-blue-100/60 dark:bg-blue-950/60 text-blue-900 dark:text-blue-200 border border-blue-200/80 dark:border-blue-800/60'
+                    ? 'bg-purple-100/70 dark:bg-purple-950/60 text-purple-900 dark:text-pink-200 border border-purple-200/80 dark:border-pink-800/60'
+                    : signupRole === 'student'
+                    ? 'bg-emerald-100/70 dark:bg-emerald-950/60 text-emerald-900 dark:text-emerald-200 border border-emerald-200/80 dark:border-emerald-800/60'
+                    : 'bg-blue-100/70 dark:bg-blue-950/60 text-blue-900 dark:text-blue-200 border border-blue-200/80 dark:border-blue-800/60'
                 }`}>
                   {signupRole === 'institute_management' ? (
-                    <ShieldAlert size={16} className="shrink-0 mt-0.5 text-indigo-600 dark:text-indigo-400" />
+                    <ShieldAlert size={16} className="shrink-0 mt-0.5 text-purple-600 dark:text-pink-400" />
+                  ) : signupRole === 'student' ? (
+                    <BadgeCheck size={16} className="shrink-0 mt-0.5 text-emerald-600 dark:text-emerald-400" />
                   ) : (
                     <BadgeCheck size={16} className="shrink-0 mt-0.5 text-blue-600 dark:text-blue-400" />
                   )}
@@ -694,9 +718,13 @@ export function LoginPage() {
               whileTap={{ scale: 0.99 }}
               disabled={busy}
               className={`mt-2 flex items-center justify-center gap-2 w-full py-4 rounded-full text-white font-bold shadow-md hover:shadow-lg disabled:opacity-70 transition-all ${
-                isRegister && signupRole === 'institute_management'
-                  ? 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700'
-                  : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700'
+                isRegister
+                  ? signupRole === 'student'
+                    ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-emerald-500/20'
+                    : signupRole === 'institute_management'
+                    ? 'bg-gradient-to-r from-purple-600 via-fuchsia-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-purple-500/20'
+                    : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-blue-500/20'
+                  : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-blue-500/20'
               }`}
             >
               <KeyRound size={18} />
