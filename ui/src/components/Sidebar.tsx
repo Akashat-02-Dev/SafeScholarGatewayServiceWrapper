@@ -72,7 +72,7 @@ export function Sidebar() {
           </div>
         )}
 
-        {/* TEACHER SECTION (BLUE THEME) */}
+        {/* TEACHER SECTION */}
         {showTeacher && (
           <div className="flex flex-row md:flex-col gap-1 sm:gap-1.5 md:mt-2">
             <div className="hidden md:flex items-center justify-between px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-blue-700 dark:text-blue-300 bg-blue-100/70 dark:bg-blue-950/50 border border-blue-200/70 dark:border-blue-800/50 rounded-lg">
@@ -81,7 +81,7 @@ export function Sidebar() {
                 <span>Teachers</span>
               </div>
               <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-blue-200/60 dark:bg-blue-900/60 text-blue-800 dark:text-blue-200">
-                BLUE
+                Faculty
               </span>
             </div>
             {teacherRoutes.map((route) => (
@@ -90,7 +90,7 @@ export function Sidebar() {
           </div>
         )}
 
-        {/* STUDENT SECTION (GREEN THEME) */}
+        {/* STUDENT SECTION */}
         {showStudent && (
           <div className="flex flex-row md:flex-col gap-1 sm:gap-1.5 md:mt-3">
             <div className="hidden md:flex items-center justify-between px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300 bg-emerald-100/70 dark:bg-emerald-950/50 border border-emerald-200/70 dark:border-emerald-800/50 rounded-lg">
@@ -99,7 +99,7 @@ export function Sidebar() {
                 <span>Students</span>
               </div>
               <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-emerald-200/60 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200">
-                GREEN
+                Learners
               </span>
             </div>
             {studentRoutes.map((route) => (
@@ -108,7 +108,7 @@ export function Sidebar() {
           </div>
         )}
 
-        {/* INSTITUTE MANAGEMENT SECTION (VIOLET/PINK THEME) */}
+        {/* INSTITUTE MANAGEMENT SECTION */}
         {showInstitute && (
           <div className="flex flex-row md:flex-col gap-1 sm:gap-1.5 md:mt-3">
             <div className="hidden md:flex items-center justify-between px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-purple-700 dark:text-pink-300 bg-purple-100/70 dark:bg-purple-950/50 border border-purple-200/70 dark:border-pink-800/50 rounded-lg">
@@ -117,7 +117,7 @@ export function Sidebar() {
                 <span>Institute Mgmt</span>
               </div>
               <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-purple-200/60 dark:bg-purple-900/60 text-purple-800 dark:text-pink-200">
-                VIOLET
+                District
               </span>
             </div>
             {instituteRoutes.map((route) => (

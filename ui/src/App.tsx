@@ -69,7 +69,7 @@ function AuthedLayout({ children }: { children: ReactNode }) {
   const domainMeta = {
     teacher: {
       label: 'Educator Workspace',
-      badge: 'Teacher Theme (Blue)',
+      badge: 'Educator Suite',
       sub: 'ACARA v9 Lesson Architecture, Rubrics & Differentiation',
       icon: GraduationCap,
       badgeClass: 'bg-blue-100 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800',
@@ -79,7 +79,7 @@ function AuthedLayout({ children }: { children: ReactNode }) {
     },
     student: {
       label: 'Student Learning Hub',
-      badge: 'Student Theme (Green)',
+      badge: 'Student Portal',
       sub: 'Guided Socratic Inquiry, Text Leveler & Writing Studio',
       icon: Backpack,
       badgeClass: 'bg-emerald-100 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
@@ -89,7 +89,7 @@ function AuthedLayout({ children }: { children: ReactNode }) {
     },
     institute: {
       label: 'Institute Management Console',
-      badge: 'Institute Theme (Violet/Pink)',
+      badge: 'Institute Console',
       sub: 'District RAG Ingestion, Teacher & Student Governance',
       icon: Building2,
       badgeClass: 'bg-purple-100 dark:bg-purple-950/70 text-purple-700 dark:text-pink-300 border-purple-200 dark:border-pink-800',
@@ -99,7 +99,7 @@ function AuthedLayout({ children }: { children: ReactNode }) {
     },
     superadmin: {
       label: 'Super Admin Command Deck',
-      badge: 'Super Admin (Amber)',
+      badge: 'Executive Command Deck',
       sub: 'Microservice Resilience Mesh, Custom RBAC & Multi-Tenant Trials',
       icon: Shield,
       badgeClass: 'bg-amber-100 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800',

@@ -93,7 +93,7 @@ export function Dashboard() {
             </div>
             <span className="self-start sm:self-auto px-3 py-1 rounded-full text-xs font-bold bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-blue-500" />
-              Blue Theme • Educator Suite
+              Educator Suite
             </span>
           </div>
 
@@ -178,7 +178,7 @@ export function Dashboard() {
             </div>
             <span className="self-start sm:self-auto px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-emerald-500" />
-              Green Theme • Student Suite
+              Student Suite
             </span>
           </div>
 
@@ -255,7 +255,7 @@ export function Dashboard() {
             </div>
             <span className="self-start sm:self-auto px-3 py-1 rounded-full text-xs font-bold bg-purple-100 dark:bg-purple-950/80 text-purple-700 dark:text-pink-300 border border-purple-200 dark:border-pink-800 flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-fuchsia-500" />
-              Pink / Violet Theme • Institute Console
+              Institute Console
             </span>
           </div>
 
@@ -493,7 +493,7 @@ export function Dashboard() {
             </div>
           </div>
           <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-            Blue Theme • 6 Tools
+            6 Core Tools
           </span>
         </div>
 
@@ -564,7 +564,7 @@ export function Dashboard() {
             </div>
           </div>
           <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-            Green Theme • 5 Tools
+            5 Core Tools
           </span>
         </div>
 
@@ -627,7 +627,7 @@ export function Dashboard() {
             </div>
           </div>
           <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-purple-100 dark:bg-purple-950/80 text-purple-700 dark:text-pink-300 border border-purple-200 dark:border-pink-800">
-            Violet/Pink Theme • 4 Modules
+            4 Core Modules
           </span>
         </div>
 

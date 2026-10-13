@@ -19,7 +19,7 @@ export const ROLE_THEMES: Record<string, RoleTheme> = {
   teacher: {
     name: 'Educator / Teacher',
     themeColor: 'blue',
-    badgeLabel: 'Teacher (Blue)',
+    badgeLabel: 'Educator Suite',
     gradient: 'from-blue-600 to-indigo-600',
     badgeClass: 'bg-blue-100 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800',
     borderClass: 'border-blue-200/80 dark:border-blue-900/60',
@@ -30,7 +30,7 @@ export const ROLE_THEMES: Record<string, RoleTheme> = {
   student: {
     name: 'Student / Learner',
     themeColor: 'green',
-    badgeLabel: 'Student (Green)',
+    badgeLabel: 'Student Portal',
     gradient: 'from-emerald-600 to-teal-600',
     badgeClass: 'bg-emerald-100 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
     borderClass: 'border-emerald-200/80 dark:border-emerald-900/60',
@@ -41,7 +41,7 @@ export const ROLE_THEMES: Record<string, RoleTheme> = {
   institute: {
     name: 'Institute Management',
     themeColor: 'violet',
-    badgeLabel: 'Institute Mgmt (Violet/Pink)',
+    badgeLabel: 'Institute Console',
     gradient: 'from-purple-600 via-fuchsia-600 to-pink-600',
     badgeClass: 'bg-purple-100 dark:bg-purple-950/70 text-purple-700 dark:text-pink-300 border-purple-200 dark:border-pink-800',
     borderClass: 'border-purple-200/80 dark:border-pink-900/60',
@@ -52,7 +52,7 @@ export const ROLE_THEMES: Record<string, RoleTheme> = {
   superadmin: {
     name: 'Super Admin',
     themeColor: 'amber',
-    badgeLabel: 'Super Admin (Amber)',
+    badgeLabel: 'Executive Command Deck',
     gradient: 'from-amber-500 via-orange-500 to-amber-600',
     badgeClass: 'bg-amber-100 dark:bg-amber-950/70 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800',
     borderClass: 'border-amber-200/80 dark:border-amber-900/60',

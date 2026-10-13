@@ -283,7 +283,7 @@ export function LoginPage() {
                       <span className="w-2 h-2 rounded-full bg-emerald-500" />
                     </div>
                     <span className="text-[11px] text-slate-500 dark:text-slate-400 hidden sm:block">
-                      Green theme • Socratic AI &amp; tests
+                      Socratic AI tutors &amp; tests
                     </span>
                   </button>
 
@@ -304,7 +304,7 @@ export function LoginPage() {
                       <span className="w-2 h-2 rounded-full bg-blue-500" />
                     </div>
                     <span className="text-[11px] text-slate-500 dark:text-slate-400 hidden sm:block">
-                      Blue theme • Lesson planning &amp; rubrics
+                      Lesson planning &amp; rubrics
                     </span>
                   </button>
 
@@ -325,7 +325,7 @@ export function LoginPage() {
                       <span className="w-2 h-2 rounded-full bg-fuchsia-500" />
                     </div>
                     <span className="text-[11px] text-slate-500 dark:text-slate-400 hidden sm:block">
-                      Violet theme • Onboarding &amp; district admin
+                      Campus onboarding &amp; district admin
                     </span>
                   </button>
                 </div>
