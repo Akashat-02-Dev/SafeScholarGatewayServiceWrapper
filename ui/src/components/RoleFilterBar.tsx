@@ -11,7 +11,6 @@ export const RoleFilterBar: React.FC<{ compact?: boolean }> = ({ compact = false
   const filters: { 
     id: RoleFilterType; 
     label: string; 
-    sublabel: string;
     icon: React.ComponentType<any>; 
     color: string;
     dotColor: string;
@@ -19,8 +18,7 @@ export const RoleFilterBar: React.FC<{ compact?: boolean }> = ({ compact = false
   }[] = [
     { 
       id: 'all', 
-      label: 'All Roles', 
-      sublabel: 'Global',
+      label: 'All Roles',
       icon: Layers, 
       color: 'from-amber-600 via-orange-600 to-amber-700', 
       dotColor: 'bg-amber-400',
@@ -29,7 +27,6 @@ export const RoleFilterBar: React.FC<{ compact?: boolean }> = ({ compact = false
     { 
       id: 'teacher', 
       label: 'Teachers', 
-      sublabel: 'Blue',
       icon: GraduationCap, 
       color: 'from-blue-600 to-indigo-600 shadow-blue-500/25', 
       dotColor: 'bg-blue-300',
@@ -38,7 +35,6 @@ export const RoleFilterBar: React.FC<{ compact?: boolean }> = ({ compact = false
     { 
       id: 'student', 
       label: 'Students', 
-      sublabel: 'Green',
       icon: Backpack, 
       color: 'from-emerald-600 to-teal-600 shadow-emerald-500/25', 
       dotColor: 'bg-emerald-300',
@@ -46,8 +42,7 @@ export const RoleFilterBar: React.FC<{ compact?: boolean }> = ({ compact = false
     },
     { 
       id: 'institute', 
-      label: 'Institute Mgmt', 
-      sublabel: 'Violet/Pink',
+      label: 'Institute Mgmt',
       icon: Building2, 
       color: 'from-purple-600 via-fuchsia-600 to-pink-600 shadow-purple-500/25', 
       dotColor: 'bg-pink-300',
@@ -70,7 +65,7 @@ export const RoleFilterBar: React.FC<{ compact?: boolean }> = ({ compact = false
             key={f.id}
             type="button"
             onClick={() => setRoleFilter(f.id)}
-            title={`Filter view for ${f.label} (${f.sublabel})`}
+            title={`Filter view for ${f.label}`}
             className={`relative flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl font-medium transition-all duration-200 select-none ${
               isActive
                 ? 'text-white shadow-md font-bold'
