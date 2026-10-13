@@ -186,7 +186,6 @@ export function Navbar() {
                       <div className="flex items-center gap-1.5 font-bold text-slate-900 dark:text-white group-hover:text-blue-600 transition-colors">
                         <span>For Educators & Faculty</span>
                         <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-                          Blue
                         </span>
                       </div>
                       <div className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug mt-0.5">
@@ -206,7 +205,6 @@ export function Navbar() {
                       <div className="flex items-center gap-1.5 font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 transition-colors">
                         <span>For Students & Learners</span>
                         <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                          Green
                         </span>
                       </div>
                       <div className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug mt-0.5">
@@ -226,7 +224,6 @@ export function Navbar() {
                       <div className="flex items-center gap-1.5 font-bold text-slate-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-pink-400 transition-colors">
                         <span>For School Districts & IT</span>
                         <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-pink-300 border border-purple-200 dark:border-pink-800">
-                          Violet
                         </span>
                       </div>
                       <div className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug mt-0.5">
