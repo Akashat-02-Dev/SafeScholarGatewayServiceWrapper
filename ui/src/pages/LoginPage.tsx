@@ -262,7 +262,7 @@ export function LoginPage() {
                     I am signing up as:
                   </label>
                   <span className="text-[10px] font-semibold text-slate-400">
-                    Role-tailored workspace &amp; colors
+                    Role-tailored workspace &amp; tools
                   </span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
