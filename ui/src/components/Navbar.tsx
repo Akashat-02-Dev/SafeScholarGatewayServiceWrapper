@@ -46,7 +46,7 @@ export function Navbar() {
 
   const platformEngines = [
     {
-      title: 'Lesson Sequences',
+      title: 'Lesson Plan Architect',
       badge: 'ACARA V9',
       roleTag: 'Teacher',
       roleColor: 'bg-blue-100 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800',
@@ -57,7 +57,7 @@ export function Navbar() {
       hoverText: 'group-hover:text-blue-600 dark:group-hover:text-blue-400',
     },
     {
-      title: 'Rubric Matrix',
+      title: 'Standards Rubric Matrix',
       badge: '4-Tier',
       roleTag: 'Teacher',
       roleColor: 'bg-blue-100 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800',
@@ -68,7 +68,7 @@ export function Navbar() {
       hoverText: 'group-hover:text-blue-600 dark:group-hover:text-blue-400',
     },
     {
-      title: 'Worksheets Studio',
+      title: 'Differentiated Activity Studio',
       badge: '3-Tier',
       roleTag: 'Teacher',
       roleColor: 'bg-blue-100 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800',
@@ -79,7 +79,7 @@ export function Navbar() {
       hoverText: 'group-hover:text-blue-600 dark:group-hover:text-blue-400',
     },
     {
-      title: 'Socratic Sandbox',
+      title: 'Socratic Inquiry Sandbox',
       badge: 'Anti-Cheating',
       roleTag: 'Student',
       roleColor: 'bg-emerald-100 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
@@ -90,7 +90,7 @@ export function Navbar() {
       hoverText: 'group-hover:text-emerald-600 dark:group-hover:text-emerald-400',
     },
     {
-      title: 'Lexile Text Leveler',
+      title: 'Lexile Reading Leveler',
       badge: 'Prep-Yr 12',
       roleTag: 'Teacher',
       roleColor: 'bg-blue-100 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800',
@@ -101,7 +101,7 @@ export function Navbar() {
       hoverText: 'group-hover:text-blue-600 dark:group-hover:text-blue-400',
     },
     {
-      title: 'Real-Time Moderation',
+      title: 'Real-Time Safety & Moderation',
       badge: 'Zero-PII',
       roleTag: 'Institute',
       roleColor: 'bg-purple-100 dark:bg-purple-950/70 text-purple-700 dark:text-pink-300 border-purple-200 dark:border-pink-800',

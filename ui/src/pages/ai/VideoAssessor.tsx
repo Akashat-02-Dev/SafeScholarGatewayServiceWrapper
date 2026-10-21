@@ -113,7 +113,7 @@ export default function VideoAssessor() {
               <Video size={20} />
             </div>
             <div>
-              <h2 className="pageTitle">YouTube Video Question Maker</h2>
+              <h2 className="pageTitle">Interactive Video Assessment Generator</h2>
               <div className="pageSub">Instantly generate standards-grounded classroom assessments directly from video transcripts.</div>
             </div>
           </div>

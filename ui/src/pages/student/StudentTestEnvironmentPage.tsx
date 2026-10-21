@@ -260,7 +260,7 @@ export const StudentTestEnvironmentPage: React.FC = () => {
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-xl sm:text-2xl font-black text-slate-800 dark:text-slate-100 tracking-tight">
-                  Student Assessment Environment
+                  Digital Assessment Chamber
                 </h1>
                 <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300">
                   2-Way Class Connected

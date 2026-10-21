@@ -138,7 +138,7 @@ export const SocraticTutorPage: React.FC<{ sessionId: string }> = ({ sessionId }
               <Sparkles size={20} />
             </div>
             <div>
-              <h2 className="pageTitle">Socratic Sandbox</h2>
+              <h2 className="pageTitle">Socratic Inquiry Sandbox</h2>
               <div className="pageSub" style={{ marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <span style={{
                   display: 'inline-block',

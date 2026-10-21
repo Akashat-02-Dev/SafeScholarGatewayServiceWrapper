@@ -80,7 +80,7 @@ function AuthedLayout({ children }: { children: ReactNode }) {
     student: {
       label: 'Student Learning Hub',
       badge: 'Student Portal',
-      sub: 'Guided Socratic Inquiry, Text Leveler & Writing Studio',
+      sub: 'Guided Socratic Inquiry, Reading Support & Formative Writing Studio',
       icon: Backpack,
       badgeClass: 'bg-emerald-100 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
       bannerBg: 'bg-gradient-to-r from-emerald-50/90 via-teal-50/50 to-white/90 dark:from-emerald-950/40 dark:via-zinc-900 dark:to-zinc-900 border-emerald-200/80 dark:border-emerald-900/60',
@@ -90,7 +90,7 @@ function AuthedLayout({ children }: { children: ReactNode }) {
     institute: {
       label: 'Institute Management Console',
       badge: 'Institute Console',
-      sub: 'District RAG Ingestion, Teacher & Student Governance',
+      sub: 'District Curriculum Knowledge Base, Faculty & Student Governance',
       icon: Building2,
       badgeClass: 'bg-purple-100 dark:bg-purple-950/70 text-purple-700 dark:text-pink-300 border-purple-200 dark:border-pink-800',
       bannerBg: 'bg-gradient-to-r from-purple-50/90 via-pink-50/40 to-white/90 dark:from-purple-950/40 dark:via-zinc-900 dark:to-zinc-900 border-purple-200/80 dark:border-pink-900/60',

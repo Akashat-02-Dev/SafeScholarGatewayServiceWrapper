@@ -99,7 +99,7 @@ export const aiService = {
   },
 
   /**
-   * Generates Australian Curriculum Prep to Year 5 Worksheets (Kura Plan / Magic School style)
+   * Generates Australian Curriculum Prep to Year 5 Differentiated Activity Sheets
    */
   async generateWorksheet(
     institutionId: string,

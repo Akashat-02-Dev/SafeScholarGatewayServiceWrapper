@@ -91,13 +91,13 @@ export const WorksheetGeneratorPage: React.FC = () => {
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h2 className="text-xl sm:text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">Worksheet Generator</h2>
+                  <h2 className="text-xl sm:text-2xl font-bold text-slate-800 dark:text-slate-100 tracking-tight">Differentiated Activity Studio</h2>
                   <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 uppercase tracking-wide">
                     ACARA v9.0
                   </span>
                 </div>
                 <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-                  Kura Plan & Magic School AI inspired printable worksheets for Australian Prep to Year 5.
+                  Tiered printable and interactive student activities with scaffolding for Australian Prep to Year 5.
                 </p>
               </div>
             </div>

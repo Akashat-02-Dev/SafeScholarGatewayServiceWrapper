@@ -111,10 +111,10 @@ export const LessonPlannerPage: React.FC = () => {
       {/* Header */}
       <header style={{ marginBottom: '24px' }}>
         <h1 className="pageTitle" style={{ fontSize: '26px', color: 'var(--c-navy)', fontFamily: "'Merriweather', Georgia, serif" }}>
-          Curriculum Architect
+          Lesson Plan Architect
         </h1>
         <p className="pageSub" style={{ fontSize: '13px', marginTop: '4px' }}>
-          Generate rigorous, standards-aligned lesson plans grounded in local district database policies.
+          Generate rigorous, standards-aligned lesson plans grounded in Australian Curriculum ACARA v9.0 and local district policies.
         </p>
       </header>
 

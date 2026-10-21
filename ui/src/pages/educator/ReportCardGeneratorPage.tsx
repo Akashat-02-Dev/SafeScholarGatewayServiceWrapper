@@ -171,7 +171,7 @@ export default function ReportCardGeneratorPage() {
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
-                  Institute Report Card & Assessment Registry
+                  Pastoral Report Synthesizer & Assessment Registry
                 </h1>
                 <span className="text-[10px] px-2.5 py-0.5 rounded-full font-bold bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
                   Institute Mgmt Console

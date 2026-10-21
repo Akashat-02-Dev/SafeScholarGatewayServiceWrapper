@@ -97,8 +97,8 @@ export default function IepGenerator() {
               <FileText size={20} />
             </div>
             <div>
-              <h2 className="pageTitle">IEP & Rubric Matrix Generator</h2>
-              <div className="pageSub">Compose individualized matrix rubrics and student-centric performance evaluation templates.</div>
+              <h2 className="pageTitle">Individualized Learning Plan (ILP/IEP) Studio</h2>
+              <div className="pageSub">Compose individualized learning plans and student-centric accommodation templates.</div>
             </div>
           </div>
 

@@ -50,7 +50,7 @@ export const LandingPage: React.FC = () => {
     {
       id: 'worksheet-generator',
       category: 'educator',
-      title: 'Differentiated Worksheet Studio',
+      title: 'Differentiated Activity Studio',
       desc: 'Produce tiered learning activities in seconds with scaffolding for support, core classroom mastery, and high-potential extension learners.',
       badge: '3-Tier Scaffold',
       badgeColor: 'teal',
@@ -60,7 +60,7 @@ export const LandingPage: React.FC = () => {
     {
       id: 'assessment-generator',
       category: 'educator',
-      title: 'Summative & Diagnostic Assessment Studio',
+      title: 'Diagnostic & Quiz Studio',
       desc: 'Create standards-linked quizzes, multiple choice questions, short answer reasoning, and exit tickets with matching teacher marking keys.',
       badge: 'Instant Marking Key',
       badgeColor: 'blue',
@@ -70,7 +70,7 @@ export const LandingPage: React.FC = () => {
     {
       id: 'text-leveler',
       category: 'educator',
-      title: 'Lexile Reading Level Transformer',
+      title: 'Lexile Reading Leveler',
       desc: 'Adapt complex primary sources, news stories, and literature to match specific student reading bands without sacrificing core conceptual meaning.',
       badge: 'Prep - Year 12',
       badgeColor: 'purple',
@@ -80,7 +80,7 @@ export const LandingPage: React.FC = () => {
     {
       id: 'custom-bot',
       category: 'educator',
-      title: 'Classroom Persona & Custom Bot Studio',
+      title: 'Classroom AI Persona Studio',
       desc: 'Deploy custom pedagogical assistants tailored with your bespoke rubrics, historical personas, or novel-study characters with safety guardrails.',
       badge: 'Custom Prompts',
       badgeColor: 'emerald',
@@ -100,7 +100,7 @@ export const LandingPage: React.FC = () => {
     {
       id: 'writing-studio',
       category: 'student',
-      title: 'Student Writing Studio & NAPLAN Coach',
+      title: 'Formative Writing Studio',
       desc: 'Step-by-step drafting partner providing formative feedback on narrative voice, persuasive evidence, sentence variation, and spelling.',
       badge: 'Formative Feedback',
       badgeColor: 'emerald',
@@ -110,7 +110,7 @@ export const LandingPage: React.FC = () => {
     {
       id: 'student-rooms',
       category: 'student',
-      title: 'Classroom PIN Join Rooms',
+      title: 'Classroom Collab Rooms',
       desc: 'Students enter secure teacher-hosted AI rooms with a 6-digit access code for controlled, monitored group exploration.',
       badge: 'Teacher Supervised',
       badgeColor: 'teal',
@@ -140,7 +140,7 @@ export const LandingPage: React.FC = () => {
     {
       id: 'rag-curriculum',
       category: 'admin',
-      title: 'District Curriculum Knowledge RAG',
+      title: 'Curriculum Knowledge Base (RAG)',
       desc: 'Ingest school policies, local curriculum handbooks, and specific regional guidelines into the AI context for localized precision.',
       badge: 'Custom Knowledge',
       badgeColor: 'indigo',

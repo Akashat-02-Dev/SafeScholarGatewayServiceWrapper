@@ -154,7 +154,7 @@ export const RAGIngestionPanel: React.FC = () => {
       <header style={{ marginBottom: '24px' }}>
         <h1 className="pageTitle" style={{ fontSize: '26px', color: 'var(--c-navy)', fontFamily: "'Merriweather', Georgia, serif", display: 'flex', alignItems: 'center', gap: '10px' }}>
           <Database size={28} style={{ color: 'var(--c-navy)' }} />
-          <span>District RAG Ingestion Panel</span>
+          <span>Curriculum Knowledge Base (RAG)</span>
         </h1>
         <p className="pageSub" style={{ fontSize: '13px', marginTop: '4px' }}>
           Upload and index district standards, local rubrics, and curricula. Isolated under Institution: <strong style={{ color: 'var(--text)' }}>{me?.institutionId || 'Local-District'}</strong>.

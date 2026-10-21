@@ -170,10 +170,10 @@ export function StudentJoinRoom() {
         <div>
           <h1 className="pageTitle flex items-center gap-2.5">
             <Bot className="text-blue-600 dark:text-blue-400" size={28} />
-            <span>Join Custom Chatbot Room</span>
+            <span>Classroom Collab Room</span>
           </h1>
           <p className="pageSub">
-            Connect to custom Socratic chatbot rooms created and assigned by your teacher. Enter your room code or select an active classroom bot below.
+            Connect to custom Socratic collaborator rooms created and assigned by your teacher. Enter your room code or select an active classroom bot below.
           </p>
         </div>
         <button

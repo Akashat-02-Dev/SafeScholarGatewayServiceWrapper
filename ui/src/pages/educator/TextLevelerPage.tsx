@@ -105,7 +105,7 @@ export const TextLevelerPage: React.FC = () => {
       {/* Header */}
       <header style={{ marginBottom: '24px' }}>
         <h1 className="pageTitle" style={{ fontSize: '26px', color: 'var(--c-navy)', fontFamily: "'Merriweather', Georgia, serif" }}>
-          Text Leveler & Differentiator
+          Lexile Reading Leveler
         </h1>
         <p className="pageSub" style={{ fontSize: '13px', marginTop: '4px' }}>
           Adjust the reading complexity of any educational material to match district Lexile standard requirements.

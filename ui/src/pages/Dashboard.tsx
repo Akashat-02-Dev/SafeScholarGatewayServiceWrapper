@@ -107,7 +107,7 @@ export function Dashboard() {
                 <div className="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-2.5">
                   <BookOpen size={18} />
                 </div>
-                <div className="font-bold text-sm text-slate-900 dark:text-white group-hover:text-blue-600">Lesson Planner</div>
+                <div className="font-bold text-sm text-slate-900 dark:text-white group-hover:text-blue-600">Lesson Plan Architect</div>
                 <div className="text-xs text-slate-500 mt-1">ACARA v9.0 outcomes, tiered differentiation & cognitive verbs.</div>
               </Link>
 
@@ -115,7 +115,7 @@ export function Dashboard() {
                 <div className="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-2.5">
                   <ClipboardList size={18} />
                 </div>
-                <div className="font-bold text-sm text-slate-900 dark:text-white group-hover:text-blue-600">Rubric Generator</div>
+                <div className="font-bold text-sm text-slate-900 dark:text-white group-hover:text-blue-600">Standards Rubric Matrix</div>
                 <div className="text-xs text-slate-500 mt-1">QCAA ISMG marking criteria with 4-tier standards matrix.</div>
               </Link>
 
@@ -123,15 +123,15 @@ export function Dashboard() {
                 <div className="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-2.5">
                   <FileSpreadsheet size={18} />
                 </div>
-                <div className="font-bold text-sm text-slate-900 dark:text-white group-hover:text-blue-600">Worksheet Generator</div>
-                <div className="text-xs text-slate-500 mt-1">Kura Plan style printable student activities with answer keys.</div>
+                <div className="font-bold text-sm text-slate-900 dark:text-white group-hover:text-blue-600">Differentiated Activity Studio</div>
+                <div className="text-xs text-slate-500 mt-1">Printable student activities with scaffolding and answer keys.</div>
               </Link>
 
               <Link to="/educator/assessment-generator" className="p-4 rounded-2xl border border-blue-100 dark:border-zinc-700/80 bg-white/90 dark:bg-zinc-800/80 hover:shadow-md hover:border-blue-400 transition-all group">
                 <div className="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-2.5">
                   <CheckSquare size={18} />
                 </div>
-                <div className="font-bold text-sm text-slate-900 dark:text-white group-hover:text-blue-600">Assessment & Quiz Generator</div>
+                <div className="font-bold text-sm text-slate-900 dark:text-white group-hover:text-blue-600">Diagnostic & Quiz Studio</div>
                 <div className="text-xs text-slate-500 mt-1">Formative checkpoints & NAPLAN practice tests with digital grading.</div>
               </Link>
 
@@ -139,7 +139,7 @@ export function Dashboard() {
                 <div className="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-2.5">
                   <Sparkles size={18} />
                 </div>
-                <div className="font-bold text-sm text-slate-900 dark:text-white group-hover:text-blue-600">Custom Chat Bot</div>
+                <div className="font-bold text-sm text-slate-900 dark:text-white group-hover:text-blue-600">Classroom AI Persona Studio</div>
                 <div className="text-xs text-slate-500 mt-1">Build specialized Socratic tutors grounded in your classroom docs.</div>
               </Link>
 
@@ -147,7 +147,7 @@ export function Dashboard() {
                 <div className="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-2.5">
                   <Scissors size={18} />
                 </div>
-                <div className="font-bold text-sm text-slate-900 dark:text-white group-hover:text-blue-600">Text Leveler</div>
+                <div className="font-bold text-sm text-slate-900 dark:text-white group-hover:text-blue-600">Lexile Reading Leveler</div>
                 <div className="text-xs text-slate-500 mt-1">Differentiate passages across Prep to Year 5 Lexile complexity.</div>
               </Link>
             </div>
@@ -192,7 +192,7 @@ export function Dashboard() {
                 <div className="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-2.5">
                   <Sparkles size={18} />
                 </div>
-                <div className="font-bold text-sm text-slate-900 dark:text-white group-hover:text-emerald-600">Socratic Sandbox AI Chat</div>
+                <div className="font-bold text-sm text-slate-900 dark:text-white group-hover:text-emerald-600">Socratic Inquiry Sandbox</div>
                 <div className="text-xs text-slate-500 mt-1">Real-time Socratic guiding tutor. Ask questions and discover answers.</div>
               </Link>
 
@@ -200,7 +200,7 @@ export function Dashboard() {
                 <div className="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-2.5">
                   <Scissors size={18} />
                 </div>
-                <div className="font-bold text-sm text-slate-900 dark:text-white group-hover:text-emerald-600">Reading Leveler</div>
+                <div className="font-bold text-sm text-slate-900 dark:text-white group-hover:text-emerald-600">Adaptive Reading Assistant</div>
                 <div className="text-xs text-slate-500 mt-1">Simplify difficult texts and listen with Australian voice audio.</div>
               </Link>
 
@@ -208,7 +208,7 @@ export function Dashboard() {
                 <div className="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-2.5">
                   <Bot size={18} />
                 </div>
-                <div className="font-bold text-sm text-slate-900 dark:text-white group-hover:text-emerald-600">Join Chatbot Room</div>
+                <div className="font-bold text-sm text-slate-900 dark:text-white group-hover:text-emerald-600">Classroom Collab Room</div>
                 <div className="text-xs text-slate-500 mt-1">Join custom Socratic chatbot rooms created and provided by your teacher.</div>
               </Link>
 
@@ -216,7 +216,7 @@ export function Dashboard() {
                 <div className="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-2.5">
                   <PenTool size={18} />
                 </div>
-                <div className="font-bold text-sm text-slate-900 dark:text-white group-hover:text-emerald-600">Writing Studio</div>
+                <div className="font-bold text-sm text-slate-900 dark:text-white group-hover:text-emerald-600">Formative Writing Studio</div>
                 <div className="text-xs text-slate-500 mt-1">Targeted writing feedback on structure, voice, and NAPLAN grammar.</div>
               </Link>
 
@@ -224,7 +224,7 @@ export function Dashboard() {
                 <div className="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-2.5">
                   <CheckSquare size={18} />
                 </div>
-                <div className="font-bold text-sm text-slate-900 dark:text-white group-hover:text-emerald-600">Test Environment</div>
+                <div className="font-bold text-sm text-slate-900 dark:text-white group-hover:text-emerald-600">Digital Assessment Chamber</div>
                 <div className="text-xs text-slate-500 mt-1">Distraction-free digital exam room with automated scoring & review.</div>
               </Link>
             </div>
@@ -269,7 +269,7 @@ export function Dashboard() {
                 <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-pink-400 flex items-center justify-center mb-3">
                   <Database size={20} />
                 </div>
-                <div className="font-bold text-base text-slate-900 dark:text-white group-hover:text-purple-600">RAG Ingestion and Update</div>
+                <div className="font-bold text-base text-slate-900 dark:text-white group-hover:text-purple-600">Curriculum Knowledge Base</div>
                 <div className="text-xs text-slate-500 mt-1">Upload school syllabi, curriculum PDFs and policies into vector embeddings.</div>
               </Link>
 
@@ -277,7 +277,7 @@ export function Dashboard() {
                 <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-pink-400 flex items-center justify-center mb-3">
                   <GraduationCap size={20} />
                 </div>
-                <div className="font-bold text-base text-slate-900 dark:text-white group-hover:text-purple-600">Teacher Management</div>
+                <div className="font-bold text-base text-slate-900 dark:text-white group-hover:text-purple-600">Faculty & Staff Directory</div>
                 <div className="text-xs text-slate-500 mt-1">Onboard staff, assign tool permissions and set monthly AI usage limits.</div>
               </Link>
 
@@ -285,7 +285,7 @@ export function Dashboard() {
                 <div className="w-10 h-10 rounded-xl bg-pink-100 dark:bg-pink-900/40 text-pink-600 dark:text-pink-400 flex items-center justify-center mb-3">
                   <Backpack size={20} />
                 </div>
-                <div className="font-bold text-base text-slate-900 dark:text-white group-hover:text-pink-600">Student Management</div>
+                <div className="font-bold text-base text-slate-900 dark:text-white group-hover:text-pink-600">Learner Roster & Safety</div>
                 <div className="text-xs text-slate-500 mt-1">Enroll learners, set daily prompt quotas, and manage safety intervention locks.</div>
               </Link>
 
@@ -293,7 +293,7 @@ export function Dashboard() {
                 <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-pink-400 flex items-center justify-center mb-3">
                   <ClipboardList size={20} />
                 </div>
-                <div className="font-bold text-base text-slate-900 dark:text-white group-hover:text-purple-600">Report Card Generator</div>
+                <div className="font-bold text-base text-slate-900 dark:text-white group-hover:text-purple-600">Pastoral Report Synthesizer</div>
                 <div className="text-xs text-slate-500 mt-1">Auto-synthesize pastoral student comments compliant with QCAA A-E reporting.</div>
               </Link>
             </div>
@@ -501,23 +501,23 @@ export function Dashboard() {
           <Link to="/educator/lesson-planner" className="p-3.5 rounded-xl border border-blue-100 dark:border-zinc-700/80 bg-white/90 dark:bg-zinc-800/90 hover:border-blue-400 hover:shadow-sm transition-all flex items-center gap-3 group">
             <BookOpen size={16} className="text-blue-600 dark:text-blue-400 shrink-0" />
             <div>
-              <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-blue-600">(a) Lesson Planner</div>
-              <div className="text-[10px] text-slate-400">ACARA v9.0 outcomes & differentiation</div>
+              <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-blue-600">(a) Lesson Plan Architect</div>
+              <div className="text-[10px] text-slate-400">ACARA v9.0 outcomes &amp; differentiation</div>
             </div>
           </Link>
 
           <Link to="/educator/rubric-generator" className="p-3.5 rounded-xl border border-blue-100 dark:border-zinc-700/80 bg-white/90 dark:bg-zinc-800/90 hover:border-blue-400 hover:shadow-sm transition-all flex items-center gap-3 group">
             <ClipboardList size={16} className="text-blue-600 dark:text-blue-400 shrink-0" />
             <div>
-              <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-blue-600">(b) Rubric Generator</div>
-              <div className="text-[10px] text-slate-400">QCAA ISMG criteria & cognitive verbs</div>
+              <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-blue-600">(b) Standards Rubric Matrix</div>
+              <div className="text-[10px] text-slate-400">QCAA ISMG criteria &amp; cognitive verbs</div>
             </div>
           </Link>
 
           <Link to="/educator/worksheet-generator" className="p-3.5 rounded-xl border border-blue-100 dark:border-zinc-700/80 bg-white/90 dark:bg-zinc-800/90 hover:border-blue-400 hover:shadow-sm transition-all flex items-center gap-3 group">
             <FileSpreadsheet size={16} className="text-blue-600 dark:text-blue-400 shrink-0" />
             <div>
-              <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-blue-600">(c) Worksheet Generator</div>
+              <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-blue-600">(c) Differentiated Activity Studio</div>
               <div className="text-[10px] text-slate-400">Printable student sheets with answer keys</div>
             </div>
           </Link>
@@ -525,7 +525,7 @@ export function Dashboard() {
           <Link to="/educator/assessment-generator" className="p-3.5 rounded-xl border border-blue-100 dark:border-zinc-700/80 bg-white/90 dark:bg-zinc-800/90 hover:border-blue-400 hover:shadow-sm transition-all flex items-center gap-3 group">
             <CheckSquare size={16} className="text-blue-600 dark:text-blue-400 shrink-0" />
             <div>
-              <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-blue-600">(d) Assessment & Quiz Gen</div>
+              <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-blue-600">(d) Diagnostic &amp; Quiz Studio</div>
               <div className="text-[10px] text-slate-400">NAPLAN tests with automated scoring</div>
             </div>
           </Link>
@@ -533,15 +533,15 @@ export function Dashboard() {
           <Link to="/educator/custom-bots" className="p-3.5 rounded-xl border border-blue-100 dark:border-zinc-700/80 bg-white/90 dark:bg-zinc-800/90 hover:border-blue-400 hover:shadow-sm transition-all flex items-center gap-3 group">
             <Sparkles size={16} className="text-blue-600 dark:text-blue-400 shrink-0" />
             <div>
-              <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-blue-600">(e) Custom Chat Bot</div>
-              <div className="text-[10px] text-slate-400">Persona & Socratic strictness studio</div>
+              <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-blue-600">(e) Classroom AI Persona Studio</div>
+              <div className="text-[10px] text-slate-400">Persona &amp; Socratic strictness studio</div>
             </div>
           </Link>
 
           <Link to="/educator/leveler" className="p-3.5 rounded-xl border border-blue-100 dark:border-zinc-700/80 bg-white/90 dark:bg-zinc-800/90 hover:border-blue-400 hover:shadow-sm transition-all flex items-center gap-3 group">
             <Scissors size={16} className="text-blue-600 dark:text-blue-400 shrink-0" />
             <div>
-              <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-blue-600">(f) Text Leveler</div>
+              <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-blue-600">(f) Lexile Reading Leveler</div>
               <div className="text-[10px] text-slate-400">Prep to Year 5 Lexile differentiation</div>
             </div>
           </Link>
@@ -560,7 +560,7 @@ export function Dashboard() {
                 <span>2. Student Features</span>
                 <span className="w-2 h-2 rounded-full bg-emerald-500" />
               </h2>
-              <span className="text-[11px] text-slate-500 dark:text-slate-400">Socratic guidance, reading support, quizzes & test taking</span>
+              <span className="text-[11px] text-slate-500 dark:text-slate-400">Socratic guidance, reading support, quizzes &amp; test taking</span>
             </div>
           </div>
           <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
@@ -572,7 +572,7 @@ export function Dashboard() {
           <Link to="/socratic-tutor" className="p-3.5 rounded-xl border border-emerald-100 dark:border-zinc-700/80 bg-white/90 dark:bg-zinc-800/90 hover:border-emerald-400 hover:shadow-sm transition-all flex items-center gap-3 group">
             <Sparkles size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
             <div>
-              <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-emerald-600">(a) Socratic Sandbox AI</div>
+              <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-emerald-600">(a) Socratic Inquiry Sandbox</div>
               <div className="text-[10px] text-slate-400">Real-time Socratic guiding dialogue</div>
             </div>
           </Link>
@@ -580,7 +580,7 @@ export function Dashboard() {
           <Link to="/student/text-leveler" className="p-3.5 rounded-xl border border-emerald-100 dark:border-zinc-700/80 bg-white/90 dark:bg-zinc-800/90 hover:border-emerald-400 hover:shadow-sm transition-all flex items-center gap-3 group">
             <Scissors size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
             <div>
-              <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-emerald-600">(b) Text Leveler (Student)</div>
+              <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-emerald-600">(b) Adaptive Reading Assistant</div>
               <div className="text-[10px] text-slate-400">Simplify difficult text with audio reading</div>
             </div>
           </Link>
@@ -588,7 +588,7 @@ export function Dashboard() {
           <Link to="/student/join-room" className="p-3.5 rounded-xl border border-emerald-100 dark:border-zinc-700/80 bg-white/90 dark:bg-zinc-800/90 hover:border-emerald-400 hover:shadow-sm transition-all flex items-center gap-3 group">
             <Bot size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
             <div>
-              <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-emerald-600">(c) Join Chatbot Room</div>
+              <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-emerald-600">(c) Classroom Collab Room</div>
               <div className="text-[10px] text-slate-400">Connect to teacher-created classroom chatbot rooms</div>
             </div>
           </Link>
@@ -596,7 +596,7 @@ export function Dashboard() {
           <Link to="/student/writing-studio" className="p-3.5 rounded-xl border border-emerald-100 dark:border-zinc-700/80 bg-white/90 dark:bg-zinc-800/90 hover:border-emerald-400 hover:shadow-sm transition-all flex items-center gap-3 group">
             <PenTool size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
             <div>
-              <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-emerald-600">(d) Writing Studio</div>
+              <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-emerald-600">(d) Formative Writing Studio</div>
               <div className="text-[10px] text-slate-400">Targeted grammar and cohesion feedback</div>
             </div>
           </Link>
@@ -604,7 +604,7 @@ export function Dashboard() {
           <Link to="/student/test-environment" className="p-3.5 rounded-xl border border-emerald-100 dark:border-zinc-700/80 bg-white/90 dark:bg-zinc-800/90 hover:border-emerald-400 hover:shadow-sm transition-all flex items-center gap-3 group">
             <CheckSquare size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
             <div>
-              <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-emerald-600">(e) Test Environment</div>
+              <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-emerald-600">(e) Digital Assessment Chamber</div>
               <div className="text-[10px] text-slate-400">Take exams with automated QCAA grading</div>
             </div>
           </Link>
@@ -623,7 +623,7 @@ export function Dashboard() {
                 <span>3. Institute Management</span>
                 <span className="w-2 h-2 rounded-full bg-fuchsia-500" />
               </h2>
-              <span className="text-[11px] text-slate-500 dark:text-slate-400">Knowledge RAG, teacher/student governance & reporting</span>
+              <span className="text-[11px] text-slate-500 dark:text-slate-400">Knowledge RAG, teacher/student governance &amp; reporting</span>
             </div>
           </div>
           <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-purple-100 dark:bg-purple-950/80 text-purple-700 dark:text-pink-300 border border-purple-200 dark:border-pink-800">
@@ -635,7 +635,7 @@ export function Dashboard() {
           <Link to="/admin/rag-ingestion" className="p-3.5 rounded-xl border border-purple-100 dark:border-zinc-700/80 bg-white/90 dark:bg-zinc-800/90 hover:border-purple-400 hover:shadow-sm transition-all flex items-center gap-3 group">
             <Database size={16} className="text-purple-600 dark:text-pink-400 shrink-0" />
             <div>
-              <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-purple-600">(a) RAG Ingestion & Base</div>
+              <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-purple-600">(a) Curriculum Knowledge Base</div>
               <div className="text-[10px] text-slate-400">Vectorize district curriculum PDFs</div>
             </div>
           </Link>
@@ -643,23 +643,23 @@ export function Dashboard() {
           <Link to="/admin/teachers" className="p-3.5 rounded-xl border border-purple-100 dark:border-zinc-700/80 bg-white/90 dark:bg-zinc-800/90 hover:border-purple-400 hover:shadow-sm transition-all flex items-center gap-3 group">
             <GraduationCap size={16} className="text-purple-600 dark:text-pink-400 shrink-0" />
             <div>
-              <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-purple-600">(b) Teacher Management</div>
-              <div className="text-[10px] text-slate-400">Onboard, tool permissions & limits</div>
+              <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-purple-600">(b) Faculty &amp; Staff Directory</div>
+              <div className="text-[10px] text-slate-400">Onboard, tool permissions &amp; limits</div>
             </div>
           </Link>
 
           <Link to="/admin/students" className="p-3.5 rounded-xl border border-pink-100 dark:border-zinc-700/80 bg-white/90 dark:bg-zinc-800/90 hover:border-pink-400 hover:shadow-sm transition-all flex items-center gap-3 group">
             <Backpack size={16} className="text-pink-600 dark:text-pink-400 shrink-0" />
             <div>
-              <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-pink-600">(c) Student Management</div>
-              <div className="text-[10px] text-slate-400">Rosters, safety locks & AI quotas</div>
+              <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-pink-600">(c) Learner Roster &amp; Safety</div>
+              <div className="text-[10px] text-slate-400">Rosters, safety locks &amp; AI quotas</div>
             </div>
           </Link>
 
           <Link to="/admin/report-card" className="p-3.5 rounded-xl border border-purple-100 dark:border-zinc-700/80 bg-white/90 dark:bg-zinc-800/90 hover:border-purple-400 hover:shadow-sm transition-all flex items-center gap-3 group">
             <ClipboardList size={16} className="text-purple-600 dark:text-pink-400 shrink-0" />
             <div>
-              <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-purple-600">(d) Report Card Gen</div>
+              <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-purple-600">(d) Pastoral Report Synthesizer</div>
               <div className="text-[10px] text-slate-400">Synthesize QCAA pastoral comments</div>
             </div>
           </Link>

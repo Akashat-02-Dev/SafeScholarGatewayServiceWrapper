@@ -93,7 +93,7 @@ export function WritingStudio() {
         <div className="px-6 py-5 border-b border-white/20 dark:border-white/10 flex justify-between items-center bg-black/5 dark:bg-white/5">
           <div className="flex items-center gap-3 text-blue-900 dark:text-blue-100">
             <FileText size={20} />
-            <h2 className="text-xl font-bold m-0">Writing Studio</h2>
+            <h2 className="text-xl font-bold m-0">Formative Writing Studio</h2>
           </div>
           <motion.button
             whileHover={{ scale: 1.02 }}
@@ -119,7 +119,7 @@ export function WritingStudio() {
       {/* Right Pane - AI Feedback */}
       <div className="flex flex-col bg-white/40 dark:bg-zinc-900/40 backdrop-blur-3xl -webkit-backdrop-filter transform-gpu border border-white/30 dark:border-white/5 rounded-[2rem] shadow-sm overflow-hidden">
         <div className="px-6 py-5 border-b border-white/20 dark:border-white/10">
-          <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 m-0">AI Writing Coach</h3>
+          <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 m-0">Formative Writing Coach</h3>
         </div>
         
         <div className="flex-1 overflow-y-auto p-6">

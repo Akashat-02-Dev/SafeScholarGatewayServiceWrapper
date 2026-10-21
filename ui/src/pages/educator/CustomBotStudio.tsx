@@ -149,7 +149,7 @@ export default function CustomBotStudio() {
       <div>
         <h1 className="pageTitle" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <Sparkles className="icon-gold" style={{ color: 'var(--c-gold)' }} />
-          Custom Socratic Bot Studio
+          Classroom AI Persona Studio
         </h1>
         <p className="pageSub" style={{ marginTop: '6px' }}>
           Design specialized, multi-tenant Socratic tutor personas aligned directly to district educational materials.

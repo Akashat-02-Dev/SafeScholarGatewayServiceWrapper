@@ -18,29 +18,29 @@ interface NavItem {
 
 // 1. Teacher Routes (Exact 6 features requested)
 const teacherRoutes: NavItem[] = [
-  { label: 'Lesson Planner', path: '/educator/lesson-planner', icon: BookOpen },
-  { label: 'Rubric Generator', path: '/educator/rubric-generator', icon: FileText },
-  { label: 'Worksheet Generator', path: '/educator/worksheet-generator', icon: FileSpreadsheet },
-  { label: 'Assessment & Quizzes', path: '/educator/assessment-generator', icon: ClipboardCheck },
-  { label: 'Custom Chat Bot', path: '/educator/custom-bots', icon: Sparkles },
-  { label: 'Text Leveler', path: '/educator/leveler', icon: Scissors },
+  { label: 'Lesson Plan Architect', path: '/educator/lesson-planner', icon: BookOpen },
+  { label: 'Standards Rubric Matrix', path: '/educator/rubric-generator', icon: FileText },
+  { label: 'Differentiated Activity Studio', path: '/educator/worksheet-generator', icon: FileSpreadsheet },
+  { label: 'Diagnostic & Quiz Studio', path: '/educator/assessment-generator', icon: ClipboardCheck },
+  { label: 'Classroom AI Persona Studio', path: '/educator/custom-bots', icon: Sparkles },
+  { label: 'Lexile Reading Leveler', path: '/educator/leveler', icon: Scissors },
 ];
 
 // 2. Student Routes (Exact 5 features requested)
 const studentRoutes: NavItem[] = [
-  { label: 'Socratic Sandbox', path: '/socratic-tutor', icon: Sparkles },
-  { label: 'Reading Leveler', path: '/student/text-leveler', icon: Scissors },
-  { label: 'Join Chatbot Room', path: '/student/join-room', icon: Bot },
-  { label: 'Writing Studio', path: '/student/writing-studio', icon: PenTool },
-  { label: 'Test Environment', path: '/student/test-environment', icon: CheckCircle2 },
+  { label: 'Socratic Inquiry Sandbox', path: '/socratic-tutor', icon: Sparkles },
+  { label: 'Adaptive Reading Assistant', path: '/student/text-leveler', icon: Scissors },
+  { label: 'Classroom Collab Room', path: '/student/join-room', icon: Bot },
+  { label: 'Formative Writing Studio', path: '/student/writing-studio', icon: PenTool },
+  { label: 'Digital Assessment Chamber', path: '/student/test-environment', icon: CheckCircle2 },
 ];
 
 // 3. Institute Management Routes (Exact 4 features requested)
 const instituteRoutes: NavItem[] = [
-  { label: 'RAG Ingestion & Base', path: '/admin/rag-ingestion', icon: Database },
-  { label: 'Teacher Management', path: '/admin/teachers', icon: GraduationCap },
-  { label: 'Student Management', path: '/admin/students', icon: Backpack },
-  { label: 'Report Card Gen', path: '/admin/report-card', icon: FileText },
+  { label: 'Curriculum Knowledge Base', path: '/admin/rag-ingestion', icon: Database },
+  { label: 'Faculty & Staff Directory', path: '/admin/teachers', icon: GraduationCap },
+  { label: 'Learner Roster & Safety', path: '/admin/students', icon: Backpack },
+  { label: 'Pastoral Report Synthesizer', path: '/admin/report-card', icon: FileText },
 ];
 
 export function Sidebar() {

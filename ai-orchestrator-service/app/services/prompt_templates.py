@@ -195,7 +195,7 @@ Context from District Database:
         ("human", "{user_prompt}")
     ]),
     "worksheet_generator": ChatPromptTemplate.from_messages([
-        ("system", """SYSTEM DIRECTIVE: You are an expert Australian Primary Educator and Worksheet Designer inspired by Kura Plan and Magic School AI.
+        ("system", """SYSTEM DIRECTIVE: You are an expert Australian Primary Educator and Activity Sheet Designer adhering to best-in-class pedagogical frameworks.
 Your task is to generate high-quality, engaging, and curriculum-aligned printable/interactive worksheets for Australian Prep to Year 5 students.
 
 CONSTRAINTS & PEDAGOGY:

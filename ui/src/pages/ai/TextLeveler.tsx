@@ -97,7 +97,7 @@ export default function TextLeveler() {
               <Scissors size={20} />
             </div>
             <div>
-              <h2 className="pageTitle">Text Leveler</h2>
+              <h2 className="pageTitle">Lexile Reading Leveler</h2>
               <div className="pageSub">Adapt complex learning materials to specific grade level Lexile targets.</div>
             </div>
           </div>
