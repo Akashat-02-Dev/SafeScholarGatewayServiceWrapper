@@ -753,7 +753,7 @@ export const LegalPage: React.FC<LegalPageProps> = ({ defaultTab = 'terms' }) =>
                     <div className="p-4 rounded-2xl bg-slate-100/70 dark:bg-zinc-800/60 border border-slate-200/80 dark:border-zinc-700 not-prose space-y-1.5 text-xs">
                       <div className="font-bold text-slate-900 dark:text-white">SafeScholar Data Protection Officer</div>
                       <div className="text-slate-600 dark:text-slate-300">Email: <a href="mailto:privacy@safescholar.com" className="text-blue-600 dark:text-blue-400 font-bold hover:underline">privacy@safescholar.com</a> / <a href="mailto:dpo@safescholar.com" className="text-blue-600 dark:text-blue-400 font-bold hover:underline">dpo@safescholar.com</a></div>
-                      <div className="text-slate-600 dark:text-slate-300">Address: SafeScholar Pty Ltd, Level 14, 175 Eagle Street, Brisbane QLD 4000, Australia</div>
+                      <div className="text-slate-600 dark:text-slate-300">Address: SafeScholar Pty Ltd,Brisbane QLD 4000, Australia</div>
                       <div className="text-slate-500 text-[11px] pt-1">Response Timeline: All institutional data inquiries acknowledged within 24 business hours.</div>
                     </div>
                   </section>
