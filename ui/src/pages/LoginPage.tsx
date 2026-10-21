@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
-import { Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../services/authService'
 import { apiFetch } from '../services/apiClient'
 import { listPublicInstitutions, registerAccount, type PublicInstitution } from '../services/roleService'
@@ -818,6 +818,19 @@ export function LoginPage() {
               </div>
             </>
           )}
+
+          {/* Institutional Compliance Disclaimer */}
+          <div className="mt-6 pt-5 border-t border-slate-200/60 dark:border-zinc-800 text-center text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+            <span>By proceeding, you agree to our </span>
+            <Link to="/terms" className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">
+              Terms of Service
+            </Link>
+            <span> and acknowledge our </span>
+            <Link to="/privacy" className="font-semibold text-blue-600 dark:hover:underline">
+              Privacy Policy
+            </Link>
+            <span> (Zero LLM Re-Training & FERPA / COPPA Compliant).</span>
+          </div>
         </div>
       </motion.div>
     </div>

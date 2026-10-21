@@ -281,18 +281,18 @@ export function Footer() {
           </div>
 
           <div className="flex items-center gap-5 font-semibold text-[11px]">
-            <a href="#" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+            <Link to="/privacy" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
               Privacy Policy
-            </a>
-            <a href="#" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+            </Link>
+            <Link to="/terms" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
               Terms of Service
-            </a>
-            <a href="#" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-              Security Architecture
-            </a>
-            <a href="#" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
-              Trust Center
-            </a>
+            </Link>
+            <Link to="/privacy" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+              Security Safeguards
+            </Link>
+            <Link to="/legal" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+              Trust & Legal Center
+            </Link>
           </div>
         </div>
       </div>

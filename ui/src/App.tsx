@@ -34,6 +34,7 @@ import { StudentTextLevelerPage } from './pages/student/StudentTextLevelerPage'
 import { StudentTestEnvironmentPage } from './pages/student/StudentTestEnvironmentPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { LandingPage } from './pages/LandingPage'
+import { LegalPage } from './pages/legal/LegalPage'
 
 import { useLocation } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -608,6 +609,11 @@ function App() {
               />
             </Route>
           </Route>
+
+          {/* Public Legal & Compliance Routes */}
+          <Route path="/terms" element={<PageTransition><LegalPage defaultTab="terms" /></PageTransition>} />
+          <Route path="/privacy" element={<PageTransition><LegalPage defaultTab="privacy" /></PageTransition>} />
+          <Route path="/legal" element={<PageTransition><LegalPage /></PageTransition>} />
 
           <Route path="/" element={<PageTransition><LandingPage /></PageTransition>} />
           <Route path="*" element={<Navigate to="/" replace />} />
