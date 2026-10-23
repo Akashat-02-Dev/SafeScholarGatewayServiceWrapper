@@ -45,19 +45,34 @@ type RateLimitResult struct {
 	Allowed     bool
 	Remaining   int64
 	ResetAtUnix int64
+	Limit       int64
 }
 
 func (l *TokenBucketLimiter) Allow(ctx context.Context, key string) (RateLimitResult, error) {
+	return l.AllowCustom(ctx, key, l.capacity, l.refillRate, l.refillPeriod)
+}
+
+func (l *TokenBucketLimiter) AllowCustom(ctx context.Context, key string, capacity, refillRate int64, refillPeriod time.Duration) (RateLimitResult, error) {
 	key = strings.TrimSpace(key)
 	if key == "" {
-		return RateLimitResult{Allowed: false}, errors.New("rate limit key required")
+		return RateLimitResult{Allowed: false, Limit: capacity}, errors.New("rate limit key required")
 	}
 	if len(key) > 200 || strings.ContainsAny(key, "\r\n\t ") {
-		return RateLimitResult{Allowed: false}, errors.New("invalid rate limit key")
+		return RateLimitResult{Allowed: false, Limit: capacity}, errors.New("invalid rate limit key")
 	}
+	if capacity <= 0 {
+		capacity = l.capacity
+	}
+	if refillRate <= 0 {
+		refillRate = l.refillRate
+	}
+	if refillPeriod <= 0 {
+		refillPeriod = l.refillPeriod
+	}
+
 	k := l.prefix + key
 	nowMs := time.Now().UnixMilli()
-	periodMs := l.refillPeriod.Milliseconds()
+	periodMs := refillPeriod.Milliseconds()
 
 	if ctx == nil {
 		ctx = context.Background()
@@ -70,17 +85,17 @@ func (l *TokenBucketLimiter) Allow(ctx context.Context, key string) (RateLimitRe
 
 	res, err := l.rdb.Eval(ctx, tokenBucketLua(), []string{k},
 		strconv.FormatInt(nowMs, 10),
-		strconv.FormatInt(l.capacity, 10),
-		strconv.FormatInt(l.refillRate, 10),
+		strconv.FormatInt(capacity, 10),
+		strconv.FormatInt(refillRate, 10),
 		strconv.FormatInt(periodMs, 10),
 	).Result()
 	if err != nil {
-		return RateLimitResult{Allowed: false}, err
+		return RateLimitResult{Allowed: false, Limit: capacity}, err
 	}
 
 	arr, ok := res.([]any)
 	if !ok || len(arr) != 3 {
-		return RateLimitResult{Allowed: false}, errors.New("invalid rate limit response")
+		return RateLimitResult{Allowed: false, Limit: capacity}, errors.New("invalid rate limit response")
 	}
 
 	allowed, _ := arr[0].(int64)
@@ -88,13 +103,14 @@ func (l *TokenBucketLimiter) Allow(ctx context.Context, key string) (RateLimitRe
 	resetAtMs, _ := arr[2].(int64)
 	resetAtUnix := resetAtMs / 1000
 	if resetAtUnix <= 0 {
-		resetAtUnix = time.Now().Unix() + int64(l.refillPeriod.Seconds())
+		resetAtUnix = time.Now().Unix() + int64(refillPeriod.Seconds())
 	}
 
 	return RateLimitResult{
 		Allowed:     allowed == 1,
 		Remaining:   remaining,
 		ResetAtUnix: resetAtUnix,
+		Limit:       capacity,
 	}, nil
 }
 

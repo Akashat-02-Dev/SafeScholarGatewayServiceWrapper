@@ -23,12 +23,23 @@ func RateLimitMiddleware(limiter *security.TokenBucketLimiter, validator *auth.T
 				return
 			}
 
-			key := rateLimitKey(r, validator)
-			res, err := limiter.Allow(r.Context(), key)
+			key, cap, refill, period := rateLimitKeyAndTier(r, validator)
+			var res security.RateLimitResult
+			var err error
+			if cap > 0 && refill > 0 && period > 0 {
+				res, err = limiter.AllowCustom(r.Context(), key, cap, refill, period)
+			} else {
+				res, err = limiter.Allow(r.Context(), key)
+			}
+
 			if err != nil {
+				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusServiceUnavailable)
+				_, _ = w.Write([]byte(`{"error":"Rate limiter service unavailable","code":"RATE_LIMIT_ERROR"}`))
 				return
 			}
+
+			w.Header().Set("X-RateLimit-Limit", int64ToString(res.Limit))
 			w.Header().Set("X-RateLimit-Remaining", int64ToString(res.Remaining))
 			w.Header().Set("X-RateLimit-Reset", int64ToString(res.ResetAtUnix))
 			if !res.Allowed {
@@ -36,7 +47,9 @@ func RateLimitMiddleware(limiter *security.TokenBucketLimiter, validator *auth.T
 				if retryAfter > 0 {
 					w.Header().Set("Retry-After", int64ToString(retryAfter))
 				}
+				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusTooManyRequests)
+				_, _ = w.Write([]byte(`{"error":"Too many requests. Rate limit exceeded.","code":"RATE_LIMIT_EXCEEDED"}`))
 				return
 			}
 			next.ServeHTTP(w, r)
@@ -44,10 +57,54 @@ func RateLimitMiddleware(limiter *security.TokenBucketLimiter, validator *auth.T
 	}
 }
 
-func rateLimitKey(r *http.Request, validator *auth.TokenValidator) string {
+func rateLimitKeyAndTier(r *http.Request, validator *auth.TokenValidator) (key string, capacity int64, refillRate int64, period time.Duration) {
+	path := strings.ToLower(r.URL.Path)
+	ip := ClientIP(r)
+	ipStr := "unknown"
+	if ip != nil {
+		ipStr = ip.String()
+	}
+
+	// 1. Strict Auth Tier: login, register, forgot-password, reset-password
+	// 10 requests / minute max to prevent brute force, credential stuffing, password spraying
+	if path == "/api/auth/login" || path == "/api/auth/register" ||
+		path == "/api/auth/forgot-password" || path == "/api/auth/reset-password" ||
+		strings.HasPrefix(path, "/api/oauth/") {
+		return "rate_limit:auth:ip:" + ipStr, 10, 10, time.Minute
+	}
+
+	// 2. High-Resource AI Tier: /api/v1/ai/*
+	// 20 requests / minute max to prevent ReDoS / LLM compute exhaustion
+	if strings.HasPrefix(path, "/api/v1/ai/") {
+		userKey := userIdentifier(r, validator)
+		if userKey != "" {
+			return "rate_limit:ai:user:" + userKey, 20, 20, time.Minute
+		}
+		return "rate_limit:ai:ip:" + ipStr, 20, 20, time.Minute
+	}
+
+	// 3. Admin Tier: /api/v1/admin/*
+	// 60 requests / minute max
+	if strings.HasPrefix(path, "/api/v1/admin/") {
+		userKey := userIdentifier(r, validator)
+		if userKey != "" {
+			return "rate_limit:admin:user:" + userKey, 60, 60, time.Minute
+		}
+		return "rate_limit:admin:ip:" + ipStr, 60, 60, time.Minute
+	}
+
+	// 4. Default General API Tier (uses default limiter capacity and period)
+	userKey := userIdentifier(r, validator)
+	if userKey != "" {
+		return "rate_limit:api:user:" + userKey, 0, 0, 0
+	}
+	return "rate_limit:api:ip:" + ipStr, 0, 0, 0
+}
+
+func userIdentifier(r *http.Request, validator *auth.TokenValidator) string {
 	uc := UserContextFromContext(r.Context())
 	if uc.IsAuthenticated && uc.UserID != "" {
-		return "rate_limit:user:" + uc.InstitutionID + ":" + uc.UserID
+		return uc.InstitutionID + ":" + uc.UserID
 	}
 
 	if validator != nil {
@@ -55,16 +112,16 @@ func rateLimitKey(r *http.Request, validator *auth.TokenValidator) string {
 		if err == nil && tokenPresent {
 			claims, _, err := validator.ValidateAccessToken(r.Context(), tokenString)
 			if err == nil && strings.TrimSpace(claims.Subject) != "" {
-				return "rate_limit:user:" + strings.TrimSpace(claims.Institution) + ":" + strings.TrimSpace(claims.Subject)
+				return strings.TrimSpace(claims.Institution) + ":" + strings.TrimSpace(claims.Subject)
 			}
 		}
 	}
+	return ""
+}
 
-	ip := ClientIP(r)
-	if ip == nil {
-		return "rate_limit:ip:unknown"
-	}
-	return "rate_limit:ip:" + ip.String()
+func rateLimitKey(r *http.Request, validator *auth.TokenValidator) string {
+	key, _, _, _ := rateLimitKeyAndTier(r, validator)
+	return key
 }
 
 func tryBearerTokenForRateLimit(r *http.Request) (string, bool, error) {

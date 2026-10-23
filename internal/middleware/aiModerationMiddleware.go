@@ -20,7 +20,25 @@ var (
 	medicareRegex    = regexp.MustCompile(`\b(?:\d[ ]?){10}\b`)
 	tfnRegex         = regexp.MustCompile(`\b(?:\d[ ]?){9}\b`)
 	aussiePhoneRegex = regexp.MustCompile(`\b(?:\+61|0)[2-478](?:[ ]?\d){8}\b`)
+
+	// LLM Prompt Injection & Jailbreak Heuristics
+	promptInjectionPatterns = []*regexp.Regexp{
+		regexp.MustCompile(`(?i)\b(ignore|disregard|forget|bypass|override)\s+(all\s+)?(previous|prior|above|system)\s+(instructions|directives|rules|prompts|constraints)\b`),
+		regexp.MustCompile(`(?i)\b(you\s+are\s+now|act\s+as)\s+(DAN|unrestricted|jailbroken|an\s+unfiltered|an\s+adversarial)\b`),
+		regexp.MustCompile(`(?i)\b(output|print|reveal|display|leak)\s+(the\s+)?(system\s+prompt|developer\s+message|secret\s+key|initial\s+prompt)\b`),
+		regexp.MustCompile(`(?i)\b(jailbreak\s+mode|developer\s+mode\s+enabled|unhinged\s+mode)\b`),
+		regexp.MustCompile(`(?i)\bdo\s+anything\s+now\b`),
+	}
 )
+
+func isPromptInjection(text string) bool {
+	for _, p := range promptInjectionPatterns {
+		if p.MatchString(text) {
+			return true
+		}
+	}
+	return false
+}
 
 func maskAussiePII(text string) string {
 	text = medicareRegex.ReplaceAllString(text, "[REDACTED]")
@@ -59,6 +77,29 @@ func AIModerationMiddleware(modClient ContentModerator, logger *security.AuditLo
 			userID := uc.UserID
 			instID := uc.InstitutionID
 
+			// Extract prompt for security inspection
+			promptRaw := aiReq.Parameters["user_prompt"]
+			if promptRaw == nil {
+				promptRaw = aiReq.Parameters["draft_text"]
+			}
+
+			if promptStr, ok := promptRaw.(string); ok && promptStr != "" {
+				// Universal Prompt Injection & Jailbreak Defense for all callers
+				if isPromptInjection(promptStr) {
+					if logger != nil {
+						_ = logger.Log(r.Context(), security.AuditEvent{
+							UserID:    userID,
+							Action:    "AI_PROMPT_INJECTION_BLOCKED",
+							IPAddress: r.RemoteAddr,
+							Metadata:  map[string]any{"tool_id": aiReq.ToolID},
+							CreatedAt: time.Now().UTC(),
+						})
+					}
+					security.WriteJSONError(w, http.StatusForbidden, "Your request violates safety guidelines: prompt injection or instruction override attempt detected.")
+					return
+				}
+			}
+
 			isStudent := false
 			for _, role := range uc.Roles {
 				if strings.ToLower(strings.TrimSpace(role)) == "student" {
@@ -70,10 +111,6 @@ func AIModerationMiddleware(modClient ContentModerator, logger *security.AuditLo
 			// 2. We only strictly moderate Student Workspace tools
 			if isStudent && (aiReq.ToolID == "socratic_tutor" || aiReq.ToolID == "writing_feedback" || aiReq.ToolID == "character_bot" || aiReq.ToolID == "custom_bot" || aiReq.ToolID == "quiz_generator" || aiReq.ToolID == "research_assistant") {
 				
-				promptRaw := aiReq.Parameters["user_prompt"]
-				if promptRaw == nil {
-					promptRaw = aiReq.Parameters["draft_text"]
-				}
 				if promptRaw == nil {
 					// Some endpoints might not have user_prompt
 					next.ServeHTTP(w, r)

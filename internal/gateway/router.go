@@ -113,6 +113,7 @@ func NewRouter(deps RouterDeps) (http.Handler, func(), error) {
 		base,
 		middleware.HostValidation(deps.Config.Server.AllowedHostnames),
 		middleware.MaxBodyBytes(deps.Config.Server.MaxRequestBodyBytes),
+		middleware.InputSanitizerMiddleware(deps.AuditLogger),
 		RouteMatchMiddleware(r.routes),
 		middleware.LoggingMiddleware(deps.Logger),
 		middleware.SecurityHeadersMiddleware(deps.Config.Security),

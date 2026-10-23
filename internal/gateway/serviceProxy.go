@@ -34,6 +34,9 @@ func (p *ServiceProxy) Forward(w http.ResponseWriter, req *http.Request, baseURL
 	if err != nil || u.Host == "" {
 		return errors.New("invalid base url")
 	}
+	if err := validateProxyTarget(u); err != nil {
+		return err
+	}
 	if proxyRequiresHTTPS(p.client.Transport) && u.Scheme != "https" {
 		return errors.New("invalid base url scheme")
 	}
@@ -190,4 +193,31 @@ func removeHopByHopHeaders(h http.Header) {
 	h.Del("Trailer")
 	h.Del("Transfer-Encoding")
 	h.Del("Upgrade")
+}
+
+func validateProxyTarget(u *url.URL) error {
+	if u == nil {
+		return errors.New("nil target url")
+	}
+	scheme := strings.ToLower(u.Scheme)
+	if scheme != "http" && scheme != "https" {
+		return errors.New("unsupported proxy target scheme")
+	}
+	host := strings.ToLower(u.Hostname())
+	if host == "" {
+		return errors.New("empty proxy target host")
+	}
+	// SSRF Protection: Block cloud metadata endpoints (AWS, GCP, Azure, OpenStack)
+	if host == "169.254.169.254" || host == "169.254.170.2" ||
+		host == "metadata.google.internal" || host == "metadata" ||
+		strings.HasSuffix(host, ".metadata.google.internal") {
+		return errors.New("ssrf protection: forbidden metadata target")
+	}
+	// Check link-local IP
+	if ip := net.ParseIP(host); ip != nil {
+		if ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() {
+			return errors.New("ssrf protection: link-local target not allowed")
+		}
+	}
+	return nil
 }

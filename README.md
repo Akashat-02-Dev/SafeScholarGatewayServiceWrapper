@@ -43,6 +43,9 @@ The database architecture enforces strict multi-tenant data isolation at the Pos
 * **NAT-Aware Rate Limiting**: Scopes volumetric API limits cryptographically by `InstitutionID` + `UserID` to prevent false-positive bans in single-egress school network environments.
 * **ASD ISM Compliance**: Enforces strict `Content-Security-Policy` and `Strict-Transport-Security` headers to meet Australian Signals Directorate guidelines.
 
+### 8. Comprehensive Threat Mitigation & WAF Guardrails
+For an exhaustive technical matrix detailing the architectural defenses, WAF middleware, multi-tier rate limiting, and cryptographic controls safeguarding against all 40+ enterprise attack vectors (SQLi, XSS, CSRF, SSRF, RCE, BOLA/IDOR, Credential Stuffing, Ransomware, DDoS, Cloud Misconfiguration, and LLM Prompt Injection), see [docs/security-architecture.md](file:///d:/Project/SafeScholarGatewayWrapper/SafeScholarGatewayServiceWrapper/docs/security-architecture.md).
+
 ---
 
 ## 🏛️ System Architecture
