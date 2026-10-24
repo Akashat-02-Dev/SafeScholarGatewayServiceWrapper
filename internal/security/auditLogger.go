@@ -21,9 +21,15 @@ type AuditEvent struct {
 	CreatedAt  time.Time
 }
 
+type EventPublisher interface {
+	Publish(ctx context.Context, topic, key string, payload any) error
+	IsEnabled() bool
+}
+
 type AuditLogger struct {
-	enabled bool
-	pool    *pgxpool.Pool
+	enabled   bool
+	pool      *pgxpool.Pool
+	publisher EventPublisher
 }
 
 func NewAuditLogger(enabled bool, pool *pgxpool.Pool) *AuditLogger {
@@ -33,12 +39,15 @@ func NewAuditLogger(enabled bool, pool *pgxpool.Pool) *AuditLogger {
 	}
 }
 
+func (a *AuditLogger) SetPublisher(pub EventPublisher) {
+	if a != nil {
+		a.publisher = pub
+	}
+}
+
 func (a *AuditLogger) Log(ctx context.Context, e AuditEvent) error {
 	if !a.enabled {
 		return nil
-	}
-	if a.pool == nil {
-		return errors.New("audit logger not configured")
 	}
 	e = normalizeAuditEvent(e)
 	if err := validateAuditEvent(e); err != nil {
@@ -46,6 +55,24 @@ func (a *AuditLogger) Log(ctx context.Context, e AuditEvent) error {
 	}
 	if e.CreatedAt.IsZero() {
 		e.CreatedAt = time.Now().UTC()
+	}
+
+	// High-throughput asynchronous publishing via Kafka Message Queue
+	if a.publisher != nil && a.publisher.IsEnabled() {
+		_ = a.publisher.Publish(ctx, "safescholar.audit-events", e.UserID, map[string]any{
+			"user_id":     e.UserID,
+			"action":      e.Action,
+			"resource":    e.Resource,
+			"resource_id": e.ResourceID,
+			"ip_address":  e.IPAddress,
+			"metadata":    e.Metadata,
+			"created_at":  e.CreatedAt,
+		})
+		return nil
+	}
+
+	if a.pool == nil {
+		return errors.New("audit logger not configured")
 	}
 
 	if ctx == nil {

@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"safescholar/gateway/infrastructure/cache"
 	"safescholar/gateway/infrastructure/database"
 	"safescholar/gateway/internal/security"
 
@@ -22,6 +23,7 @@ import (
 type AuthService struct {
 	pool           *pgxpool.Pool
 	rdb            *redis.Client
+	cache          *cache.CacheService
 	passwordPolicy PasswordPolicy
 	sessions       *SessionManager
 	tokens         *TokenGenerator
@@ -60,9 +62,14 @@ type MeResult struct {
 }
 
 func NewAuthService(pool *pgxpool.Pool, rdb *redis.Client, sessions *SessionManager, tokens *TokenGenerator, auditLogger *security.AuditLogger) *AuthService {
+	var cacheSvc *cache.CacheService
+	if rdb != nil {
+		cacheSvc = cache.NewCacheService(rdb, true, 15*time.Minute, "safescholar:cache:", nil)
+	}
 	return &AuthService{
 		pool:           pool,
 		rdb:            rdb,
+		cache:          cacheSvc,
 		passwordPolicy: DefaultPasswordPolicy(),
 		sessions:       sessions,
 		tokens:         tokens,
@@ -73,6 +80,12 @@ func NewAuthService(pool *pgxpool.Pool, rdb *redis.Client, sessions *SessionMana
 		lockoutDurationAccount:   30 * time.Minute,
 		lockoutDurationIP:        15 * time.Minute,
 		failureWindow:            15 * time.Minute,
+	}
+}
+
+func (s *AuthService) SetCache(c *cache.CacheService) {
+	if s != nil {
+		s.cache = c
 	}
 }
 
@@ -270,6 +283,39 @@ func (s *AuthService) Me(ctx context.Context, userID, institutionID string, role
 		return MeResult{}, errors.New("user required")
 	}
 
+	// 1. Check Redis Cache first (Cache-Aside pattern)
+	if s.cache != nil {
+		if cached, ok := s.cache.GetUser(ctx, uid); ok && cached != nil {
+			if strings.ToLower(strings.TrimSpace(cached.Status)) != "active" {
+				return MeResult{}, errors.New("inactive")
+			}
+			outPerms := perms
+			if cached.IsSysAdmin {
+				has := false
+				for _, p := range perms {
+					if strings.EqualFold(strings.TrimSpace(p), "SUPER_ADMIN") {
+						has = true
+						break
+					}
+				}
+				if !has {
+					outPerms = append(outPerms, "SUPER_ADMIN")
+				}
+			}
+			return MeResult{
+				UserID:        cached.UserID,
+				InstitutionID: cached.InstitutionID,
+				Email:         cached.Email,
+				FirstName:     cached.FirstName,
+				LastName:      cached.LastName,
+				IsSysAdmin:    cached.IsSysAdmin,
+				Roles:         roles,
+				Permissions:   outPerms,
+			}, nil
+		}
+	}
+
+	// 2. Cache miss: Query PostgreSQL
 	tx, err := s.pool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		return MeResult{}, err
@@ -300,6 +346,19 @@ limit 1`, uid).Scan(&uid, &inst, &email, &first, &last, &status, &isSysAdmin)
 
 	if err := tx.Commit(ctx); err != nil {
 		return MeResult{}, err
+	}
+
+	// 3. Populate Redis Cache with 15-minute TTL
+	if s.cache != nil {
+		s.cache.SetUser(ctx, uid, &cache.CachedUser{
+			UserID:        uid,
+			InstitutionID: strings.TrimSpace(inst),
+			Email:         strings.ToLower(strings.TrimSpace(email)),
+			FirstName:     strings.TrimSpace(first),
+			LastName:      strings.TrimSpace(last),
+			Status:        status,
+			IsSysAdmin:    isSysAdmin,
+		}, 15*time.Minute)
 	}
 
 	outPerms := perms
@@ -1660,6 +1719,11 @@ func (s *AuthService) IsolateUser(ctx context.Context, actorUserID, actorInstitu
 
 	if err := tx.Commit(ctx); err != nil {
 		return err
+	}
+
+	// Invalidate Redis user cache immediately
+	if s.cache != nil {
+		s.cache.InvalidateUser(ctx, uid)
 	}
 
 	// Session Revocation: Purge all session keys from Redis and set revoked=true

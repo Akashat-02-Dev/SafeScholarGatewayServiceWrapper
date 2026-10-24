@@ -34,6 +34,8 @@ type Config struct {
 	ServiceRegistry RegistryConfig  `yaml:"serviceRegistry"`
 	Security        SecurityConfig  `yaml:"security"`
 	Audit           AuditConfig     `yaml:"audit"`
+	Kafka           KafkaConfig     `yaml:"kafka"`
+	Cache           CacheConfig     `yaml:"cache"`
 	Bootstrap       BootstrapConfig `yaml:"bootstrap"`
 }
 
@@ -146,6 +148,22 @@ type BootstrapConfig struct {
 	SysAdminLastNameEnv  string `yaml:"sysAdminLastNameEnv"`
 }
 
+type KafkaConfig struct {
+	Enabled       bool          `yaml:"enabled"`
+	Brokers       []string      `yaml:"brokers"`
+	ClientID      string        `yaml:"clientId"`
+	ConsumerGroup string        `yaml:"consumerGroup"`
+	BatchSize     int           `yaml:"batchSize"`
+	BatchTimeout  time.Duration `yaml:"batchTimeout"`
+	AsyncFallback bool          `yaml:"asyncFallback"`
+}
+
+type CacheConfig struct {
+	Enabled    bool          `yaml:"enabled"`
+	DefaultTTL time.Duration `yaml:"defaultTtl"`
+	Prefix     string        `yaml:"prefix"`
+}
+
 func Load() (Config, error) {
 	path := strings.TrimSpace(os.Getenv("CONFIG_PATH"))
 	if path == "" {
@@ -217,6 +235,47 @@ func Load() (Config, error) {
 	}
 	if v := strings.TrimSpace(os.Getenv("EXTERNAL_BASE_URL")); v != "" {
 		cfg.Server.ExternalBaseURL = v
+	}
+	if v := strings.TrimSpace(os.Getenv("KAFKA_BROKERS")); v != "" {
+		cfg.Kafka.Brokers = strings.Split(v, ",")
+		for i := range cfg.Kafka.Brokers {
+			cfg.Kafka.Brokers[i] = strings.TrimSpace(cfg.Kafka.Brokers[i])
+		}
+	}
+	if v := strings.TrimSpace(os.Getenv("KAFKA_ENABLED")); v != "" {
+		cfg.Kafka.Enabled = strings.EqualFold(v, "true") || v == "1"
+	}
+	if v := strings.TrimSpace(os.Getenv("KAFKA_CLIENT_ID")); v != "" {
+		cfg.Kafka.ClientID = v
+	}
+	if v := strings.TrimSpace(os.Getenv("KAFKA_CONSUMER_GROUP")); v != "" {
+		cfg.Kafka.ConsumerGroup = v
+	}
+	if v := strings.TrimSpace(os.Getenv("CACHE_ENABLED")); v != "" {
+		cfg.Cache.Enabled = strings.EqualFold(v, "true") || v == "1"
+	}
+	if v := strings.TrimSpace(os.Getenv("CACHE_PREFIX")); v != "" {
+		cfg.Cache.Prefix = v
+	}
+
+	// Apply robust architectural defaults
+	if cfg.Cache.DefaultTTL <= 0 {
+		cfg.Cache.DefaultTTL = 15 * time.Minute
+	}
+	if cfg.Cache.Prefix == "" {
+		cfg.Cache.Prefix = "safescholar:cache:"
+	}
+	if cfg.Kafka.ClientID == "" {
+		cfg.Kafka.ClientID = "safescholar-gateway"
+	}
+	if cfg.Kafka.ConsumerGroup == "" {
+		cfg.Kafka.ConsumerGroup = "safescholar-audit-group"
+	}
+	if cfg.Kafka.BatchSize <= 0 {
+		cfg.Kafka.BatchSize = 100
+	}
+	if cfg.Kafka.BatchTimeout <= 0 {
+		cfg.Kafka.BatchTimeout = 20 * time.Millisecond
 	}
 
 	if err := cfg.validate(); err != nil {

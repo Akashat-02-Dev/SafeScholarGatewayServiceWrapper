@@ -94,6 +94,19 @@ security:
   contentSecurityPolicy: "default-src 'self'; base-uri 'none'; frame-ancestors 'none'; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' http://localhost:8080 https://localhost:9443 https://localhost:9444 https://localhost:9445 http://localhost:8000 http://localhost:8001"
 audit:
   enabled: true
+cache:
+  enabled: true
+  defaultTtl: 15m
+  prefix: "safescholar:cache:"
+kafka:
+  enabled: false
+  brokers:
+    - "localhost:9092"
+  clientId: "safescholar-gateway-dev"
+  consumerGroup: "safescholar-audit-group"
+  batchSize: 100
+  batchTimeout: 20ms
+  asyncFallback: true
 bootstrap:
   sysAdminEmailEnv: SYS_ADMIN_EMAIL
   sysAdminPasswordEnv: SYS_ADMIN_PASSWORD

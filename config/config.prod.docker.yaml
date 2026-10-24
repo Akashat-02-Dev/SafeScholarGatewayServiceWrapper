@@ -90,6 +90,19 @@ security:
   contentSecurityPolicy: "default-src 'self' 'unsafe-inline' data:; connect-src *;"
 audit:
   enabled: true
+cache:
+  enabled: true
+  defaultTtl: 30m
+  prefix: "safescholar:cache:"
+kafka:
+  enabled: true
+  brokers:
+    - "kafka:9092"
+  clientId: "safescholar-gateway-prod"
+  consumerGroup: "safescholar-audit-group"
+  batchSize: 200
+  batchTimeout: 50ms
+  asyncFallback: true
 bootstrap:
   sysAdminEmailEnv: SYS_ADMIN_EMAIL
   sysAdminPasswordEnv: SYS_ADMIN_PASSWORD

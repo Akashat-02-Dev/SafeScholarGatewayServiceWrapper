@@ -17,19 +17,33 @@ import (
 type ServiceProxy struct {
 	client  *http.Client
 	timeout time.Duration
+	lb      *LoadBalancer
 }
 
 func NewServiceProxy(client *http.Client) *ServiceProxy {
+	return NewServiceProxyWithLB(client, NewLoadBalancer())
+}
+
+func NewServiceProxyWithLB(client *http.Client, lb *LoadBalancer) *ServiceProxy {
 	if client == nil {
 		client = &http.Client{Timeout: 15 * time.Second}
 	}
-	return &ServiceProxy{client: client, timeout: 15 * time.Second}
+	if lb == nil {
+		lb = NewLoadBalancer()
+	}
+	return &ServiceProxy{client: client, timeout: 15 * time.Second, lb: lb}
 }
 
 func (p *ServiceProxy) Forward(w http.ResponseWriter, req *http.Request, baseURL string, stripPrefix string) error {
 	if p == nil || p.client == nil {
 		return errors.New("service proxy not configured")
 	}
+
+	// Resolve target endpoint through Load Balancer if pooled
+	if p.lb != nil && strings.Contains(baseURL, ",") {
+		baseURL = p.lb.ResolveURL("downstream", baseURL)
+	}
+
 	u, err := url.Parse(strings.TrimSpace(baseURL))
 	if err != nil || u.Host == "" {
 		return errors.New("invalid base url")

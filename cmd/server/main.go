@@ -26,6 +26,7 @@ import (
 	"safescholar/gateway/config"
 	"safescholar/gateway/infrastructure/cache"
 	"safescholar/gateway/infrastructure/database"
+	"safescholar/gateway/infrastructure/messaging"
 	"safescholar/gateway/infrastructure/service_registry"
 	"safescholar/gateway/internal/adapters"
 	"safescholar/gateway/internal/auth"
@@ -81,16 +82,38 @@ func main() {
 	}
 	defer func() { _ = rdb.Close() }()
 
+	cacheSvc := cache.NewCacheService(rdb, cfg.Cache.Enabled, cfg.Cache.DefaultTTL, cfg.Cache.Prefix, logger)
+
 	jwtManager, err := security.NewJWTManager(cfg.JWT.Issuer, cfg.JWT.Audience, cfg.JWT.PrivateKeyPEMFile, cfg.JWT.PublicKeyPEMFile, cfg.JWT.ClockSkew)
 	if err != nil {
 		fatal(err)
 	}
 
 	auditLogger := security.NewAuditLogger(cfg.Audit.Enabled, pool)
+
+	// High-performance Kafka Message Queue initialization with resilient fallback
+	kafkaProducer := messaging.NewKafkaProducer(messaging.KafkaConfig{
+		Enabled:       cfg.Kafka.Enabled,
+		Brokers:       cfg.Kafka.Brokers,
+		ClientID:      cfg.Kafka.ClientID,
+		ConsumerGroup: cfg.Kafka.ConsumerGroup,
+		BatchSize:     cfg.Kafka.BatchSize,
+		BatchTimeout:  cfg.Kafka.BatchTimeout,
+		AsyncFallback: cfg.Kafka.AsyncFallback,
+	}, logger)
+	auditLogger.SetPublisher(kafkaProducer)
+
+	var auditConsumer *messaging.KafkaAuditConsumer
+	if cfg.Kafka.Enabled && len(cfg.Kafka.Brokers) > 0 {
+		auditConsumer = messaging.NewKafkaAuditConsumer(cfg.Kafka.Brokers, cfg.Kafka.ConsumerGroup, pool, logger)
+		auditConsumer.Start(ctx)
+	}
+
 	sessionManager := auth.NewSessionManager(rdb, pool)
 	tokenGen := auth.NewTokenGenerator(jwtManager, pool)
 	tokenValidator := auth.NewTokenValidator(jwtManager, sessionManager)
 	authSvc := auth.NewAuthService(pool, rdb, sessionManager, tokenGen, auditLogger)
+	authSvc.SetCache(cacheSvc)
 
 	oauthSvc, err := oauth.NewOAuthService(ctx, cfg.OAuth, pool, rdb, tokenGen, sessionManager, auditLogger)
 	if err != nil {
@@ -188,6 +211,13 @@ func main() {
 	select {
 	case <-ctx.Done():
 		logger.Info("Shutting down Gateway Server gracefully...")
+
+		if auditConsumer != nil {
+			auditConsumer.Stop()
+		}
+		if kafkaProducer != nil {
+			kafkaProducer.Close()
+		}
 
 		if cleanup != nil {
 			cleanup()
