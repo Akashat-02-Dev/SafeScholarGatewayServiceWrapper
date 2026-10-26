@@ -119,11 +119,6 @@ func userIdentifier(r *http.Request, validator *auth.TokenValidator) string {
 	return ""
 }
 
-func rateLimitKey(r *http.Request, validator *auth.TokenValidator) string {
-	key, _, _, _ := rateLimitKeyAndTier(r, validator)
-	return key
-}
-
 func tryBearerTokenForRateLimit(r *http.Request) (string, bool, error) {
 	h := strings.TrimSpace(r.Header.Get("Authorization"))
 	if h == "" {

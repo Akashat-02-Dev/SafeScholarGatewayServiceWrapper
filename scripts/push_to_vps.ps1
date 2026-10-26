@@ -52,16 +52,16 @@ tar -czf $archiveName $excludeList *
 Write-Host "[OK] Archive created ($([Math]::Round((Get-Item $archiveName).Length / 1MB, 2)) MB)." -ForegroundColor Green
 
 # 3. Upload archive to Hostinger VPS
-Write-Host "===> Uploading $archiveName to $VpsUser@$VpsIp:/opt/safescholar/..." -ForegroundColor Yellow
+Write-Host "===> Uploading $archiveName to ${VpsUser}@${VpsIp}:/opt/safescholar/..." -ForegroundColor Yellow
 ssh -o StrictHostKeyChecking=no "$VpsUser@$VpsIp" "mkdir -p /opt/safescholar"
-scp -o StrictHostKeyChecking=no $archiveName "$VpsUser@$VpsIp:/opt/safescholar/"
+scp -o StrictHostKeyChecking=no $archiveName "${VpsUser}@${VpsIp}:/opt/safescholar/"
 
 # 4. Extract archive on VPS
 Write-Host "===> Extracting files on VPS..." -ForegroundColor Yellow
 ssh -o StrictHostKeyChecking=no "$VpsUser@$VpsIp" "cd /opt/safescholar && tar -xzf $archiveName && chmod +x scripts/*.sh"
 
 # 5. Prompt to run deployment
-Write-Host "`n[SUCCESS] Codebase synchronized to $VpsUser@$VpsIp:/opt/safescholar/!" -ForegroundColor Green
+Write-Host "`n[SUCCESS] Codebase synchronized to ${VpsUser}@${VpsIp}:/opt/safescholar/!" -ForegroundColor Green
 Write-Host "`nTo start the deployment now, execute:" -ForegroundColor Cyan
 Write-Host "ssh $VpsUser@$VpsIp 'cd /opt/safescholar && sudo bash scripts/deploy_hostinger.sh'" -ForegroundColor White
 

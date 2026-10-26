@@ -178,6 +178,7 @@ func rejectSecurityViolation(w http.ResponseWriter, r *http.Request, auditLogger
 			IPAddress:  ipStr,
 			Metadata: map[string]any{
 				"reason":         reason,
+				"message":        message,
 				"method":         r.Method,
 				"path":           r.URL.Path,
 				"institution_id": uc.InstitutionID,
@@ -195,5 +196,6 @@ func rejectSecurityViolation(w http.ResponseWriter, r *http.Request, auditLogger
 		"error":   "Request rejected: prohibited injection command pattern detected",
 		"code":    "SECURITY_VIOLATION",
 		"details": reason,
+		"message": message,
 	})
 }

@@ -171,11 +171,12 @@ func (r *Router) serve(w http.ResponseWriter, req *http.Request) {
 		r.handleMe(w, req)
 		return
 	case route.PathPrefix == "/api/auth/profile":
-		if req.Method == http.MethodGet {
+		switch req.Method {
+		case http.MethodGet:
 			r.handleGetProfile(w, req)
-		} else if req.Method == http.MethodPatch {
+		case http.MethodPatch:
 			r.handleUpdateProfile(w, req)
-		} else {
+		default:
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		}
 		return

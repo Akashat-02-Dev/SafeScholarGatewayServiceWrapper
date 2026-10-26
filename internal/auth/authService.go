@@ -839,7 +839,8 @@ func (s *AuthService) Register(ctx context.Context, req RegisterRequest, ip net.
 		"institution_name": instName,
 	}
 
-	if role == "student" {
+	switch role {
+	case "student":
 		ay := strings.TrimSpace(req.AcademicYear)
 		if ay == "" {
 			return errors.New("academic year / grade is required for student registration")
@@ -851,7 +852,7 @@ func (s *AuthService) Register(ctx context.Context, req RegisterRequest, ip net.
 		if strings.TrimSpace(req.Department) != "" {
 			meta["department"] = strings.TrimSpace(req.Department)
 		}
-	} else if role == "teacher" {
+	case "teacher":
 		dept := strings.TrimSpace(req.Department)
 		if dept == "" {
 			return errors.New("department or subject is required for teacher registration")
@@ -1031,15 +1032,16 @@ func (s *AuthService) ApproveUser(ctx context.Context, reviewerUserID, reviewerI
 					_ = json.Unmarshal(currentMetaBytes, &userMeta)
 				}
 				for k, v := range reqChanges {
-					if k == "firstName" {
+					switch k {
+					case "firstName":
 						if s, ok := v.(string); ok && s != "" {
 							currFirstName = s
 						}
-					} else if k == "lastName" {
+					case "lastName":
 						if s, ok := v.(string); ok && s != "" {
 							currLastName = s
 						}
-					} else {
+					default:
 						userMeta[k] = v
 					}
 				}

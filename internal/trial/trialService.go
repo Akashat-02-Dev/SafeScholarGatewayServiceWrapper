@@ -421,7 +421,8 @@ func (s *TrialService) ValidateTrialQuota(ctx context.Context, institutionID, ro
 
 	r := strings.ToLower(strings.TrimSpace(roleName))
 
-	if r == "teacher" || r == "educator" {
+	switch r {
+	case "teacher", "educator":
 		var activeTeachers int
 		err = tx.QueryRow(ctx, `
 			select count(distinct ur.user_id)
@@ -435,7 +436,7 @@ func (s *TrialService) ValidateTrialQuota(ctx context.Context, institutionID, ro
 		if err == nil && activeTeachers >= maxTeachers {
 			return fmt.Errorf("trial teacher quota reached (maximum allowed: %d). Contact Super Admin to upgrade", maxTeachers)
 		}
-	} else if r == "student" {
+	case "student":
 		var activeStudents int
 		err = tx.QueryRow(ctx, `
 			select count(distinct ur.user_id)
